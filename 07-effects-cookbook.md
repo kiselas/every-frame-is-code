@@ -99,7 +99,9 @@ Like fire, but: normal blending (not `lighter`), sprites are gray with low alpha
 ## Glow and bloom in 2D
 
 ```js
-// two-layer glow of an object: core + wide halo
+// two-layer glow of an object: core + wide halo.
+// Two filter blurs per call: fine for one hero object per frame. For anything drawn many times
+// (particles, letters, UI elements) render the glowing shape once into a sprite and drawImage it.
 function glow(ctx, drawShape, color, core = 8, halo = 40){
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
@@ -112,7 +114,7 @@ function glow(ctx, drawShape, color, core = 8, halo = 40){
 
 Bloom for the whole frame: downscale the frame 4x, keep only bright areas (in 2D, roughly via `filter: brightness() contrast()`), blur, scale back up with `lighter`. For quality bloom, move to WebGL (UnrealBloomPass or your own shader).
 
-`ctx.filter = 'blur()'` is expensive at large radii. Blur a downscaled copy and scale it up: blur(40px) at full resolution ≈ blur(10px) at a quarter.
+`ctx.filter = 'blur()'` is paid per draw call, on a canvas-sized layer: one blur of the whole frame costs ~2 ms at 1080p, but a blur on each of 24 letters costs ~17 ms. Blur whole layers, or bake the blur into sprites. For large radii, blur a downscaled copy and scale it up: blur(40px) at full resolution ≈ blur(10px) at a quarter. Measurements: 13-performance.md.
 
 ## Film grain
 

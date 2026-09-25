@@ -7,7 +7,7 @@ description: Code-drawn motion graphics, animated videos, explainers, kinetic ty
 
 1. Read `00-agent-brief.md` in full. These rules are mandatory.
 2. Read the files for the task:
-   - any video: `01-pipeline.md`, `04-motion-easing.md`, `06-montage.md`, `12-render-qa.md`;
+   - any video: `01-pipeline.md`, `04-motion-easing.md`, `06-montage.md`, `12-render-qa.md`, `13-performance.md`;
    - choosing a style: `03-visual-style.md`;
    - transitions between scenes: `05-transitions.md`;
    - fire, particles, glow, grain, shaders: `07-effects-cookbook.md`;
@@ -16,4 +16,5 @@ description: Code-drawn motion graphics, animated videos, explainers, kinetic ty
    - games: `10-games-juice.md`;
    - 3D: `11-threejs.md`.
 3. Show the plan as data first (style, beat grid, shots, events), then write the code.
-4. After rendering, build a contact sheet (`render/contact-sheet.sh`), look at it, and fix issues by specific timecodes.
+4. Write the page to render fast from the start (`13-performance.md`): sprites instead of per-draw blur, no pixel readbacks in the frame loop, static layers cached. Iterate with `render.mjs --draft` on fragments.
+5. After rendering, build a contact sheet (`render/contact-sheet.sh`), look at it, and fix issues by specific timecodes.

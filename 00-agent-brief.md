@@ -27,7 +27,15 @@ Short rules. Details in the neighboring files.
 16. Text never overlaps important objects or the brightest spot in the frame. Safe zones are 5-8% from the edges.
 17. Reading time: at least 0.3 s per word plus 1 s of margin.
 
+## Performance
+18. No `getImageData` in the frame loop, not even for timing: Chrome moves the canvas to the CPU and every draw gets several times slower. Read pixels only at init.
+19. Blur and glow go into sprites rendered once: no `ctx.filter` per draw call, no `shadowBlur` on many shapes, no gradient per particle. One blur of a whole layer per frame is fine.
+20. Static layers are rendered once into offscreen buffers; buffers are allocated at init and reused.
+21. Expensive composites (motion blur, whip, bloom) run on a half- or quarter-size buffer and are scaled up once.
+22. Caches are keyed by look (glyph, color, blur level), never by time or frame order: parallel workers render chunks out of order. Details and measurements in 13-performance.md.
+
 ## Review
-18. After every version, render a contact sheet (one frame every 0.5 s) and look at it yourself. Look for: text overlaps, empty frames, static stretches longer than 2 s, elements running off the edges, brightness jumps.
-19. Fix issues by specific frame, citing the timecode.
-20. No sharp isolated hits in the audio right after silence.
+23. Iterate on fragments with `render.mjs --draft`; run `--profile` when a render is slow, it names the slowest timecodes.
+24. After every version, render a contact sheet (one frame every 0.5 s) and look at it yourself. Look for: text overlaps, empty frames, static stretches longer than 2 s, elements running off the edges, brightness jumps.
+25. Fix issues by specific frame, citing the timecode.
+26. No sharp isolated hits in the audio right after silence.

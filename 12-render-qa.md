@@ -72,6 +72,6 @@ For the agent: after every render, open the contact sheet and describe what you 
 
 Encoding: H.264, `-pix_fmt yuv420p`, `-crf 18`, `-movflags +faststart`. For a GIF preview: `ffmpeg -i out.mp4 -vf "fps=15,scale=640:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse" preview.gif`.
 
-## Live preview performance
+## Speed
 
-Rendering is frame-by-frame, so a heavy frame doesn't hurt the MP4. But the live preview should run at least at 30 fps, or it becomes hard to judge. If it's slow: reduce the particle count in live mode, cache static layers into buffers, blur downscaled copies, or switch to WebGL.
+Iterate on fragments with `--draft` (half size, 30 fps) and render the whole film at full quality only for the final cut. If a render or the live preview is slow, run `render.mjs --profile`: it prints the slowest frames by timecode. What to do about them, with measured costs, is in 13-performance.md.

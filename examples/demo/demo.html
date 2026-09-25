@@ -93,6 +93,7 @@ const fmtTime = s => { const m = Math.floor(s / 60), r = s - m * 60; return `${m
 
 // --- buffers and brush state -------------------------------------------------
 function buf(w = W, h = H) { const c = new OffscreenCanvas(w, h); return { c, x: c.getContext('2d') }; }
+const halfB = buf(W / 2, H / 2);
 const A = buf(), B = buf(), termB = buf(), vizB = buf(), palA = buf(), palB = buf(), finB = buf(), thumbB = buf();
 function reset(c) {
   c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
@@ -102,16 +103,22 @@ function reset(c) {
 }
 function zoomAt(c, s, cx, cy) { c.translate(cx, cy); c.scale(s, s); c.translate(-cx, -cy); }
 
+// A halo: solid under the disc it sits behind, then a short falloff, like shadowBlur around a shape.
+function makeHaloSprite(r, rgb) {
+  const c = new OffscreenCanvas(r * 2, r * 2), x = c.getContext('2d'), g = x.createRadialGradient(r, r, 0, r, r, r);
+  g.addColorStop(0, `rgba(${rgb},1)`); g.addColorStop(.66, `rgba(${rgb},.85)`); g.addColorStop(.8, `rgba(${rgb},.3)`); g.addColorStop(1, `rgba(${rgb},0)`);
+  x.fillStyle = g; x.fillRect(0, 0, r * 2, r * 2); return c.transferToImageBitmap();
+}
 function makeGlowSprite(r, rgb, mid = .35) {
   const c = new OffscreenCanvas(r * 2, r * 2), x = c.getContext('2d');
   const g = x.createRadialGradient(r, r, 0, r, r, r);
   g.addColorStop(0, `rgba(${rgb},1)`); g.addColorStop(mid, `rgba(${rgb},.35)`); g.addColorStop(1, `rgba(${rgb},0)`);
-  x.fillStyle = g; x.fillRect(0, 0, r * 2, r * 2); return c;
+  x.fillStyle = g; x.fillRect(0, 0, r * 2, r * 2); return c.transferToImageBitmap();
 }
 const grainTiles = Array.from({ length: 8 }, (_, k) => {
   const c = new OffscreenCanvas(256, 256), x = c.getContext('2d'), img = x.createImageData(256, 256), r = mulberry32(100 + k);
   for (let i = 0; i < img.data.length; i += 4) { const v = r() * 255; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
-  x.putImageData(img, 0, 0); return c;
+  x.putImageData(img, 0, 0); return c.transferToImageBitmap();
 });
 function grain(c, t, amount = .06) {
   const tile = grainTiles[Math.floor(t * 24) % grainTiles.length];
@@ -131,17 +138,44 @@ function prefixes(c, text) {
   if (!v) { v = []; for (let i = 0; i <= text.length; i++) v.push(c.measureText(text.slice(0, i)).width); _pref.set(k, v); }
   return v;
 }
+// Glyph sprites for the blurred reveal. ctx.filter on each fillText costs ~0.7 ms per letter at 1080p,
+// ~60x a drawImage of a pre-blurred sprite (13-performance.md). A sprite is rendered once per
+// (font, char, color, blur level, glow). The key is the look of the glyph, never the time,
+// so frames rendered in any order by parallel workers come out the same.
+const _glyphs = new Map();
+const BLUR_LEVELS = [0, .75, 1.5, 2.5, 4, 6, 9, 13, 18];
+const blurLevel = b => BLUR_LEVELS.reduce((best, v) => Math.abs(v - b) < Math.abs(best - b) ? v : best, 0);
+function glyph(font, ch, color, blur = 0, glow = null) {
+  const key = `${font}|${ch}|${color}|${blur}|${glow ? glow.color + glow.blur : ''}`;
+  let g = _glyphs.get(key);
+  if (!g) {
+    const m = new OffscreenCanvas(1, 1).getContext('2d'); m.font = font;
+    const mt = m.measureText(ch), asc = Math.ceil(mt.fontBoundingBoxAscent), desc = Math.ceil(mt.fontBoundingBoxDescent);
+    const pad = Math.ceil(blur * 2.5 + (glow ? glow.blur * 1.5 : 0)) + 2;
+    const cvs = new OffscreenCanvas(Math.ceil(mt.width) + pad * 2, asc + desc + pad * 2), x = cvs.getContext('2d');
+    x.font = font; x.fillStyle = color;
+    if (blur) x.filter = `blur(${blur}px)`;
+    if (glow) { x.shadowColor = glow.color; x.shadowBlur = glow.blur; }
+    x.fillText(ch, pad, pad + asc);
+    g = { cvs: cvs.transferToImageBitmap(), dx: pad, dy: pad + asc }; _glyphs.set(key, g);
+  }
+  return g;
+}
+function drawGlyph(c, font, ch, x, y, color, blur = 0, glow = null) {
+  const g = glyph(font, ch, color, blur, glow); c.drawImage(g.cvs, x - g.dx, y - g.dy);
+}
 function revealText(c, text, x, y, t, t0, o = {}) {
   const per = o.per ?? .04, dur = o.dur ?? .6, rise = o.rise ?? 30, blur = o.blur ?? 12;
   const px = prefixes(c, text), w = px[text.length], x0 = o.align === 'center' ? x - w / 2 : x;
+  const a0 = c.globalAlpha;
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]; if (ch === ' ') continue;
     const p = ease.outExpo(seg(t, t0 + i * per, t0 + i * per + dur)); if (p <= 0) continue;
-    c.save(); c.globalAlpha *= p;
-    if (blur && p < .99) c.filter = `blur(${((1 - p) * blur).toFixed(2)}px)`;
-    if (o.color) c.fillStyle = typeof o.color === 'function' ? o.color(i, x0 + px[i]) : o.color;
-    c.fillText(ch, x0 + px[i], y + (1 - p) * rise); c.restore();
+    const col = typeof o.color === 'function' ? o.color(i, x0 + px[i]) : (o.color ?? c.fillStyle);
+    c.globalAlpha = a0 * p;
+    drawGlyph(c, c.font, ch, x0 + px[i], y + (1 - p) * rise, col, blurLevel((1 - p) * blur), o.glow);
   }
+  c.globalAlpha = a0;
   return w;
 }
 function maskText(c, text, x, y, t, t0, size, o = {}) {
@@ -425,12 +459,13 @@ function initSprites() {
   SPR.white = makeGlowSprite(64, '255,255,255', .3);
   SPR.warm = makeGlowSprite(128, '255,170,90', .25);
   SPR.pink = makeGlowSprite(64, '255,61,127', .3);
+  SPR.phosHalo = makeHaloSprite(128, '80,255,80');
   const s = new OffscreenCanvas(128, 128), x = s.getContext('2d');
   const g = x.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, 'rgba(70,64,58,.55)'); g.addColorStop(1, 'rgba(70,64,58,0)');
-  x.fillStyle = g; x.fillRect(0, 0, 128, 128); SPR.smoke = s;
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128); SPR.smoke = s.transferToImageBitmap();
   const bk = new OffscreenCanvas(128, 128), bx = bk.getContext('2d');
   const g2 = bx.createRadialGradient(64, 64, 40, 64, 64, 62); g2.addColorStop(0, 'rgba(255,150,70,.5)'); g2.addColorStop(.85, 'rgba(255,170,90,.8)'); g2.addColorStop(1, 'rgba(255,170,90,0)');
-  bx.fillStyle = g2; bx.beginPath(); bx.arc(64, 64, 62, 0, TAU); bx.fill(); SPR.bokeh = bk;
+  bx.fillStyle = g2; bx.beginPath(); bx.arc(64, 64, 62, 0, TAU); bx.fill(); SPR.bokeh = bk.transferToImageBitmap();
 }
 function cyc(p, t) { const x = (t + p.off) / p.life; const cycle = Math.floor(x); return { age: x - cycle, cycle, tt: (x - cycle) * p.life }; }
 function drawFire(c, t) {
@@ -528,13 +563,13 @@ function drawFire(c, t) {
   const out = 1 - seg(t, 9.3, 9.6);
   if (out > 0) {
     c.save(); c.globalAlpha = out;
-    c.shadowColor = 'rgba(0,0,0,.5)'; c.shadowBlur = 20;
     const lit = (i, x) => mix('#a88b62', '#ffe7bb', clamp((x - 150) / 950));
+    const shade = { color: 'rgba(0,0,0,.5)', blur: 20 };
     c.font = `500 54px ${F.serif}`; c.letterSpacing = '14px';
-    revealText(c, 'NO PIXELS WERE', 152, 440, t, 5.5, { per: .045, dur: .8, blur: 14, color: lit });
+    revealText(c, 'NO PIXELS WERE', 152, 440, t, 5.5, { per: .045, dur: .8, blur: 14, color: lit, glow: shade });
     c.font = `700 124px ${F.serif}`; c.letterSpacing = '4px';
-    revealText(c, 'GENERATED.', 144, 578, t, 6.15, { per: .06, dur: .9, blur: 18, rise: 40, color: lit });
-    c.shadowBlur = 0; c.letterSpacing = '4px';
+    revealText(c, 'GENERATED.', 144, 578, t, 6.15, { per: .06, dur: .9, blur: 18, rise: 40, color: lit, glow: shade });
+    c.letterSpacing = '4px';
     c.font = `400 22px ${F.sans}`; c.fillStyle = '#b88a4a'; c.globalAlpha = out * ease.outCubic(seg(t, 7.3, 8.0));
     c.fillText('CANVAS 2D  ·  650 STATELESS PARTICLES  ·  ADDITIVE SPRITES  ·  SEEDED NOISE', 152, 648);
     c.restore();
@@ -833,6 +868,8 @@ for (let i = 0; i < 4; i++) PAL_FRAMES.push({ s: i, start: 22 + i * .5, end: 22.
 for (let i = 4; i < 12; i++) PAL_FRAMES.push({ s: i, start: 24 + (i - 4) * .25, end: 24.25 + (i - 4) * .25 });
 for (let i = 0; i < 12; i++) PAL_FRAMES.push({ s: i, start: 26 + i * .125, end: 26.125 + i * .125 });
 const pixB = buf(192, 108);
+// A soft glow behind a shape: one pre-rendered sprite instead of shadowBlur on every draw.
+function glowAt(c, spr, x, y, r, a = 1) { const g = c.globalAlpha; c.globalAlpha = g * a; c.drawImage(spr, x - r, y - r, r * 2, r * 2); c.globalAlpha = g; }
 function sunDisc(c, S, fill) { c.fillStyle = fill; c.beginPath(); c.arc(S.sx, S.sy, S.r, 0, TAU); c.fill(); }
 function ridge(c, base, amp, freq, seed, t, drift, col) {
   c.fillStyle = col; c.beginPath(); c.moveTo(-60, H + 60);
@@ -928,11 +965,11 @@ const PAL = [
   } },
   { name: 'Phosphor', font: `700 96px ${F.mono}`, ink: '#b6ffb6', glow: '#1f7a1f', draw(c, t, S) {
     c.fillStyle = '#020402'; c.fillRect(-60, -60, W + 120, H + 120);
-    c.save(); c.shadowColor = 'rgba(80,255,80,.8)'; c.shadowBlur = 24;
+    glowAt(c, SPR.phosHalo, S.sx, S.sy, S.r * 1.25, .35);
+    // one halo sprite instead of shadowBlur on each of ~50 bars
     for (let y = S.sy - S.r; y < S.sy + S.r; y += 7) { const hw = Math.sqrt(Math.max(0, S.r * S.r - (y - S.sy) ** 2)); c.fillStyle = Math.abs(y - S.sy) < S.r * .5 ? '#b6ffb6' : '#1f7a1f'; c.fillRect(S.sx - hw, y, hw * 2, 3); }
-    c.restore();
     c.strokeStyle = '#1f7a1f'; c.lineWidth = 2; c.setLineDash([14, 12]); c.beginPath(); c.moveTo(0, S.hy); c.lineTo(W, S.hy); c.stroke(); c.setLineDash([]);
-    for (let k = -12; k <= 12; k++) { c.beginPath(); c.moveTo(W / 2 + k * 40, S.hy); c.lineTo(W / 2 + k * 260, H); c.stroke(); }
+    c.beginPath(); for (let k = -12; k <= 12; k++) { c.moveTo(W / 2 + k * 40, S.hy); c.lineTo(W / 2 + k * 260, H); } c.stroke();
     c.fillStyle = 'rgba(0,0,0,.25)'; for (let y = 0; y < H; y += 4) c.fillRect(0, y, W, 2);
   } },
   { name: 'Pixel art', font: `400 92px ${F.pixel}`, ink: '#FFF1E8', hard: '#000', draw(c, t, S) {
@@ -977,9 +1014,12 @@ const PAL = [
     sunDisc(c, S, sg); c.restore();
     c.fillStyle = '#2a0f52'; for (let k = 0; k < 7; k++) c.fillRect(S.sx - S.r, S.sy + 10 + k * 26, S.r * 2, 3 + k * 2.2);
     c.fillStyle = '#0d0221'; c.fillRect(-60, S.hy, W + 120, H);
-    c.save(); c.strokeStyle = '#ff2975'; c.lineWidth = 2.5; c.shadowColor = '#ff2975'; c.shadowBlur = 14;
-    for (let k = -20; k <= 20; k++) { c.beginPath(); c.moveTo(W / 2 + k * 30, S.hy); c.lineTo(W / 2 + k * 260, H + 20); c.stroke(); }
-    for (let k = 0; k < 14; k++) { const z = ((k + (t * 2) % 1) / 14), y = S.hy + (H - S.hy) * z * z; c.globalAlpha = z; c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
+    c.save(); c.strokeStyle = '#ff2975';
+    const rays = new Path2D(); for (let k = -20; k <= 20; k++) { rays.moveTo(W / 2 + k * 30, S.hy); rays.lineTo(W / 2 + k * 260, H + 20); }
+    // shadowBlur on each of these ~55 strokes costs ~12 ms a frame; a wide faint stroke under a thin one ~0.3 ms
+    const glowLine = (path, a) => { c.globalAlpha = a * .22; c.lineWidth = 10; c.stroke(path); c.globalAlpha = a; c.lineWidth = 2.5; c.stroke(path); };
+    glowLine(rays, 1);
+    for (let k = 0; k < 14; k++) { const z = ((k + (t * 2) % 1) / 14), y = S.hy + (H - S.hy) * z * z, ln = new Path2D(); ln.moveTo(0, y); ln.lineTo(W, y); glowLine(ln, z); }
     c.restore();
     c.strokeStyle = '#ff2975'; c.lineWidth = 3; c.beginPath(); c.moveTo(0, S.hy); c.lineTo(W, S.hy); c.stroke();
   } },
@@ -1516,14 +1556,16 @@ const TR = {
   },
   burn(c, a, b, p) { c.drawImage(burnGL(a, b, p), 0, 0); },
   whip(c, a, b, p, o) {
-    const d = o.dir || 1, e = ease.inOutExpo(p), n = 10;
-    c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+    // 10 samples x 2 scenes = 20 full-frame composites; composited at half size they take ~30% less.
+    // The result is motion-blurred anyway, so the resolution loss does not show.
+    const d = o.dir || 1, e = ease.inOutExpo(p), n = 10, h = halfB.x, w2 = W / 2, h2 = H / 2;
+    reset(h); h.fillStyle = '#000'; h.fillRect(0, 0, w2, h2);
     const blur = Math.sin(p * Math.PI);
     for (let i = 0; i < n; i++) {
       const k = e + (i / n - .5) * .25 * blur;
-      c.globalAlpha = 1 / n * 1.6; c.drawImage(a, -d * k * W, 0); c.drawImage(b, d * (1 - k) * W, 0);
+      h.globalAlpha = 1 / n * 1.6; h.drawImage(a, -d * k * w2, 0, w2, h2); h.drawImage(b, d * (1 - k) * w2, 0, w2, h2);
     }
-    c.globalAlpha = 1;
+    c.drawImage(halfB.c, 0, 0, W, H);
   },
   wipe(c, a, b, p, o = {}) {
     const e = ease.inOutCubic(p), ang = .35, feather = 160;

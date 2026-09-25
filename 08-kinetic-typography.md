@@ -25,19 +25,33 @@ Measuring character by character breaks kerning. For large titles, measure prefi
 ## Techniques
 
 **Character-by-character reveal with blur**
+
+Do not set `ctx.filter = 'blur()'` per letter: each call costs ~0.7 ms at 1080p, 60 times a `drawImage` (13-performance.md). Render each blurred glyph once into a sprite, cache a few blur levels, and draw the nearest one.
+
 ```js
-function revealText(ctx, text, font, cx, cy, t, t0, per = .04, dur = .6){
-  const L = layoutLine(ctx, text, font, 4); ctx.font = font; ctx.textBaseline = 'middle';
+const BLUR_LEVELS = [0, .75, 1.5, 2.5, 4, 6, 9, 13, 18], glyphs = new Map();
+const nearestBlur = b => BLUR_LEVELS.reduce((best, v) => Math.abs(v - b) < Math.abs(best - b) ? v : best, 0);
+function glyph(font, ch, color, blur){            // the key is the look, never the time
+  const key = `${font}|${ch}|${color}|${blur}`;
+  if (!glyphs.has(key)) {
+    const m = new OffscreenCanvas(1, 1).getContext('2d'); m.font = font;
+    const mt = m.measureText(ch), asc = Math.ceil(mt.fontBoundingBoxAscent), pad = Math.ceil(blur * 2.5) + 2;
+    const c = new OffscreenCanvas(Math.ceil(mt.width) + pad * 2, asc + Math.ceil(mt.fontBoundingBoxDescent) + pad * 2), x = c.getContext('2d');
+    x.font = font; x.fillStyle = color; if (blur) x.filter = `blur(${blur}px)`; x.fillText(ch, pad, pad + asc);
+    glyphs.set(key, { img: c, dx: pad, dy: pad + asc });
+  }
+  return glyphs.get(key);
+}
+function revealText(ctx, text, font, color, cx, baseline, t, t0, per = .04, dur = .6){
+  const L = layoutLine(ctx, text, font, 4);
   L.chars.forEach((c, i) => {
     const p = ease.outExpo(seg(t, t0 + i * per, t0 + i * per + dur));
-    if (p <= 0) return;
-    ctx.save();
+    if (p <= 0 || c.ch === ' ') return;
+    const g = glyph(font, c.ch, color, nearestBlur((1 - p) * 12));
     ctx.globalAlpha = p;
-    ctx.filter = `blur(${(1 - p) * 12}px)`;
-    ctx.translate(cx - L.width / 2 + c.x, cy + (1 - p) * 30);
-    ctx.fillText(c.ch, 0, 0);
-    ctx.restore();
+    ctx.drawImage(g.img, cx - L.width / 2 + c.x - g.dx, baseline + (1 - p) * 30 - g.dy);
   });
+  ctx.globalAlpha = 1;
 }
 ```
 

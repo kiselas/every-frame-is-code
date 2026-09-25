@@ -85,9 +85,12 @@ In a plain chat, attach `00-agent-brief.md` and one or two topic files.
 ```bash
 cd render && npm install
 node render.mjs ../film.html ../film.mp4              # the whole film with sound
-node render.mjs ../film.html ../part.mp4 --from 20 --to 35
+node render.mjs ../film.html ../part.mp4 --from 20 --to 35 --draft   # quick preview of a fragment
+node render.mjs ../film.html ../film.mp4 --profile    # where the time goes, by timecode
 ./contact-sheet.sh ../film.mp4 ../sheet.png           # 2 frames per second on one image
 ```
+
+Frames are captured over CDP and rendered by several browsers in parallel: the 60 s demo renders in about 3 minutes on a laptop, and a draft of a fragment in seconds. What makes a page fast or slow to render is measured in [13-performance.md](13-performance.md).
 
 Requires Node 18+, Google Chrome and ffmpeg. The page must expose `window.__meta`, `window.__draw(t)` and `window.__ready`; details in [01-pipeline.md](01-pipeline.md) and [render/README.md](render/README.md).
 
@@ -114,6 +117,7 @@ node render.mjs ../examples/demo/demo.html ../examples/demo/demo.mp4
 | [10-games-juice.md](10-games-juice.md) | Game feel: controls, hitstop, screen shake, camera |
 | [11-threejs.md](11-threejs.md) | 3D: lighting, post-processing, shader particles |
 | [12-render-qa.md](12-render-qa.md) | Rendering, contact sheets, review checklist |
+| [13-performance.md](13-performance.md) | Fast pages and fast renders: measured costs of canvas operations, render pipeline, profiling |
 | [render/](render/) | Render scripts (Node + Playwright + ffmpeg) |
 | [examples/demo/](examples/demo/) | Demo film: script and source |
 | [scripts/pack-skill.sh](scripts/pack-skill.sh) | Builds `motion-kit.zip` for ChatGPT and Claude.ai. Releases build it automatically: just push a `vX.Y.Z` tag |
