@@ -1,0 +1,13 @@
+{
+  "name": "motion-kit-render",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Frame-by-frame renderer for code-drawn animations",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.45.0"
+  }
+}
