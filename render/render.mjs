@@ -1,8 +1,8 @@
-// Покадровый рендер HTML-анимации в MP4.
-// Использование: node render.mjs <input.html> [out.mp4] [--from 0] [--to DURATION] [--voice voice.wav]
-// Страница должна выставлять window.__meta = {W,H,FPS,DURATION}, window.__draw(t), window.__ready = true.
-// Необязательно: window.__renderAudio() -> base64 WAV.
-// Chrome: по умолчанию установленный Google Chrome; другой путь через CHROME_PATH.
+// Frame-by-frame render of an HTML animation to MP4.
+// Usage: node render.mjs <input.html> [out.mp4] [--from 0] [--to DURATION] [--voice voice.wav]
+// The page must expose window.__meta = {W,H,FPS,DURATION}, window.__draw(t), window.__ready = true.
+// Optional: window.__renderAudio() -> base64 WAV.
+// Chrome: the installed Google Chrome by default; set CHROME_PATH for another binary.
 
 import { chromium } from 'playwright-core';
 import { spawn } from 'node:child_process';
@@ -32,7 +32,7 @@ const { W, H, FPS, DURATION } = await page.evaluate(() => window.__meta);
 await page.setViewportSize({ width: W, height: H });
 const to = toArg ? parseFloat(toArg) : DURATION;
 
-// звук
+// audio
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mk-'));
 const audioInputs = [];
 const hasAudio = await page.evaluate(() => typeof window.__renderAudio === 'function');

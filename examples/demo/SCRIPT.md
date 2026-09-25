@@ -1,121 +1,121 @@
-# Демо motion-kit: сценарий ролика на 60 секунд
+# motion-kit demo: 60-second film script
 
-Ролик рассказывает о репозитории средствами самого репозитория. Каждая глава показывает одну возможность и одновременно меняет стиль, так что за минуту зритель видит весь набор: фосфорный терминал, огонь, гравюру, 3D, палитры, пиксельную игру, каталог переходов, звук и контроль качества.
+The film tells the story of the repo using the repo's own tools. Each chapter shows one capability and simultaneously changes style, so in one minute the viewer sees the whole set: a phosphor terminal, fire, an engraving, 3D, palettes, a pixel-art game, a catalog of transitions, sound, and quality control.
 
-## Паспорт
+## Specs
 
-| Параметр | Значение |
+| Parameter | Value |
 |---|---|
-| Длина | 60 с |
-| Формат | 1920×1080, 60 fps (черновики 30 fps) |
-| Темп | 120 BPM: доля 0.5 с, такт 2 с, всего 30 тактов |
-| Язык титров | английский (для GitHub), русская версия заменой строк в `captions` |
-| Идея | «Every frame is code»: ни одного пикселя не сгенерировано, всё нарисовано программой |
-| Сквозной мотив | мигающий курсор `▍`. Он открывает ролик, превращается в искру, прячется в каждой сцене (точка на гравюре, ядро сферы, пиксель игры) и закрывает ролик |
+| Length | 60 s |
+| Format | 1920×1080, 60 fps (drafts at 30 fps) |
+| Tempo | 120 BPM: beat 0.5 s, bar 2 s, 30 bars total |
+| Caption language | captions are in English (a localized version only needs new strings in `captions`) |
+| Concept | "Every frame is code": not a single pixel is generated, everything is drawn by the program |
+| Recurring motif | a blinking cursor `▍`. It opens the film, turns into a spark, hides in every scene (a dot in the engraving, the sphere's core, a pixel in the game), and closes the film |
 
-## Музыкальная форма
+## Musical form
 
-| Такты | Время | Секция | Что звучит |
+| Bars | Time | Section | What plays |
 |---|---|---|---|
-| 1–2 | 0:00–0:04 | intro | тишина, щелчки клавиш, низкий гул |
-| 3–8 | 0:04–0:16 | build A | пэд, бочка на каждую долю с такта 5 |
-| 9–11 | 0:16–0:22 | build B | добавляются хэты восьмыми, фильтр пэда раскрывается |
-| 12–14 | 0:22–0:28 | montage | плотный ритм, райзер на такте 14 |
-| 14 (конец) | 0:27.5–0:28.5 | break | полная тишина 1 с |
-| 15–19 | 0:28.5–0:38 | drop | impact на 0:28.5, бочка, бас, звуки игры в сетку |
-| 20–23 | 0:38–0:46 | groove | ритм держится, каждый переход со своим звуком |
-| 24–26 | 0:46–0:52 | reveal | ритм становится видимым, пульсы звука совпадают с графикой |
-| 27–30 | 0:52–1:00 | outro | ударные уходят, пэд тянется через финальный титр (L-cut) |
+| 1–2 | 0:00–0:04 | intro | silence, keystroke clicks, a low hum |
+| 3–8 | 0:04–0:16 | build A | pad, kick on every beat starting at bar 5 |
+| 9–11 | 0:16–0:22 | build B | eighth-note hi-hats come in, the pad filter opens up |
+| 12–14 | 0:22–0:28 | montage | dense rhythm, riser on bar 14 |
+| 14 (end) | 0:27.5–0:28.5 | break | 1 s of complete silence |
+| 15–19 | 0:28.5–0:38 | drop | impact at 0:28.5, kick, bass, game sounds locked to the grid |
+| 20–23 | 0:38–0:46 | groove | the rhythm holds, every transition has its own sound |
+| 24–26 | 0:46–0:52 | reveal | the rhythm becomes visible, sound pulses line up with the graphics |
+| 27–30 | 0:52–1:00 | outro | the drums drop out, the pad sustains through the final title (L-cut) |
 
-## Шоты
+## Shots
 
-### 1. Терминал (0:00–0:04) · 00, 01, 08
+### 1. Terminal (0:00–0:04) · 00, 01, 08
 
-Стиль «Фосфор»: #020402 фон, #1f7a1f и #b6ffb6 текст, белый для горячих символов. Сканлайны, лёгкая бочкообразная дисторсия, свечение текста в два слоя.
+Phosphor style: #020402 background, #1f7a1f and #b6ffb6 text, white for hot characters. Scanlines, slight barrel distortion, two-layer text glow.
 
-Чёрный экран, курсор мигает ровно два раза (две доли). Печатается строка `function draw(ctx, t) {` со звуком клавиш, каждый символ со вспышкой. Под ней появляется `// every frame is code`. Крупность: деталь, медленный наезд 4%.
+Black screen, the cursor blinks exactly twice (two beats). The line `function draw(ctx, t) {` types out with keystroke sound, each character with a flash. `// every frame is code` appears below it. Framing: close-up, slow 4% push-in.
 
-Переход: символы кода рассыпаются в частицы (сэмплинг пикселей текста), частицы стягиваются в одну точку на месте курсора. Точка вспыхивает и становится искрой.
+Transition: the code characters break apart into particles (sampled from the text's pixels), the particles converge into a single point at the cursor's position. The point flares and becomes a spark.
 
-### 2. Огонь (0:04–0:10) · 07, 08
+### 2. Fire (0:04–0:10) · 07, 08
 
-Стиль «Диафильм»: #1c1a17, тёплая рампа огня от #fff6d5 до #4a1208. Зерно 6%, виньетка.
+Filmstrip style: #1c1a17, a warm fire ramp from #fff6d5 to #4a1208. 6% film grain, vignette.
 
-Искра падает, разгорается в пламя (система частиц со спрайтами, аддитивное смешивание), слой искр уходит вверх по шуму. Камера tilt вверх вслед за искрами. Титр по буквам с размытием, засечный шрифт (Cinzel): **NO PIXELS WERE GENERATED.** Ключевое слово не выделяем цветом, оно стоит отдельной строкой крупнее.
+The spark falls and ignites into a flame (a sprite-based particle system, additive blending), a layer of embers drifts upward on noise. The camera tilts up, following the embers. Title types in letter by letter with blur, serif typeface (Cinzel): **NO PIXELS WERE GENERATED.** The key word isn't highlighted with color; it sits on its own line, larger.
 
-Переход: zoom-through в самое яркое место пламени на 0:10, белая вспышка на сильную долю такта 6.
+Transition: zoom-through into the brightest point of the flame at 0:10, a white flash on the strong beat of bar 6.
 
-### 3. Гравюра (0:10–0:16) · 03, 07, 04
+### 3. Engraving (0:10–0:16) · 03, 07, 04
 
-Стиль «Гравюра»: #efe6d2 бумага, #3b3226 тушь, #9e2b25 один акцент. Штриховка вместо градиентов, line boil 10 раз в секунду.
+Engraving style: #efe6d2 paper, #3b3226 ink, #9e2b25 as the single accent. Hatching instead of gradients, line boil at 10 times per second.
 
-Из белой вспышки проявляется бумага. Одна линия рисует астролябию (lineDash-анимация), кольца докручиваются со stagger и spring. В центре красная точка, это курсор. Демонстрация детерминизма: кадр «перематывается» назад на полсекунды и проигрывается снова, линии дрожат идентично. Титр в нижней трети гротеском: **Seeded. Deterministic. Frame-exact.**
+The paper emerges out of the white flash. A single line draws an astrolabe (lineDash animation), the rings finish turning with stagger and a spring. A red dot at the center is the cursor. A demonstration of determinism: the frame "rewinds" half a second and plays again, and the lines wobble identically. Lower-third title in a sans-serif: **Seeded. Deterministic. Frame-exact.**
 
-Переход: match cut по форме. Внешнее кольцо астролябии совпадает по размеру и позиции с контуром сферы в следующем шоте.
+Transition: a match cut on shape. The astrolabe's outer ring matches the size and position of the sphere's outline in the next shot.
 
-### 4. 3D-сфера (0:16–0:22) · 11, 07
+### 4. 3D sphere (0:16–0:22) · 11, 07
 
-Стиль «Чертёж» в объёме: #1d3557 фон, #e8f1f7 линии, #f4a261 ядро. Three.js, ACES, UnrealBloomPass, туман, узкое фокусное (fov 30).
+Blueprint style in 3D: #1d3557 background, #e8f1f7 lines, #f4a261 core. Three.js, ACES, UnrealBloomPass, fog, narrow field of view (fov 30).
 
-Каркасная сфера из линий чертежа, внутри горячее ядро (бывший курсор). Камера облетает по сплайну на inOutCubic. Вокруг 20 000 частиц на шейдере медленно закручиваются в диск. На каждую долю ядро пульсирует. Титр: **3D when you need it.**
+A wireframe sphere made of blueprint lines, with a hot core inside (the former cursor). The camera orbits along a spline with inOutCubic easing. Around it, 20,000 shader-driven particles slowly spiral into a disk. The core pulses on every beat. Title: **3D when you need it.**
 
-Переход: burn dissolve (GLSL) с оранжевой кромкой, которая на такте 11 прожигает кадр в следующую сцену.
+Transition: a burn dissolve (GLSL) with an orange edge that burns through the frame into the next scene on bar 11.
 
-### 5. Монтаж палитр (0:22–0:28) · 03, 06
+### 5. Palette montage (0:22–0:28) · 03, 06
 
-Смена стилей на бит с ускорением: первые 4 кадра по одной доле (0.5 с), следующие 8 по половине доли (0.25 с). В каждом кадре одна и та же композиция (круг, горизонт, одна строка текста), чтобы менялся именно стиль, а не содержание: Швейцарский плакат, Лесной туман, Ночной город, Чертёж, затем быстрее Гравюра, Диафильм, Фосфор, пиксель-арт, акварель, ASCII, неон, дуотон. Внизу маленькой строкой название палитры.
+Styles change on the beat, accelerating: the first 4 frames at one beat each (0.5 s), the next 8 at half a beat each (0.25 s). Every frame keeps the same composition (a circle, a horizon, one line of text), so only the style changes, not the content: Swiss poster, Forest fog, Night city, Blueprint, then faster: Engraving, Filmstrip, Phosphor, pixel art, watercolor, ASCII, neon, duotone. The palette name appears in a small line at the bottom.
 
-Райзер нарастает, последние два кадра разрываются glitch-переходом.
+The riser builds, and the last two frames tear apart with a glitch transition.
 
-### 6. Пауза (0:27.5–0:28.5) · 06
+### 6. Pause (0:27.5–0:28.5) · 06
 
-Тишина, чёрный экран, мигает только курсор. Один раз. Это самый важный кадр для пика: зритель задерживает дыхание.
+Silence, a black screen, only the cursor blinks. Once. This is the most important frame for the peak: the viewer holds their breath.
 
-### 7. Игра (0:28.5–0:38) · 10, 04
+### 7. Game (0:28.5–0:38) · 10, 04
 
-Стиль «Пиксель»: внутреннее разрешение 128×72, палитра на 16 цветов, масштаб с `image-rendering: pixelated`. Курсор становится пиксельным персонажем.
+Pixel style: internal resolution 128×72, a 16-color palette, scaled with `image-rendering: pixelated`. The cursor becomes a pixel-art character.
 
-Impact на 0:28.5 совпадает с приземлением героя: squash, пыль, тряска по травме. Дальше короткий геймплей, каждое действие на долю: разбег, прыжок со stretch, удар по врагу (хитстоп 80 мс, белая вспышка, частицы по пиксельной сетке), подбор монеты (летит к счётчику, счётчик прыгает на spring). На пике враг разлетается осколками, замедление через speed ramp на 0:35, затем резкое ускорение. Титр крупным пиксельным шрифтом на удар: **JUICE.**
+The impact at 0:28.5 lines up with the hero's landing: squash, dust, trauma-based screen shake. Then a short gameplay beat, one action per beat: a run-up, a jump with stretch, a hit on an enemy (80 ms hitstop, white flash, particles snapped to the pixel grid), a coin pickup (flies to the counter, the counter bounces on a spring). At the peak the enemy breaks into debris, a speed ramp slows time at 0:35, then snaps back to full speed. Title in a large pixel font on the hit: **JUICE.**
 
-Переход: whip pan вправо на 0:38, персонаж «выбегает» в следующий кадр.
+Transition: a whip pan to the right at 0:38, the character "runs out" into the next frame.
 
-### 8. Каталог переходов (0:38–0:46) · 05
+### 8. Transition catalog (0:38–0:46) · 05
 
-Стиль «Швейцарский плакат»: #f2f0eb, #111111, #e3242b, строгая сетка, гротеск.
+Swiss poster style: #f2f0eb, #111111, #e3242b, a strict grid, sans-serif type.
 
-Экран делится на сетку 2×2, в каждой ячейке по кругу играет свой переход между двумя простыми сценами (круг и квадрат): iris, push, luma-вайп, волновая дисторсия. На такте 22 сетка схлопывается обратно в один кадр через push, и на весь экран идёт мягкий вайп под углом. Рядом с каждой ячейкой подпись типа перехода. Титр: **Transitions are data.**
+The screen splits into a 2x2 grid; each cell loops its own transition between two simple scenes (a circle and a square): iris, push, a luma wipe, wave distortion. On bar 22 the grid collapses back into a single frame via a push, and a soft angled wipe covers the whole screen. Each cell is labeled with its transition type. Title: **Transitions are data.**
 
-Переход: мягкий вайп открывает следующую сцену.
+Transition: a soft wipe reveals the next scene.
 
-### 9. Звук и QA (0:46–0:52) · 09, 12
+### 9. Sound and QA (0:46–0:52) · 09, 12
 
-Стиль «Ночной город»: #0b0d17, #4a4e8c, #ff3d7f акцент.
+Night city style: #0b0d17, #4a4e8c, #ff3d7f accent.
 
-Звук становится видимым: бочка это расходящееся кольцо, хэты это короткие штрихи на горизонтальной шкале, пэд это медленная волна внизу. Всё строго синхронно, потому что читает один массив `events`. Затем кадр уменьшается и становится одной ячейкой контакт-листа, рядом появляются остальные кадры ролика с таймкодами. На двух ячейках отрисовываются красные рамки «проверка»: так агент находит проблемные кадры. Титр: **Rendered frame by frame. Checked like a director.**
+Sound becomes visible: the kick is an expanding ring, the hi-hats are short marks on a horizontal scale, the pad is a slow wave at the bottom. Everything stays perfectly in sync because it all reads from one `events` array. Then the frame shrinks down into a single contact-sheet cell, and the film's other frames appear next to it with timecodes. Two cells get red "review" frames drawn on them: this is how the agent spots problem frames. Title: **Rendered frame by frame. Checked like a director.**
 
-Переход: pull-out. Контакт-лист продолжает отъезжать, ячейки становятся точками.
+Transition: a pull-out. The contact sheet keeps zooming out, and the cells shrink into dots.
 
-### 10. Финал (0:52–1:00) · 06, 08
+### 10. Finale (0:52–1:00) · 06, 08
 
-Стиль возвращается к «Фосфору» из первого шота, круг замыкается.
+The style returns to the Phosphor look from the first shot; the circle closes.
 
-Все точки-ячейки стягиваются в одну, это курсор. Печатается `motion-kit`, под ним `github.com/kiselas/every-frame-is-code`. Мерцание сканлайнов затухает. Пэд тянется ещё две секунды после исчезновения картинки (L-cut), курсор мигает последним.
+All the dot-cells converge into one: the cursor. `motion-kit` types out, with `github.com/kiselas/every-frame-is-code` below it. The scanline flicker fades out. The pad sustains for two more seconds after the picture disappears (L-cut), and the cursor is the last thing to blink.
 
-## Сводка переходов
+## Transition summary
 
-| Время | Из | В | Тип | Смысл |
+| Time | From | To | Type | Meaning |
 |---|---|---|---|---|
-| 0:04 | терминал | огонь | текст в частицы, частицы в искру | код становится изображением |
-| 0:10 | огонь | гравюра | zoom-through + вспышка белым | погружение в деталь |
-| 0:16 | гравюра | сфера | match cut по кругу | та же форма, новое измерение |
-| 0:22 | сфера | палитры | burn dissolve | прожечь в следующую главу |
-| 0:22–0:28 | палитры | палитры | резы на бит, glitch в конце | ускорение к пику |
-| 0:28.5 | пауза | игра | smash cut на impact | контраст тишины и удара |
-| 0:38 | игра | каталог | whip pan | энергия, персонаж уводит камеру |
-| 0:46 | каталог | звук | мягкий вайп | спокойствие после показа |
-| 0:52 | контакт-лист | финал | pull-out до точки | всё возвращается в курсор |
+| 0:04 | terminal | fire | text into particles, particles into a spark | code becomes an image |
+| 0:10 | fire | engraving | zoom-through + white flash | diving into detail |
+| 0:16 | engraving | sphere | match cut on a circle | same shape, new dimension |
+| 0:22 | sphere | palettes | burn dissolve | burning into the next chapter |
+| 0:22–0:28 | palettes | palettes | cuts on the beat, glitch at the end | accelerating toward the peak |
+| 0:28.5 | pause | game | smash cut on the impact | contrast between silence and impact |
+| 0:38 | game | catalog | whip pan | energy, the character pulls the camera along |
+| 0:46 | catalog | sound | soft wipe | calm after the showcase |
+| 0:52 | contact sheet | finale | pull-out to a dot | everything returns to the cursor |
 
-## Титры
+## Captions
 
 ```js
 const captions = [
@@ -130,26 +130,26 @@ const captions = [
 ];
 ```
 
-## Возможности, которые покрывает ролик
+## Capabilities the film covers
 
-Canvas 2D и WebGL, Three.js с постобработкой, шейдерные переходы, сидированная случайность и перемотка, система частиц без состояния, огонь, свечение, зерно, виньетка, сканлайны, рисованная линия и line boil, штриховка, кинетическая типографика (печать, размытие по буквам, удар на бит), текст в частицы, 12 палитр, пиксель-арт, game feel (хитстоп, тряска, squash, спринги), speed ramp, match cut, whip pan, burn dissolve, zoom-through, glitch, iris, push, luma-вайп, split-screen, музыка на Web Audio с синхронизацией событий, L-cut, контакт-лист.
+Canvas 2D and WebGL, Three.js with post-processing, shader transitions, seeded randomness and rewind, a stateless particle system, fire, glow, film grain, vignette, scanlines, hand-drawn line and line boil, hatching, kinetic typography (typing, letter blur, hits on the beat), text into particles, 12 palettes, pixel art, game feel (hitstop, screen shake, squash, springs), speed ramp, match cut, whip pan, burn dissolve, zoom-through, glitch, iris, push, luma wipe, split-screen, Web Audio music synced to events, L-cut, contact sheet.
 
-## Как собирать
+## How to build it
 
-Минута с десятью стилями слишком тяжела для одного прохода. Собирай тремя частями в одном HTML с общим таймлайном, BPM и массивом событий:
+A one-minute film with ten styles is too heavy to build in one pass. Build it in three parts inside a single HTML file, sharing one timeline, BPM, and events array:
 
-1. 0:00–0:22 (шоты 1–4)
-2. 0:22–0:38 (шоты 5–7)
-3. 0:38–1:00 (шоты 8–10)
+1. 0:00–0:22 (shots 1–4)
+2. 0:22–0:38 (shots 5–7)
+3. 0:38–1:00 (shots 8–10)
 
-После каждой части рендер фрагмента через `--from` и `--to`, контакт-лист, правки по таймкодам.
+After each part: render the fragment with `--from` and `--to`, build a contact sheet, and fix issues by timecode.
 
-Промпт для первой части:
+Prompt for the first part:
 
 ```
-Прочитай SKILL.md и следуй ему. Собираем демо-ролик репозитория по examples/demo/SCRIPT.md.
-Сейчас только часть 1: шоты 1–4 (0:00–0:22), но каркас (таймлайн, BPM, events, captions,
-режим рендера, звук) закладывай сразу на все 60 секунд.
-Сначала покажи план как данные, потом код в examples/demo/demo.html.
-После рендера фрагмента 0–22 с построй контакт-лист и опиши, что видишь.
+Read SKILL.md and follow it. We're building the repo's demo film from examples/demo/SCRIPT.md.
+Right now, only part 1: shots 1-4 (0:00-0:22), but set up the whole scaffold (timeline, BPM,
+events, captions, render mode, audio) for the full 60 seconds from the start.
+First show the plan as data, then the code in examples/demo/demo.html.
+After rendering the 0-22s fragment, build a contact sheet and describe what you see.
 ```

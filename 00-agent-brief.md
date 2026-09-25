@@ -1,33 +1,33 @@
-# Agent brief: кодовая графика и анимация
+# Agent brief: code-driven graphics and animation
 
-Короткие правила. Подробности в соседних файлах.
+Short rules. Details in the neighboring files.
 
-## Архитектура
-1. Один самодостаточный HTML-файл. Никаких внешних картинок и аудио, всё рисуется и синтезируется кодом. Библиотеки только с CDN.
-2. Кадр это чистая функция времени: `draw(ctx, t)`. Никакого накопленного состояния между кадрами. Это даёт перемотку, покадровый рендер и воспроизводимость.
-3. Случайность только сидированная (mulberry32 или аналог). `Math.random()` запрещён в отрисовке.
-4. Сначала план как данные: бит-сетка, список шотов, список событий. Потом код отрисовки. Картинка и звук читают одну структуру таймингов.
-5. Страница поддерживает два режима: живой просмотр (requestAnimationFrame) и рендер (`window.__draw(t)` вызывается извне). Подробно в 01-pipeline.md.
+## Architecture
+1. A single self-contained HTML file. No external images or audio — everything is drawn and synthesized in code. Libraries only from a CDN.
+2. A frame is a pure function of time: `draw(ctx, t)`. No accumulated state between frames. This gives you seeking, frame-by-frame rendering, and reproducibility.
+3. Randomness is seeded only (mulberry32 or similar). `Math.random()` is forbidden in drawing code.
+4. Start with the plan as data: beat grid, shot list, event list. Then the drawing code. Image and sound read from the same timing structure.
+5. The page supports two modes: live preview (requestAnimationFrame) and render (`window.__draw(t)` called externally). Details in 01-pipeline.md.
 
-## Визуал
-6. Один мир, а не слайды. Камера движется через непрерывное пространство, сцены перетекают друг в друга.
-7. Минимум три слоя глубины: фон, средний план, передний план. Параллакс между ними.
-8. Один источник света на сцену, всё освещение согласовано с ним.
-9. Смелость в одном месте. Одно запоминающееся решение на ролик, остальное дисциплинированно.
-10. Не скатывайся в дефолт: тёмно-синий фон с янтарным акцентом, неоновый градиент, центрированный текст на всё, случайные частицы для заполнения пустоты. Если стиль не задан, предложи стиль, вытекающий из темы.
+## Visuals
+6. One world, not slides. The camera moves through continuous space; scenes flow into one another.
+7. At least three depth layers: background, midground, foreground. Parallax between them.
+8. One light source per scene; all lighting is consistent with it.
+9. Boldness in one place. One memorable choice per video, everything else disciplined.
+10. Don't fall back on the default: a dark-blue background with an amber accent, a neon gradient, centered text for everything, random particles to fill empty space. If no style is specified, propose a style that follows from the subject.
 
-## Движение
-11. Ничего не движется линейно. Каждое движение на easing-кривой, у крупных объектов есть anticipation и overshoot.
-12. Stagger вместо одновременности: элементы группы стартуют со сдвигом 30–80 мс.
-13. Нет мёртвых участков: в кадре всегда что-то живёт (дыхание, дрейф, мерцание), но не всё сразу.
-14. Склейки и акценты на сильные доли бита.
+## Motion
+11. Nothing moves linearly. Every motion follows an easing curve; large objects have anticipation and overshoot.
+12. Stagger instead of simultaneity: elements in a group start with a 30-80 ms offset.
+13. No dead stretches: something in the frame is always alive (breathing, drift, flicker), but not everything at once.
+14. Cuts and accents land on strong beats.
 
-## Текст
-15. Шрифты загружены до первого кадра (`document.fonts.ready`).
-16. Текст никогда не перекрывает важные объекты и самое яркое место кадра. Безопасные зоны 5–8% от краёв.
-17. Время чтения: минимум 0.3 с на слово плюс 1 с запаса.
+## Text
+15. Fonts are loaded before the first frame (`document.fonts.ready`).
+16. Text never overlaps important objects or the brightest spot in the frame. Safe zones are 5-8% from the edges.
+17. Reading time: at least 0.3 s per word plus 1 s of margin.
 
-## Проверка
-18. После каждой версии рендери контакт-лист (кадр каждые 0.5 с) и смотри на него сам. Ищи: перекрытия текста, пустые кадры, статичные участки дольше 2 с, выход за края, скачки яркости.
-19. Исправляй по конкретным кадрам, называя таймкод.
-20. Громкость без резких одиночных ударов после тишины.
+## Review
+18. After every version, render a contact sheet (one frame every 0.5 s) and look at it yourself. Look for: text overlaps, empty frames, static stretches longer than 2 s, elements running off the edges, brightness jumps.
+19. Fix issues by specific frame, citing the timecode.
+20. No sharp isolated hits in the audio right after silence.

@@ -1,11 +1,11 @@
-# Движение и тайминг
+# Motion and Timing
 
-## Базовые утилиты
+## Basic utilities
 
 ```js
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp  = (a, b, p) => a + (b - a) * p;
-const seg   = (t, a, b) => clamp((t - a) / (b - a));   // прогресс 0..1 на отрезке [a,b]
+const seg   = (t, a, b) => clamp((t - a) / (b - a));   // progress 0..1 over the segment [a,b]
 const smooth = p => p * p * (3 - 2 * p);
 
 const ease = {
@@ -19,8 +19,8 @@ const ease = {
   inBack:     (p, s = 1.70158) => (s + 1) * p ** 3 - s * p ** 2,
 };
 
-// Пружина в закрытой форме: детерминированно, без интегрирования.
-// zeta < 1 даёт колебания; omega это жёсткость.
+// Spring in closed form: deterministic, no integration needed.
+// zeta < 1 gives oscillation; omega is stiffness.
 function spring(t, zeta = 0.45, omega = 14){
   if (t <= 0) return 0;
   const wd = omega * Math.sqrt(1 - zeta * zeta);
@@ -28,82 +28,82 @@ function spring(t, zeta = 0.45, omega = 14){
 }
 ```
 
-Использование: `x = lerp(x0, x1, ease.outExpo(seg(t, 2.0, 2.8)))`.
+Usage: `x = lerp(x0, x1, ease.outExpo(seg(t, 2.0, 2.8)))`.
 
-## Какую кривую выбирать
+## Which curve to choose
 
-| Ситуация | Кривая |
+| Situation | Curve |
 |---|---|
-| Объект появляется, прилетает | outExpo, outQuart |
-| Объект уходит, улетает | inExpo, inCubic |
-| Перемещение внутри кадра | inOutCubic |
-| Движение камеры | inOutCubic или inOutSine, длинное |
-| Появление с характером | outBack, spring |
-| Удар, падение | inQuad до контакта, затем spring на отскок |
-| Непрерывная жизнь (дыхание, дрейф) | sin с разными фазами, noise |
+| An object appears, flies in | outExpo, outQuart |
+| An object leaves, flies away | inExpo, inCubic |
+| Movement inside the frame | inOutCubic |
+| Camera movement | inOutCubic or inOutSine, long |
+| Appearance with character | outBack, spring |
+| Impact, fall | inQuad until contact, then spring on the bounce |
+| Continuous life (breathing, drift) | sin with different phases, noise |
 
-Линейное движение допустимо только для постоянных процессов: вращение планеты, бегущая строка, конвейер.
+Linear motion is acceptable only for constant processes: a rotating planet, a running text ticker, a conveyor belt.
 
-## Тайминг
+## Timing
 
-| Действие | Длительность |
+| Action | Duration |
 |---|---|
-| Микроакцент (пульс, вспышка) | 0.1–0.25 с |
-| Появление элемента | 0.3–0.6 с |
-| Перемещение по кадру | 0.5–1.2 с |
-| Переход между сценами | 0.4–1.0 с |
-| Движение камеры | 1.5–6 с |
-| Удержание кадра для чтения | 0.3 с на слово + 1 с |
+| Micro-accent (pulse, flash) | 0.1-0.25 s |
+| Element appearing | 0.3-0.6 s |
+| Movement across the frame | 0.5-1.2 s |
+| Transition between scenes | 0.4-1.0 s |
+| Camera movement | 1.5-6 s |
+| Holding a frame for reading | 0.3 s per word + 1 s |
 
-Привязывай ключевые моменты к биту: `const beat = n => n * 60 / BPM`.
+Anchor key moments to the beat: `const beat = n => n * 60 / BPM`.
 
-## Принципы анимации, которые реально работают в коде
+## Animation principles that actually work in code
 
-- **Anticipation.** Перед рывком небольшое движение в обратную сторону (inBack или отдельный отрезок 0.1–0.2 с).
-- **Follow-through и overlapping.** Части объекта останавливаются не одновременно: хвост, волосы, подвешенные элементы запаздывают. Проще всего: та же кривая, сдвинутая на 50–120 мс, или spring с другим zeta.
-- **Squash & stretch.** При ускорении вытягивай по направлению движения, при ударе сплющивай, сохраняя площадь: `sx = 1 + k, sy = 1 / (1 + k)`.
-- **Arcs.** Живое движется по дугам, а не по прямым. Добавь к линейной траектории синус по перпендикуляру.
-- **Slow in / slow out.** Любой easing.
-- **Secondary action.** Пока главное движется, что-то второстепенное тоже живёт: частицы, тень, блик.
-- **Staging.** В каждый момент ясно, куда смотреть. Одно главное движение, остальное тише.
-- **Exaggeration.** В коде всё выглядит «по учебнику» слишком скромно. Удвой амплитуды и посмотри.
+- **Anticipation.** A small movement in the opposite direction before a fast move (inBack, or a separate 0.1-0.2 s segment).
+- **Follow-through and overlapping action.** Parts of an object don't stop at the same time: a tail, hair, hanging elements lag behind. Simplest approach: the same curve shifted by 50-120 ms, or a spring with a different zeta.
+- **Squash & stretch.** Stretch along the direction of motion during acceleration, flatten on impact, preserving area: `sx = 1 + k, sy = 1 / (1 + k)`.
+- **Arcs.** Living things move along arcs, not straight lines. Add a perpendicular sine wave to the linear trajectory.
+- **Slow in / slow out.** Any easing.
+- **Secondary action.** While the main thing moves, something secondary lives too: particles, a shadow, a highlight.
+- **Staging.** At every moment it is clear where to look. One primary movement, everything else quieter.
+- **Exaggeration.** In code everything looks "textbook" — too modest. Double the amplitudes and look again.
 
 ## Stagger
 
 ```js
-// i-й элемент из n стартует со сдвигом; spread это общий разброс стартов
+// the i-th element out of n starts with an offset; spread is the total spread of start times
 function staggered(t, start, dur, i, n, spread = 0.4, curve = ease.outExpo){
   const s = start + (n > 1 ? i / (n - 1) : 0) * spread;
   return curve(seg(t, s, s + dur));
 }
 ```
 
-Порядок stagger несёт смысл: слева направо (чтение), от центра наружу (взрыв, раскрытие), от точки касания (реакция), случайный сидированный (органика).
+Stagger order carries meaning: left to right (reading order), from center outward (explosion, reveal), from the point of contact (reaction), random seeded (organic).
 
-## Непрерывная жизнь
+## Continuous life
 
-Статичный кадр дольше 1.5–2 с выглядит как зависание. Минимальная жизнь:
-- дыхание масштаба 0.5–1.5% по синусу с периодом 3–5 с;
-- дрейф фона и частиц;
-- мерцание света на 2–5%;
-- медленный наезд камеры (push-in) на 3–8% за шот.
+A static frame longer than 1.5-2 s looks frozen. Minimal life:
+- scale breathing of 0.5-1.5% on a sine wave with a period of 3-5 s;
+- background and particle drift;
+- light flicker of 2-5%;
+- a slow camera push-in of 3-8% over the shot.
 
-Разные объекты получают разные фазы и периоды (из seed), иначе всё пульсирует синхронно.
+Different objects get different phases and periods (from a seed), otherwise everything pulses in sync.
 
-## Движения камеры
+## Camera movements
 
-| Движение | Эффект | Реализация в 2D |
+| Movement | Effect | 2D implementation |
 |---|---|---|
-| Push-in (наезд) | напряжение, внимание | scale растёт вокруг точки интереса |
-| Pull-out (отъезд) | раскрытие масштаба, финал | scale падает |
-| Pan | обзор, следование | translate по x |
-| Tilt | раскрытие высоты | translate по y |
-| Orbit | объём, торжественность | в 2D имитируется параллаксом слоёв |
-| Handheld | документальность, тревога | смещение и поворот по fbm, амплитуда малая |
-| Rack focus | смена внимания | blur переднего и заднего плана меняется местами |
-| Whip pan | энергия, склейка | быстрый pan с motion blur, см. 05-transitions.md |
+| Push-in | tension, attention | scale grows around the point of interest |
+| Pull-out | reveals scale, ending | scale shrinks |
+| Pan | overview, following | translate on x |
+| Tilt | reveals height | translate on y |
+| Orbit | volume, solemnity | simulated in 2D with layer parallax |
+| Handheld | documentary feel, unease | offset and rotation driven by fbm, small amplitude |
+| Rack focus | shift of attention | foreground and background blur swap places |
+| Whip pan | energy, cut | fast pan with motion blur, see 05-transitions.md |
 
-Камера в 2D это один `ctx.setTransform` на слой. Параллакс: каждый слой умножает смещение камеры на свой коэффициент (фон 0.2, средний 1, передний 1.6).
+The camera in 2D is a single `ctx.setTransform` per layer. Parallax: each layer multiplies the camera offset by its own coefficient (background 0.2, midground 1, foreground 1.6).
 
 ```js
 function applyCamera(ctx, cam, depth = 1){

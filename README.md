@@ -2,13 +2,13 @@
 
 # motion-kit
 
-**Every frame is code.** Набор знаний, по которому AI-агент делает графику кодом:<br>
-ролики, эксплейнеры, кинетическую типографику, 3D-сцены и игры, а потом сам рендерит их в MP4.
+**Every frame is code.** A knowledge kit that lets an AI agent make graphics with code:<br>
+videos, explainers, kinetic typography, 3D scenes and games, and then render them to MP4 on its own.
 
-<img src="examples/demo/teaser.gif" width="720" alt="Тизер демо-ролика: огонь, гравюра, 3D-сфера, монтаж палитр, пиксельная игра, каталог переходов, контакт-лист, финальный титр">
+<img src="examples/demo/teaser.gif" width="720" alt="Demo film teaser: fire, engraving, 3D sphere, palette montage, pixel game, transition catalog, contact sheet, final title">
 
-<sub>Ни одного сгенерированного пикселя: весь ролик — один HTML-файл, который рисует каждый кадр.<br>
-Исходник: <a href="examples/demo/demo.html">examples/demo/demo.html</a> · сценарий: <a href="examples/demo/SCRIPT.md">examples/demo/SCRIPT.md</a></sub>
+<sub>Not a single generated pixel: the whole film is one HTML file that draws every frame.<br>
+Source: <a href="examples/demo/demo.html">examples/demo/demo.html</a> · script: <a href="examples/demo/SCRIPT.md">examples/demo/SCRIPT.md</a></sub>
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-black)](LICENSE)
 [![Agent Skill: Claude · Codex · ChatGPT](https://img.shields.io/badge/Agent_Skill-Claude_·_Codex_·_ChatGPT-d97757)](SKILL.md)
@@ -16,113 +16,113 @@
 
 </div>
 
-## Зачем это
+## Why
 
-Модель умеет писать код графики, но без правил выдаёт один и тот же скринсейвер: тёмно-синий фон, неоновый градиент, частицы «для красоты», всё движется линейно и одновременно, текст налезает на объекты, переходы только кроссфейдом.
+Models can write graphics code, but without rules they produce the same screensaver every time: a dark navy background, a neon gradient, particles "for atmosphere", everything moving linearly and all at once, text on top of objects, and crossfades as the only transition.
 
-motion-kit — это правила и рецепты, которые закрывают эти провалы. Главная идея архитектуры: **кадр — чистая функция времени** `draw(ctx, t)`. Отсюда всё остальное:
+motion-kit is a set of rules and recipes that closes those gaps. The core architectural idea: **a frame is a pure function of time**, `draw(ctx, t)`. Everything else follows from it:
 
-- **перемотка на любую секунду** — кадр не зависит от предыдущих;
-- **покадровый рендер без рывков** — headless Chrome ждёт каждый кадр, сколько бы тот ни рисовался;
-- **правка одной строкой** — поменял easing или цвет, перерендерил, получил тот же ролик с одним отличием;
-- **звук в синхроне с картинкой** — музыка на Web Audio читает тот же массив событий, что и отрисовка.
+- **seek to any second**: a frame does not depend on the previous ones;
+- **frame-by-frame rendering without stutter**: headless Chrome waits for every frame, however long it takes to draw;
+- **one-line edits**: change an easing curve or a color, re-render, and get the same film with exactly one difference;
+- **sound in sync with the picture**: the Web Audio score reads the same event list as the drawing code.
 
-## Что внутри демо-ролика
+## What's in the demo film
 
-Минутный ролик сделан строго по этому набору. Каждая сцена показывает одну возможность в своём стиле:
+The one-minute film was made strictly by this kit. Each scene shows one capability in its own style:
 
 <table>
 <tr>
-<td width="33%"><img src="examples/demo/stills/01-terminal.jpg" alt="Терминал"><br><b>Печать и частицы</b><br><sub>Текст печатается и рассыпается в частицы. <a href="08-kinetic-typography.md">08</a> · <a href="07-effects-cookbook.md">07</a></sub></td>
-<td width="33%"><img src="examples/demo/stills/02-fire.jpg" alt="Огонь"><br><b>Огонь без состояния</b><br><sub>650 частиц, спрайты, аддитивное смешивание, зерно. <a href="07-effects-cookbook.md">07</a></sub></td>
-<td width="33%"><img src="examples/demo/stills/03-engraving.jpg" alt="Гравюра"><br><b>Детерминизм</b><br><sub>Линия рисует астролябию, кадр перематывается и повторяется точь-в-точь. <a href="01-pipeline.md">01</a> · <a href="04-motion-easing.md">04</a></sub></td>
+<td width="33%"><img src="examples/demo/stills/01-terminal.jpg" alt="Terminal"><br><b>Typing and particles</b><br><sub>Text types itself out, then scatters into particles. <a href="08-kinetic-typography.md">08</a> · <a href="07-effects-cookbook.md">07</a></sub></td>
+<td width="33%"><img src="examples/demo/stills/02-fire.jpg" alt="Fire"><br><b>Stateless fire</b><br><sub>650 particles, sprites, additive blending, film grain. <a href="07-effects-cookbook.md">07</a></sub></td>
+<td width="33%"><img src="examples/demo/stills/03-engraving.jpg" alt="Engraving"><br><b>Determinism</b><br><sub>A line draws an astrolabe, the frame rewinds and replays exactly. <a href="01-pipeline.md">01</a> · <a href="04-motion-easing.md">04</a></sub></td>
 </tr>
 <tr>
-<td><img src="examples/demo/stills/04-sphere.jpg" alt="3D-сфера"><br><b>3D, когда нужно</b><br><sub>Three.js, bloom, ACES, 20 000 частиц на шейдере. <a href="11-threejs.md">11</a></sub></td>
-<td><img src="examples/demo/stills/05-palettes.jpg" alt="Палитры"><br><b>12 стилей, одна композиция</b><br><sub>Монтаж на бит с ускорением к пику. <a href="03-visual-style.md">03</a> · <a href="06-montage.md">06</a></sub></td>
-<td><img src="examples/demo/stills/06-game.jpg" alt="Пиксельная игра"><br><b>Game feel</b><br><sub>Hitstop, тряска, squash &amp; stretch, speed ramp. <a href="10-games-juice.md">10</a></sub></td>
+<td><img src="examples/demo/stills/04-sphere.jpg" alt="3D sphere"><br><b>3D when you need it</b><br><sub>Three.js, bloom, ACES, 20,000 shader particles. <a href="11-threejs.md">11</a></sub></td>
+<td><img src="examples/demo/stills/05-palettes.jpg" alt="Palettes"><br><b>12 styles, one composition</b><br><sub>Cuts on the beat, accelerating toward the peak. <a href="03-visual-style.md">03</a> · <a href="06-montage.md">06</a></sub></td>
+<td><img src="examples/demo/stills/06-game.jpg" alt="Pixel game"><br><b>Game feel</b><br><sub>Hitstop, screen shake, squash &amp; stretch, speed ramp. <a href="10-games-juice.md">10</a></sub></td>
 </tr>
 <tr>
-<td><img src="examples/demo/stills/07-transitions.jpg" alt="Каталог переходов"><br><b>Переходы — это данные</b><br><sub>Iris, push, luma, волна, прожиг, whip pan. <a href="05-transitions.md">05</a></sub></td>
-<td><img src="examples/demo/stills/08-qa.jpg" alt="Контакт-лист"><br><b>Проверка как у режиссёра</b><br><sub>Контакт-лист и правки по таймкодам. <a href="12-render-qa.md">12</a> · <a href="09-audio-sync.md">09</a></sub></td>
-<td><img src="examples/demo/stills/09-finale.jpg" alt="Финал"><br><b>CRT-финал</b><br><sub>Шейдерная постобработка: дисторсия, сканлайны, аберрация. <a href="07-effects-cookbook.md">07</a></sub></td>
+<td><img src="examples/demo/stills/07-transitions.jpg" alt="Transition catalog"><br><b>Transitions are data</b><br><sub>Iris, push, luma, wave, burn, whip pan. <a href="05-transitions.md">05</a></sub></td>
+<td><img src="examples/demo/stills/08-qa.jpg" alt="Contact sheet"><br><b>Checked like a director</b><br><sub>A contact sheet and fixes by timecode. <a href="12-render-qa.md">12</a> · <a href="09-audio-sync.md">09</a></sub></td>
+<td><img src="examples/demo/stills/09-finale.jpg" alt="Finale"><br><b>CRT finale</b><br><sub>Shader post-processing: distortion, scanlines, aberration. <a href="07-effects-cookbook.md">07</a></sub></td>
 </tr>
 </table>
 
-Посмотреть вживую: открой [`examples/demo/demo.html`](examples/demo/demo.html) в Chrome. Клик включает звук, пробел ставит на паузу, стрелки перематывают.
+Watch it live: open [`examples/demo/demo.html`](examples/demo/demo.html) in Chrome. Click to turn on sound, space pauses, arrow keys seek.
 
-## Быстрый старт
+## Quick start
 
-motion-kit оформлен как скилл в открытом формате [Agent Skills](https://agentskills.io): папка с `SKILL.md`. Один и тот же скилл работает в Claude и в ChatGPT, установка отличается только местом.
+motion-kit is packaged as a skill in the open [Agent Skills](https://agentskills.io) format: a folder with a `SKILL.md`. The same skill works in Claude and in ChatGPT; only the install location differs.
 
-| Где | Как подключить |
+| Where | How to install |
 |---|---|
 | **Claude Code** | `git clone https://github.com/kiselas/every-frame-is-code ~/.claude/skills/motion-kit` |
-| **Codex** (CLI, IDE, приложение) | `git clone https://github.com/kiselas/every-frame-is-code ~/.agents/skills/motion-kit` |
-| **ChatGPT** | скачай [motion-kit.zip](https://github.com/kiselas/every-frame-is-code/releases/latest/download/motion-kit.zip), затем Plugins → Skills → Create → Upload from computer |
-| **Claude.ai / Claude Desktop** | тот же [motion-kit.zip](https://github.com/kiselas/every-frame-is-code/releases/latest/download/motion-kit.zip), затем Customize → Skills → Upload |
+| **Codex** (CLI, IDE, app) | `git clone https://github.com/kiselas/every-frame-is-code ~/.agents/skills/motion-kit` |
+| **ChatGPT** | download [motion-kit.zip](https://github.com/kiselas/every-frame-is-code/releases/latest/download/motion-kit.zip), then Plugins → Skills → Create → Upload from computer |
+| **Claude.ai / Claude Desktop** | the same [motion-kit.zip](https://github.com/kiselas/every-frame-is-code/releases/latest/download/motion-kit.zip), then Customize → Skills → Upload |
 
-Для одного проекта клонируй в `.claude/skills/motion-kit` или `.agents/skills/motion-kit` внутри репозитория. Агент сам подхватит скилл, когда задача про графику или анимацию. Позвать явно: `/motion-kit` в Claude Code, `$motion-kit` в Codex, `@motion-kit` в ChatGPT. Попробуй:
-
-```
-Сделай 20-секундный ролик про историю часов в стиле гравюры, 1080p, с музыкой.
-Сначала покажи план как данные, потом код, потом отрендери и посмотри контакт-лист.
-```
-
-Рендер в MP4 требует Node, Chrome и ffmpeg, так что он работает там, где у агента есть терминал: в Claude Code и Codex. В ChatGPT и Claude.ai скилл помогает спланировать и написать ролик, а рендеришь ты у себя командой из раздела ниже.
-
-**Без поддержки скиллов.** Скопируй папку в `docs/motion/` и добавь в `CLAUDE.md` или `AGENTS.md`:
+For a single project, clone into `.claude/skills/motion-kit` or `.agents/skills/motion-kit` inside the repository. The agent picks up the skill on its own when the task is about graphics or animation. To call it explicitly: `/motion-kit` in Claude Code, `$motion-kit` in Codex, `@motion-kit` in ChatGPT. Try:
 
 ```
-Перед любой работой с графикой, анимацией или играми прочитай docs/motion/00-agent-brief.md,
-затем файлы, относящиеся к задаче.
+Make a 20-second film about the history of clocks in an engraving style, 1080p, with music.
+Show the plan as data first, then the code, then render it and review the contact sheet.
 ```
 
-В обычном чате прикрепи `00-agent-brief.md` и один-два тематических файла.
+Rendering to MP4 needs Node, Chrome and ffmpeg, so it works where the agent has a terminal: Claude Code and Codex. In ChatGPT and Claude.ai the skill helps plan and write the film, and you render it locally with the command below.
 
-## Рендер
+**Without skill support.** Copy the folder to `docs/motion/` and add this to `CLAUDE.md` or `AGENTS.md`:
+
+```
+Before any work on graphics, animation or games, read docs/motion/00-agent-brief.md,
+then the files relevant to the task.
+```
+
+In a plain chat, attach `00-agent-brief.md` and one or two topic files.
+
+## Rendering
 
 ```bash
 cd render && npm install
-node render.mjs ../film.html ../film.mp4              # весь ролик со звуком
+node render.mjs ../film.html ../film.mp4              # the whole film with sound
 node render.mjs ../film.html ../part.mp4 --from 20 --to 35
-./contact-sheet.sh ../film.mp4 ../sheet.png           # 2 кадра в секунду на одной картинке
+./contact-sheet.sh ../film.mp4 ../sheet.png           # 2 frames per second on one image
 ```
 
-Нужны Node 18+, Google Chrome и ffmpeg. Страница должна выставить `window.__meta`, `window.__draw(t)` и `window.__ready`, подробно в [01-pipeline.md](01-pipeline.md) и [render/README.md](render/README.md).
+Requires Node 18+, Google Chrome and ffmpeg. The page must expose `window.__meta`, `window.__draw(t)` and `window.__ready`; details in [01-pipeline.md](01-pipeline.md) and [render/README.md](render/README.md).
 
-Демо-ролик целиком (1080p, 60 fps, со звуком):
+The full demo film (1080p, 60 fps, with sound):
 
 ```bash
 node render.mjs ../examples/demo/demo.html ../examples/demo/demo.mp4
 ```
 
-## Содержание
+## Contents
 
-| Файл | О чём |
+| File | About |
 |---|---|
-| [00-agent-brief.md](00-agent-brief.md) | Сжатые правила для агента. Главный файл |
-| [01-pipeline.md](01-pipeline.md) | Архитектура: draw(t), таймлайн сцен, детерминизм, буферы |
-| [02-prompting.md](02-prompting.md) | Как ставить задачу, шаблоны промптов, фразы для правок |
-| [03-visual-style.md](03-visual-style.md) | Палитры, свет, композиция, фактура, цветокоррекция |
-| [04-motion-easing.md](04-motion-easing.md) | Кривые, пружины, тайминг, принципы анимации, камера |
-| [05-transitions.md](05-transitions.md) | Каталог переходов: Canvas 2D и GLSL |
-| [06-montage.md](06-montage.md) | Монтаж: склейки, ритм, структура, speed ramp |
-| [07-effects-cookbook.md](07-effects-cookbook.md) | Шум, частицы, огонь, дым, свечение, зерно, шейдеры |
-| [08-kinetic-typography.md](08-kinetic-typography.md) | Анимированный текст и титры под озвучку |
-| [09-audio-sync.md](09-audio-sync.md) | Музыка на Web Audio, офлайн-рендер, озвучка, микс |
-| [10-games-juice.md](10-games-juice.md) | Game feel: управление, хитстоп, тряска, камера |
-| [11-threejs.md](11-threejs.md) | 3D: свет, постобработка, частицы на шейдерах |
-| [12-render-qa.md](12-render-qa.md) | Рендер, контакт-листы, чек-лист проверки |
-| [render/](render/) | Скрипты рендера (Node + Playwright + ffmpeg) |
-| [examples/demo/](examples/demo/) | Демо-ролик: сценарий и исходник |
-| [scripts/pack-skill.sh](scripts/pack-skill.sh) | Сборка `motion-kit.zip` для ChatGPT и Claude.ai. Релиз собирает его сам: достаточно запушить тег `vX.Y.Z` |
-| [sources.md](sources.md) | Источники и что почитать |
+| [00-agent-brief.md](00-agent-brief.md) | Condensed rules for the agent. The main file |
+| [01-pipeline.md](01-pipeline.md) | Architecture: draw(t), scene timeline, determinism, buffers |
+| [02-prompting.md](02-prompting.md) | How to brief a task, prompt templates, phrases for revisions |
+| [03-visual-style.md](03-visual-style.md) | Palettes, light, composition, texture, color grading |
+| [04-motion-easing.md](04-motion-easing.md) | Curves, springs, timing, animation principles, camera |
+| [05-transitions.md](05-transitions.md) | Transition catalog: Canvas 2D and GLSL |
+| [06-montage.md](06-montage.md) | Editing: cuts, rhythm, structure, speed ramp |
+| [07-effects-cookbook.md](07-effects-cookbook.md) | Noise, particles, fire, smoke, glow, grain, shaders |
+| [08-kinetic-typography.md](08-kinetic-typography.md) | Animated text and captions for voice-over |
+| [09-audio-sync.md](09-audio-sync.md) | Music with Web Audio, offline rendering, voice-over, mixing |
+| [10-games-juice.md](10-games-juice.md) | Game feel: controls, hitstop, screen shake, camera |
+| [11-threejs.md](11-threejs.md) | 3D: lighting, post-processing, shader particles |
+| [12-render-qa.md](12-render-qa.md) | Rendering, contact sheets, review checklist |
+| [render/](render/) | Render scripts (Node + Playwright + ffmpeg) |
+| [examples/demo/](examples/demo/) | Demo film: script and source |
+| [scripts/pack-skill.sh](scripts/pack-skill.sh) | Builds `motion-kit.zip` for ChatGPT and Claude.ai. Releases build it automatically: just push a `vX.Y.Z` tag |
+| [sources.md](sources.md) | Sources and further reading |
 
-## Вклад
+## Contributing
 
-Pull requests приветствуются: новые рецепты эффектов, переходы, промпты, которые у вас сработали (с результатом), исправления в коде. К промпту прикладывайте ссылку на ролик или контакт-лист.
+Pull requests are welcome: new effect recipes, transitions, prompts that worked for you (with the result), fixes to the code. When you submit a prompt, include a link to the video or its contact sheet.
 
-## Лицензия
+## License
 
 MIT

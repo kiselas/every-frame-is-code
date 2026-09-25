@@ -1,8 +1,8 @@
-# 3D на Three.js
+# 3D with Three.js
 
-## Подключение
+## Setup
 
-ES-модули через importmap, версия закреплена:
+ES modules via importmap, with a pinned version:
 
 ```html
 <script type="importmap">
@@ -20,7 +20,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 </script>
 ```
 
-## Базовая настройка
+## Basic setup
 
 ```js
 const W = 1920, H = 1080;
@@ -41,11 +41,11 @@ composer.addPass(new UnrealBloomPass(new THREE.Vector2(W, H), 0.8, 0.5, 0.85)); 
 composer.addPass(new OutputPass());
 ```
 
-`preserveDrawingBuffer: true` нужен для захвата кадров. `setPixelRatio(1)` в режиме рендера, чтобы размер кадра совпадал с заданным.
+`preserveDrawingBuffer: true` is needed to capture frames. Use `setPixelRatio(1)` in render mode so the frame size matches the one you set.
 
-## Детерминизм
+## Determinism
 
-Не используй `THREE.Clock` и `performance.now()` для анимации. Всё обновляется из `t`:
+Don't use `THREE.Clock` or `performance.now()` for animation. Everything updates from `t`:
 
 ```js
 function update(t){
@@ -56,12 +56,12 @@ function update(t){
 window.__draw = t => { update(t); composer.render(); };
 ```
 
-## Свет
+## Lighting
 
-- Три точки: ключевой (DirectionalLight или SpotLight, с тенью), заполняющий (слабый, противоположного оттенка), контровой (сзади, яркий, обрисовывает силуэт).
-- `HemisphereLight` для мягкого окружения вместо плоского `AmbientLight`.
-- Для светящихся объектов `emissive` + `emissiveIntensity > 1`, bloom подхватит их через threshold.
-- Для отражений окружения используй `RoomEnvironment` из addons и `PMREMGenerator`: металлы и стекло без окружения выглядят мёртвыми.
+- Three-point setup: key light (DirectionalLight or SpotLight, with shadow), fill light (weak, opposite tint), rim/back light (behind, bright, outlines the silhouette).
+- `HemisphereLight` for soft ambient lighting instead of flat `AmbientLight`.
+- For glowing objects, use `emissive` + `emissiveIntensity > 1`; bloom will pick them up via its threshold.
+- For environment reflections, use `RoomEnvironment` from addons and `PMREMGenerator`: metals and glass look dead without an environment.
 
 ```js
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -69,17 +69,17 @@ const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 ```
 
-## Камера
+## Camera
 
-- Узкое фокусное (fov 25–40) выглядит кинематографичнее широкого.
-- Пролёты по сплайну: `THREE.CatmullRomCurve3` через 4–8 точек, прогресс по easing, `lookAt` тоже по своему сплайну или lerp между целями.
-- Лёгкий handheld через шум на позиции и повороте (амплитуда в сотые доли).
-- Глубина резкости: `BokehPass` из addons, фокус на главном объекте.
+- A narrow field of view (fov 25–40) looks more cinematic than a wide one.
+- Camera flythroughs on a spline: `THREE.CatmullRomCurve3` through 4–8 points, progress driven by easing; `lookAt` follows its own spline too, or lerps between targets.
+- A subtle handheld feel via noise on position and rotation (amplitude in hundredths).
+- Depth of field: `BokehPass` from addons, focused on the main subject.
 
-## Много объектов
+## Many objects
 
-- `InstancedMesh` для тысяч одинаковых объектов, матрицы обновляются в `update(t)`.
-- `THREE.Points` с собственным `ShaderMaterial` для десятков тысяч частиц; позиции считай в вершинном шейдере из `uTime` и атрибутов, тогда CPU не участвует.
+- `InstancedMesh` for thousands of identical objects; matrices update inside `update(t)`.
+- `THREE.Points` with a custom `ShaderMaterial` for tens of thousands of particles; compute positions in the vertex shader from `uTime` and attributes, so the CPU stays out of it.
 
 ```js
 const mat = new THREE.ShaderMaterial({
@@ -100,16 +100,16 @@ const mat = new THREE.ShaderMaterial({
 });
 ```
 
-## Материалы и вид
+## Materials and look
 
-- `MeshStandardMaterial` / `MeshPhysicalMaterial` с разумными roughness (0.3–0.8); roughness 0 и metalness 1 без окружения дают чёрные объекты.
-- Процедурные текстуры через `CanvasTexture` (нарисуй шум, штриховку, узор в 2D canvas).
-- Стилизация: `MeshToonMaterial` с градиентной картой для cel-shading; обводка через увеличенную копию меша с `side: BackSide`.
+- `MeshStandardMaterial` / `MeshPhysicalMaterial` with reasonable roughness (0.3–0.8); roughness 0 and metalness 1 with no environment give black objects.
+- Procedural textures via `CanvasTexture` (draw noise, hatching, or a pattern in a 2D canvas).
+- Stylization: `MeshToonMaterial` with a gradient map for cel-shading; outlines via an enlarged copy of the mesh with `side: BackSide`.
 
-## Типичные проблемы
+## Common problems
 
-- Всё чёрное: нет света или окружения, либо roughness/metalness крайние.
-- Всё выжжено: bloom threshold слишком низкий, экспозиция высокая.
-- Мыло: pixelRatio меньше 1 или bloom radius большой.
-- Мерцание дальних объектов: слишком маленький near у камеры, увеличь до 0.5–1.
-- Текст в 3D: `TextGeometry` из addons с загрузкой typeface JSON; для титров часто проще рисовать текст в 2D поверх отрендеренного кадра.
+- Everything is black: no light or environment, or roughness/metalness are at their extremes.
+- Everything is blown out: bloom threshold is too low, exposure is too high.
+- Blurry/soft image: pixelRatio below 1, or bloom radius is large.
+- Flickering of distant objects: the camera's near plane is too small; increase it to 0.5–1.
+- Text in 3D: `TextGeometry` from addons with a loaded typeface JSON; for titles it's often simpler to draw text in 2D over the rendered frame.

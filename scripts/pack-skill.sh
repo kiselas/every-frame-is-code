@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Собирает motion-kit.zip для загрузки скилла в ChatGPT или Claude.ai:
-# папка motion-kit/ с SKILL.md, справочником и скриптами рендера, без examples/.
-# Использование: bash scripts/pack-skill.sh [out.zip]
+# Builds motion-kit.zip for uploading the skill to ChatGPT or Claude.ai:
+# a motion-kit/ folder with SKILL.md, the reference docs and the render scripts, without examples/.
+# Usage: bash scripts/pack-skill.sh [out.zip]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 OUT="${1:-motion-kit.zip}"

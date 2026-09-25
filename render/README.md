@@ -1,45 +1,45 @@
 # render
 
-Покадровый рендер HTML-анимаций в MP4 и контакт-листы для проверки.
+Frame-by-frame rendering of HTML animations to MP4, and contact sheets for review.
 
-## Установка
+## Installation
 
-Нужны Node 18+, Google Chrome и ffmpeg в PATH.
+Requires Node 18+, Google Chrome, and ffmpeg on PATH.
 
 ```bash
 npm install
 ```
 
-Если Chrome стоит не в стандартном месте: `CHROME_PATH=/path/to/chrome node render.mjs ...`
+If Chrome isn't installed in the default location: `CHROME_PATH=/path/to/chrome node render.mjs ...`
 
-## Рендер
+## Rendering
 
 ```bash
 node render.mjs ../film.html ../film.mp4
-node render.mjs ../film.html ../part.mp4 --from 20 --to 35      # фрагмент
-node render.mjs ../film.html ../film.mp4 --voice ../voice.wav     # подмешать озвучку к музыке
+node render.mjs ../film.html ../part.mp4 --from 20 --to 35      # a fragment
+node render.mjs ../film.html ../film.mp4 --voice ../voice.wav     # mix voice-over into the music
 ```
 
-Контракт страницы:
+Page contract:
 
 ```js
 window.__meta = { W: 1920, H: 1080, FPS: 60, DURATION: 60 };
-window.__draw = t => { /* нарисовать кадр для времени t */ };
-window.__ready = true;                         // после document.fonts.ready
-window.__renderAudio = async () => base64Wav;  // необязательно
+window.__draw = t => { /* draw the frame for time t */ };
+window.__ready = true;                         // after document.fonts.ready
+window.__renderAudio = async () => base64Wav;  // optional
 ```
 
-Страница открывается с `?render`: в этом режиме она не должна запускать свой requestAnimationFrame.
+The page is opened with `?render`: in this mode it must not run its own requestAnimationFrame.
 
-## Контакт-лист
+## Contact sheet
 
 ```bash
-./contact-sheet.sh ../film.mp4 ../sheet.png        # 2 кадра/с, 8 колонок
-./contact-sheet.sh ../film.mp4 ../sheet.png 4 10   # 4 кадра/с, 10 колонок
+./contact-sheet.sh ../film.mp4 ../sheet.png        # 2 frames/s, 8 columns
+./contact-sheet.sh ../film.mp4 ../sheet.png 4 10   # 4 frames/s, 10 columns
 ```
 
-Нужен ffmpeg со сборкой drawtext (freetype). Если drawtext недоступен, убери его из фильтра в скрипте.
+Requires an ffmpeg build with drawtext (freetype). If drawtext isn't available, remove it from the filter in the script.
 
-## Скорость
+## Speed
 
-Скриншот на каждый кадр медленнее реального времени: минута в 60 fps обычно рендерится несколько минут. Для черновиков ставь `FPS: 30` и меньшее разрешение в `__meta`.
+Taking a screenshot for every frame is slower than real time: a one-minute clip at 60 fps usually takes several minutes to render. For drafts, set `FPS: 30` and a lower resolution in `__meta`.

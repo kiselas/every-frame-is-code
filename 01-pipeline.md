@@ -1,14 +1,14 @@
-# Пайплайн: как устроен кодовый ролик
+# Pipeline: how a code-driven video is built
 
-## Главная идея
+## Core idea
 
-Весь фильм это функция `draw(ctx, t)`, которая по времени `t` рисует кадр целиком. Функция не помнит предыдущих кадров. Отсюда три свойства:
+The whole film is a function `draw(ctx, t)` that renders the entire frame from time `t`. The function doesn't remember previous frames. This gives three properties:
 
-- можно перемотать на любую секунду и получить тот же кадр;
-- headless-браузер рендерит покадрово, сколько бы ни занимал один кадр, поэтому тяжёлые эффекты не вызывают рывков в итоговом MP4;
-- два рендера дают идентичный результат.
+- you can seek to any second and get the same frame;
+- the headless browser renders frame by frame, no matter how long a single frame takes, so heavy effects don't cause stutter in the final MP4;
+- two renders produce an identical result.
 
-## Скелет страницы
+## Page skeleton
 
 ```html
 <!doctype html>
@@ -17,19 +17,19 @@
 </head><body>
 <canvas id="c"></canvas>
 <script>
-const W = 1920, H = 1080, FPS = 60, DURATION = 60; // секунды
+const W = 1920, H = 1080, FPS = 60, DURATION = 60; // seconds
 const cv = document.getElementById('c');
 cv.width = W; cv.height = H;
 const ctx = cv.getContext('2d');
 
-// --- сидированный RNG ---
+// --- seeded RNG ---
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-// Для частиц: генерируй массив параметров ОДИН раз с фиксированным seed,
-// а в draw(t) вычисляй позицию каждой частицы из её параметров и t.
+// For particles: generate the parameter array ONCE with a fixed seed,
+// then in draw(t) compute each particle's position from its parameters and t.
 const rnd = mulberry32(1337);
 const stars = Array.from({length: 400}, () => ({x: rnd()*W, y: rnd()*H, r: rnd()*1.5+0.3, ph: rnd()*6.28}));
 
-// --- план как данные ---
+// --- plan as data ---
 const BPM = 100, BEAT = 60 / BPM;
 const scenes = [
   { id: 'intro', start: 0,  end: 8,  draw: drawIntro },
@@ -37,12 +37,12 @@ const scenes = [
   { id: 'peak',  start: 30, end: 50, draw: drawPeak  },
   { id: 'outro', start: 50, end: 60, draw: drawOutro },
 ];
-const events = [ // читают и картинка, и звук
+const events = [ // read by both the visuals and the audio
   { t: 8,  type: 'hit' },
   { t: 30, type: 'drop' },
 ];
 
-// --- кадр ---
+// --- frame ---
 function draw(t){
   ctx.clearRect(0,0,W,H);
   for (const s of scenes) {
@@ -51,7 +51,7 @@ function draw(t){
       s.draw(ctx, lt, p, t);
     }
   }
-  // переходы между сценами: см. 05-transitions.md
+  // transitions between scenes: see 05-transitions.md
 }
 
 function drawIntro(ctx, lt, p, t){ /* ... */ }
@@ -59,9 +59,9 @@ function drawBuild(ctx, lt, p, t){ /* ... */ }
 function drawPeak (ctx, lt, p, t){ /* ... */ }
 function drawOutro(ctx, lt, p, t){ /* ... */ }
 
-// --- два режима ---
+// --- two modes ---
 window.__meta = { W, H, FPS, DURATION };
-window.__draw = draw;              // рендер-скрипт вызывает это
+window.__draw = draw;              // called by the render script
 const RENDER = new URLSearchParams(location.search).has('render');
 
 document.fonts.ready.then(() => {
@@ -84,9 +84,9 @@ document.fonts.ready.then(() => {
 </script></body></html>
 ```
 
-## Эффекты, зависящие от прошлого
+## Effects that depend on the past
 
-Шлейфы, motion blur, «затухающий след» обычно делают через полупрозрачную заливку поверх прошлого кадра. Это ломает детерминизм. Замена: нарисуй объект в нескольких прошлых моментах `t - k*dt` с убывающей прозрачностью. Для motion blur 6–10 выборок на кадр достаточно.
+Trails, motion blur, a "fading trail" are usually done by painting a semi-transparent fill over the previous frame. This breaks determinism. Replacement: draw the object at several past moments `t - k*dt` with decreasing opacity. For motion blur, 6-10 samples per frame are enough.
 
 ```js
 function drawWithTrail(ctx, t, drawObj, samples = 8, span = 0.12){
@@ -98,21 +98,21 @@ function drawWithTrail(ctx, t, drawObj, samples = 8, span = 0.12){
 }
 ```
 
-## Физика и симуляции
+## Physics and simulations
 
-Если нужна настоящая симуляция (жидкость, ткань, столкновения), она не является функцией от `t`. Варианты:
-- в режиме рендера шагать симуляцию фиксированным `dt = 1/FPS` строго по порядку кадров (рендер-скрипт идёт последовательно, это работает);
-- для перемотки в живом режиме кешировать снапшоты состояния каждые N секунд.
+If you need a real simulation (fluid, cloth, collisions), it isn't a function of `t`. Options:
+- in render mode, step the simulation with a fixed `dt = 1/FPS` strictly in frame order (the render script proceeds sequentially, so this works);
+- for seeking in live mode, cache state snapshots every N seconds.
 
-## Слои и оффскрин-буферы
+## Layers and offscreen buffers
 
-Для переходов, постобработки и масок каждая сцена рисуется в свой `OffscreenCanvas` (или обычный canvas вне DOM), потом буферы композируются. Держи 2–3 буфера и переиспользуй, не создавай новые на кадр.
+For transitions, post-processing, and masks, each scene is drawn into its own `OffscreenCanvas` (or a regular canvas outside the DOM), then the buffers are composited. Keep 2-3 buffers and reuse them; don't create new ones per frame.
 
 ```js
 const bufA = new OffscreenCanvas(W, H), bufB = new OffscreenCanvas(W, H);
 const ca = bufA.getContext('2d'), cb = bufB.getContext('2d');
 ```
 
-## Когда переходить на WebGL
+## When to switch to WebGL
 
-Canvas 2D хорош до нескольких тысяч примитивов и простых эффектов. Если нужны: десятки тысяч частиц, bloom, дисторсия, noise-переходы, объём, свет, то используй WebGL (Three.js или сырой фрагментный шейдер). Для 2D-стилистики с шейдерной постобработкой удобна связка: рисуешь в Canvas 2D, передаёшь его как текстуру в полноэкранный шейдер.
+Canvas 2D is good for up to a few thousand primitives and simple effects. If you need tens of thousands of particles, bloom, distortion, noise transitions, volume, or light, use WebGL (Three.js or a raw fragment shader). For a 2D look with shader post-processing, a convenient combo is: draw in Canvas 2D, then pass it as a texture into a full-screen shader.

@@ -1,59 +1,59 @@
-# Монтаж
+# Editing
 
-Кодовый ролик это тоже монтаж. Большинство роликов «выглядят как скринсейвер» не из-за графики, а из-за отсутствия монтажной логики.
+A code-driven video is an edit too. Most videos "look like a screensaver" not because of the graphics, but because of missing editing logic.
 
-## Шесть критериев склейки (Уолтер Мёрч)
+## The six criteria for a cut (Walter Murch)
 
-По убыванию важности: эмоция, история, ритм, движение взгляда, плоскость кадра, пространство. Склейка, которая работает на эмоцию, прощает нарушения всего остального. Склейка, которая корректна технически, но ничего не даёт эмоционально, бесполезна.
+In descending order of importance: emotion, story, rhythm, eye-trace, screen plane, space. A cut that works for emotion forgives violations of everything else. A cut that is technically correct but delivers nothing emotionally is useless.
 
-## Правила склеек
+## Cutting rules
 
-- **Резать на действии.** Склейка посреди движения (замах, поворот, падение) прячет шов: мозг следит за движением.
-- **Движение взгляда.** Точка интереса после склейки должна быть рядом с точкой интереса до склейки. Если главный объект был справа вверху, новый шот начинается с интереса там же, потом может уйти.
-- **Смена крупности.** Не склеивай два похожих плана (скачок, jump cut), если это не художественный приём. Чередуй: общий → средний → крупный → деталь.
-- **Направление движения.** Если объект уходит вправо, в следующем шоте он входит слева (правило 180 градусов).
-- **Длина шота зависит от информации.** Общий план требует больше времени, чем крупный. Сложный кадр держи дольше, простой короче.
-- **J-cut и L-cut.** Звук следующей сцены начинается раньше картинки (J) или звук предыдущей тянется после склейки (L). Самый дешёвый способ сделать монтаж плавным.
+- **Cut on action.** A cut in the middle of a movement (a wind-up, a turn, a fall) hides the seam: the brain follows the motion.
+- **Eye-trace.** The point of interest after the cut should be near the point of interest before the cut. If the main object was in the upper right, the new shot starts with interest in the same place, and can move away from there.
+- **Change of shot size.** Don't cut between two similar shots (a jump cut) unless it's a deliberate device. Alternate: wide -> medium -> close-up -> extreme close-up.
+- **Direction of motion.** If an object exits to the right, in the next shot it enters from the left (the 180-degree rule).
+- **Shot length depends on information.** A wide shot needs more time than a close-up. Hold a complex frame longer, a simple one shorter.
+- **J-cut and L-cut.** The sound of the next scene starts before its picture (J), or the sound of the previous scene carries on after the cut (L). The cheapest way to make an edit feel smooth.
 
-## Ритм
+## Rhythm
 
-- **Бит-сетка.** Выбери BPM (80–100 для спокойного, 110–130 для энергичного). Склейки и акценты на сильные доли. Смены сцен на границы фраз по 4 или 8 тактов.
-- **Ускорение к пику.** Длина шотов уменьшается к кульминации: 4 такта, 2, 1, половина.
-- **Пауза перед пиком.** Короткая тишина или замирание (0.5–1.5 с) перед главным моментом делает его в разы сильнее.
-- **Выдох после пика.** После кульминации длинный спокойный план.
-- **Не всё на бит.** Если каждое событие на бит, это метроном. Оставляй свободные движения между долями.
+- **Beat grid.** Choose a BPM (80-100 for calm, 110-130 for energetic). Cuts and accents land on strong beats. Scene changes land on phrase boundaries of 4 or 8 bars.
+- **Acceleration toward the peak.** Shot length shrinks toward the climax: 4 bars, 2, 1, half.
+- **Pause before the peak.** A short silence or freeze (0.5-1.5 s) before the main moment makes it many times stronger.
+- **Exhale after the peak.** A long calm shot after the climax.
+- **Not everything on the beat.** If every event lands on a beat, it's a metronome. Leave free movement between beats.
 
-## Структура по длине
+## Structure by length
 
-| Длина | Структура |
+| Length | Structure |
 |---|---|
-| 10–20 с | крючок (0–2 с), одна идея, развязка с титром |
-| 30 с | крючок, 3 бита развития, пик, финал |
-| 60 с | вступление, завязка, 2 акта развития, пауза, пик, выход |
-| 2–3 мин | главы по 20–30 с, каждая со своим мини-пиком; общий визуальный мотив, который эволюционирует |
+| 10-20 s | hook (0-2 s), one idea, payoff with a title card |
+| 30 s | hook, 3 beats of development, peak, ending |
+| 60 s | intro, setup, 2 acts of development, pause, peak, exit |
+| 2-3 min | chapters of 20-30 s, each with its own mini-peak; a shared visual motif that evolves |
 
-Для вертикальных площадок первые 1–2 секунды решают всё: движение и контраст с первого кадра, никакого медленного проявления из чёрного.
+For vertical platforms, the first 1-2 seconds decide everything: motion and contrast from the first frame, no slow fade-in from black.
 
-## Визуальный мотив
+## Visual motif
 
-Сквозной образ, который проходит через весь ролик и меняется вместе с историей (искра → факел → пожар → звёзды; одна линия, которая рисует всё). Мотив связывает сцены сильнее любых переходов и делает монтаж осмысленным.
+A recurring image that runs through the whole video and changes along with the story (a spark -> a torch -> a fire -> stars; a single line that draws everything). A motif ties scenes together more strongly than any transition and gives the edit meaning.
 
-## Монтажные приёмы
+## Editing techniques
 
-- **Match cut:** склейка по сходству формы, движения, цвета, композиции.
-- **Smash cut:** резкий переход от тихого к громкому (или наоборот) без подготовки. Работает на контрасте.
-- **Монтажная последовательность:** серия коротких шотов на один тезис (время идёт, прогресс растёт). Хороша со stagger и ускорением.
-- **Параллельный монтаж:** чередование двух линий, которые сходятся в финале.
-- **Сплит-скрин:** разделение кадра на части, одновременные события.
-- **Freeze frame:** стоп-кадр на пике с титром.
-- **Speed ramp:** замедление на ключевом моменте, затем резкое ускорение. В коде это нелинейная функция времени сцены: `sceneT = rampTime(t)`.
+- **Match cut:** a cut on similarity of shape, motion, color, composition.
+- **Smash cut:** an abrupt switch from quiet to loud (or the reverse) with no lead-in. Works through contrast.
+- **Montage sequence:** a series of short shots on a single thesis (time passing, progress building). Works well with stagger and acceleration.
+- **Parallel editing:** alternating two storylines that converge at the end.
+- **Split screen:** dividing the frame into parts, simultaneous events.
+- **Freeze frame:** a stop-frame at the peak with a title card.
+- **Speed ramp:** slowing down at a key moment, then a sharp speed-up. In code this is a nonlinear function of scene time: `sceneT = rampTime(t)`.
 
 ```js
-// speed ramp: нормальная скорость, замедление вокруг tc, затем догоняющее ускорение
+// speed ramp: normal speed, slowdown around tc, then a catch-up speed-up
 function rampTime(t, tc, width = 0.8, slow = 0.2){
   const x = (t - tc) / width;
-  const k = 1 - (1 - slow) * Math.exp(-x * x * 4);   // локальная скорость
-  // интеграл скорости: приближаем численно, детерминированно
+  const k = 1 - (1 - slow) * Math.exp(-x * x * 4);   // local speed
+  // integral of speed: approximate numerically, deterministically
   let acc = 0, steps = 200, t0 = Math.min(t, tc - 3 * width);
   const dt = (t - t0) / steps;
   for (let i = 0; i < steps; i++) { const xi = (t0 + (i + .5) * dt - tc) / width; acc += (1 - (1 - slow) * Math.exp(-xi * xi * 4)) * dt; }
@@ -61,7 +61,7 @@ function rampTime(t, tc, width = 0.8, slow = 0.2){
 }
 ```
 
-## План как данные
+## Plan as data
 
 ```js
 const shots = [
@@ -71,4 +71,4 @@ const shots = [
 ];
 ```
 
-Попроси модель сначала показать эту таблицу и проверь её глазами: крупности чередуются, длины уменьшаются к пику, у каждого перехода есть смысл.
+Ask the model to show this table first and check it by eye: shot sizes alternate, lengths shrink toward the peak, every transition has a reason.

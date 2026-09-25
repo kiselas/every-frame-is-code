@@ -1,5 +1,5 @@
-# По тегу vX.Y.Z собирает motion-kit.zip и прикладывает к релизу.
-# Ссылка releases/latest/download/motion-kit.zip в README всегда ведёт на свежую версию.
+# On a vX.Y.Z tag, builds motion-kit.zip and attaches it to the release.
+# The releases/latest/download/motion-kit.zip link in README always points to the newest version.
 name: release
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Тег релиза, к которому приложить архив'
+        description: 'Release tag to attach the archive to'
         required: true
 permissions:
   contents: write

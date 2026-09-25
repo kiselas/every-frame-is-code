@@ -1,11 +1,11 @@
-# Кулинарная книга эффектов
+# Effects Cookbook
 
-Все рецепты детерминированы: состояние вычисляется из `t` и сидированных параметров.
+All recipes are deterministic: state is computed from `t` and seeded parameters.
 
-## Шум
+## Noise
 
 ```js
-// 2D value noise + fbm, сидированно
+// 2D value noise + fbm, seeded
 function makeNoise(seed = 1){
   const r = mulberry32(seed), P = new Uint8Array(512), G = new Float32Array(256);
   for (let i = 0; i < 256; i++) { P[i] = i; G[i] = r(); }
@@ -21,11 +21,11 @@ function makeNoise(seed = 1){
 const N = makeNoise(42);
 ```
 
-Применения: дрожь линий, дрейф частиц, handheld-камера, неровные края, мерцание, облака.
+Uses: line jitter, particle drift, handheld camera, rough edges, flicker, clouds.
 
-## Система частиц без состояния
+## Stateless particle system
 
-Каждая частица получает постоянные параметры при инициализации. В кадре её возраст вычисляется циклически из `t`.
+Each particle gets constant parameters at init. In a frame, its age is computed cyclically from `t`.
 
 ```js
 const rp = mulberry32(7);
@@ -41,15 +41,15 @@ function particleState(p, t){
   const tt = age * p.life;
   return { age, cycle,
     x: p.x0 + p.vx * tt + Math.sin(t * 3 + p.wob) * 12 * age,
-    y: p.vy * tt + 0.5 * (p.g || 0) * tt * tt };         // p.g: гравитация, если нужна
+    y: p.vy * tt + 0.5 * (p.g || 0) * tt * tt };         // p.g: gravity, if needed
 }
 ```
 
-`cycle` можно использовать как дополнительный seed, чтобы каждая «жизнь» частицы немного отличалась.
+`cycle` can be used as an extra seed so each particle "life" differs slightly.
 
-## Спрайты вместо градиентов
+## Sprites instead of gradients
 
-`createRadialGradient` на каждую частицу в каждом кадре медленный. Предрисуй спрайты один раз:
+`createRadialGradient` per particle per frame is slow. Pre-render sprites once:
 
 ```js
 function makeGlowSprite(r, color){
@@ -60,9 +60,9 @@ function makeGlowSprite(r, color){
 }
 ```
 
-## Огонь
+## Fire
 
-Цветовая рампа по возрасту частицы, аддитивное смешивание, спрайты на 16 шагов рампы.
+Color ramp by particle age, additive blending, sprites for 16 ramp steps.
 
 ```js
 const FIRE_RAMP = [[255,250,230],[255,214,120],[255,140,60],[220,60,30],[90,20,10],[20,5,5]];
@@ -90,31 +90,31 @@ function drawFire(ctx, t, cx, cy, scale = 1){
 }
 ```
 
-Добавь поверх отдельный слой искр: мелкие частицы с долгой жизнью, летят выше и дальше, с дугой по шуму.
+Add a separate sparks layer on top: small particles with a long life, flying higher and farther, arcing by noise.
 
-## Дым
+## Smoke
 
-Как огонь, но: обычное смешивание (не `lighter`), спрайты серые с низкой альфой, размер растёт с возрастом (×3–5), движение медленное, сильный дрейф по fbm, поворот спрайта.
+Like fire, but: normal blending (not `lighter`), sprites are gray with low alpha, size grows with age (×3–5), motion is slow, strong fbm drift, sprite rotation.
 
-## Свечение и bloom в 2D
+## Glow and bloom in 2D
 
 ```js
-// двухслойное свечение объекта: ядро + широкий ореол
+// two-layer glow of an object: core + wide halo
 function glow(ctx, drawShape, color, core = 8, halo = 40){
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   ctx.filter = `blur(${halo}px)`; ctx.globalAlpha = .5; drawShape(ctx, color);
   ctx.filter = `blur(${core}px)`; ctx.globalAlpha = .9; drawShape(ctx, color);
-  ctx.filter = 'none'; ctx.globalAlpha = 1; drawShape(ctx, '#fff');   // горячий центр почти белый
+  ctx.filter = 'none'; ctx.globalAlpha = 1; drawShape(ctx, '#fff');   // hot center is almost white
   ctx.restore();
 }
 ```
 
-Bloom для всего кадра: уменьши кадр в 4 раза, оставь только яркие участки (в 2D грубо через `filter: brightness() contrast()`), размой, растяни обратно с `lighter`. Для качественного bloom переходи на WebGL (UnrealBloomPass или свой шейдер).
+Bloom for the whole frame: downscale the frame 4x, keep only bright areas (in 2D, roughly via `filter: brightness() contrast()`), blur, scale back up with `lighter`. For quality bloom, move to WebGL (UnrealBloomPass or your own shader).
 
-`ctx.filter = 'blur()'` тяжёлый на больших радиусах. Размывай уменьшенную копию и растягивай: blur(40px) на полном разрешении ≈ blur(10px) на четверти.
+`ctx.filter = 'blur()'` is expensive at large radii. Blur a downscaled copy and scale it up: blur(40px) at full resolution ≈ blur(10px) at a quarter.
 
-## Зерно плёнки
+## Film grain
 
 ```js
 const grainTiles = Array.from({ length: 8 }, (_, k) => {
@@ -123,13 +123,13 @@ const grainTiles = Array.from({ length: 8 }, (_, k) => {
   x.putImageData(img, 0, 0); return c;
 });
 function drawGrain(ctx, t, amount = .06){
-  const tile = grainTiles[Math.floor(t * 24) % grainTiles.length];   // зерно меняется 24 раза в секунду
+  const tile = grainTiles[Math.floor(t * 24) % grainTiles.length];   // grain changes 24 times per second
   ctx.save(); ctx.globalAlpha = amount; ctx.globalCompositeOperation = 'overlay';
   ctx.fillStyle = ctx.createPattern(tile, 'repeat'); ctx.fillRect(0, 0, W, H); ctx.restore();
 }
 ```
 
-## Виньетка
+## Vignette
 
 ```js
 function vignette(ctx, strength = .45){
@@ -139,10 +139,10 @@ function vignette(ctx, strength = .45){
 }
 ```
 
-## Рисованная линия и line boil
+## Hand-drawn line and line boil
 
 ```js
-// дрожащая линия; seed меняется 10 раз в секунду, как у рисованной анимации
+// jittery line; seed changes 10 times per second, like hand-drawn animation
 function inkLine(ctx, pts, t, amp = 1.6, fps = 10){
   const r = mulberry32(Math.floor(t * fps) * 131 + pts.length);
   ctx.beginPath();
@@ -151,23 +151,23 @@ function inkLine(ctx, pts, t, amp = 1.6, fps = 10){
 }
 ```
 
-Для рисования линии по ходу анимации: `ctx.setLineDash([len, len]); ctx.lineDashOffset = len * (1 - p)`.
+To draw a line progressively over the animation: `ctx.setLineDash([len, len]); ctx.lineDashOffset = len * (1 - p)`.
 
-## Звёздное небо и туманности
+## Starfield and nebulas
 
-- Звёзды: 3 слоя с разной яркостью и параллаксом, мерцание `0.7 + 0.3 * sin(t * k + phase)` с индивидуальными k и phase.
-- Туманность: fbm, раскрашенный рампой, рендеренный один раз в низком разрешении, растянутый и медленно смещающийся. Второй слой fbm с другим масштабом поверх в `lighter`.
+- Stars: 3 layers with different brightness and parallax, flicker `0.7 + 0.3 * sin(t * k + phase)` with individual k and phase.
+- Nebula: fbm, colored with a ramp, rendered once at low resolution, scaled up and drifting slowly. A second fbm layer at a different scale on top in `lighter`.
 
-## Туман и атмосфера
+## Fog and atmosphere
 
-Полупрозрачные слои fbm между планами глубины, каждый со своей скоростью дрейфа. Дальние объекты смешивай с цветом тумана: `mix(color, fogColor, depth)`.
+Semi-transparent fbm layers between depth planes, each with its own drift speed. Blend distant objects with the fog color: `mix(color, fogColor, depth)`.
 
-## Шейдерная постобработка (WebGL)
+## Shader post-processing (WebGL)
 
-Раннер из 05-transitions.md подходит и для постобработки одного кадра (передай тот же буфер в `from` и `to`).
+The runner from 05-transitions.md also works for post-processing a single frame (pass the same buffer as both `from` and `to`).
 
 ```glsl
-// хроматическая аберрация + виньетка + зерно
+// chromatic aberration + vignette + grain
 uniform float time;
 void main(){
   vec2 d = (uv - .5) * .004;
@@ -179,7 +179,7 @@ void main(){
 ```
 
 ```glsl
-// god rays: радиальное размытие от источника света
+// god rays: radial blur from a light source
 uniform vec2 light;
 void main(){
   vec2 dir = (uv - light) / 64.; vec2 p = uv; vec3 acc = vec3(0); float w = 1.;
@@ -188,13 +188,13 @@ void main(){
 }
 ```
 
-Если используешь `time` в шейдере, добавь в раннер uniform и передавай `t`, а не системное время.
+If you use `time` in the shader, add a uniform to the runner and pass `t`, not system time.
 
-## Другие эффекты, которые стоит знать
+## Other effects worth knowing
 
-- **CRT:** сканлайны (горизонтальные полосы с альфой 0.1–0.2), бочкообразная дисторсия, свечение, лёгкое мерцание.
-- **Тепловое марево:** смещение UV по fbm, анимированному вверх.
-- **Блики объектива:** цепочка кругов на линии между источником и центром кадра, разного размера и цвета, аддитивно.
-- **Пикселизация:** рисуй в маленький буфер, растягивай с `imageSmoothingEnabled = false`.
-- **Дизеринг:** упорядоченный (матрица Байера) в шейдере для ретро-стиля с ограниченной палитрой.
-- **Частицы в текст:** рендер текста в скрытый canvas, сэмплинг непрозрачных пикселей в точки, частицы летят в эти точки со stagger.
+- **CRT:** scanlines (horizontal stripes with alpha 0.1–0.2), barrel distortion, glow, slight flicker.
+- **Heat haze:** UV offset by fbm, animated upward.
+- **Lens flare:** a chain of circles along the line between the light source and the frame center, varying size and color, additive.
+- **Pixelation:** draw into a small buffer, scale it up with `imageSmoothingEnabled = false`.
+- **Dithering:** ordered dithering (Bayer matrix) in a shader for a retro look with a limited palette.
+- **Particles into text:** render text into a hidden canvas, sample opaque pixels into points, particles fly to these points with stagger.

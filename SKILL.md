@@ -1,19 +1,19 @@
 ---
 name: motion-kit
-description: Кодовая графика, анимационные ролики, эксплейнеры, кинетическая типографика, переходы, монтаж, 3D-сцены на Three.js и браузерные игры с сильным game feel. Использовать, когда нужно сделать красивую анимацию, видео, заставку, интерактивную сцену или игру в HTML/JS и отрендерить в MP4. Code-drawn motion graphics, explainer videos, kinetic typography, transitions, Three.js scenes and juicy browser games rendered to MP4.
+description: Code-drawn motion graphics, animated videos, explainers, kinetic typography, transitions, editing, Three.js scenes and browser games with strong game feel. Use when you need to make a good-looking animation, video, intro, interactive scene or game in HTML/JS and render it to MP4.
 ---
 
 # Motion Kit
 
-1. Прочитай `00-agent-brief.md` полностью. Это обязательные правила.
-2. Прочитай файлы по задаче:
-   - любой ролик: `01-pipeline.md`, `04-motion-easing.md`, `06-montage.md`, `12-render-qa.md`;
-   - выбор стиля: `03-visual-style.md`;
-   - переходы между сценами: `05-transitions.md`;
-   - огонь, частицы, свечение, зерно, шейдеры: `07-effects-cookbook.md`;
-   - титры и анимированный текст: `08-kinetic-typography.md`;
-   - музыка, звуки, озвучка: `09-audio-sync.md`;
-   - игры: `10-games-juice.md`;
+1. Read `00-agent-brief.md` in full. These rules are mandatory.
+2. Read the files for the task:
+   - any video: `01-pipeline.md`, `04-motion-easing.md`, `06-montage.md`, `12-render-qa.md`;
+   - choosing a style: `03-visual-style.md`;
+   - transitions between scenes: `05-transitions.md`;
+   - fire, particles, glow, grain, shaders: `07-effects-cookbook.md`;
+   - titles and animated text: `08-kinetic-typography.md`;
+   - music, sound effects, voice-over: `09-audio-sync.md`;
+   - games: `10-games-juice.md`;
    - 3D: `11-threejs.md`.
-3. Сначала покажи план как данные (стиль, бит-сетка, шоты, события), потом пиши код.
-4. После рендера строй контакт-лист (`render/contact-sheet.sh`), смотри на него и исправляй по конкретным таймкодам.
+3. Show the plan as data first (style, beat grid, shots, events), then write the code.
+4. After rendering, build a contact sheet (`render/contact-sheet.sh`), look at it, and fix issues by specific timecodes.

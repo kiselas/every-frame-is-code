@@ -26,7 +26,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 // ============================================================================
-// Паспорт: examples/demo/SCRIPT.md. 60 с, 120 BPM, доля 0.5 с, такт 2 с.
+// Spec: examples/demo/SCRIPT.md. 60 s, 120 BPM, beat 0.5 s, bar 2 s.
 // ============================================================================
 const W = 1920, H = 1080, FPS = 60, DURATION = 60;
 const BPM = 120, BEAT = 60 / BPM, BAR = BEAT * 4;
@@ -45,7 +45,7 @@ const F = {
   pixel: 'Silkscreen, monospace',
 };
 
-// --- утилиты движения (04-motion-easing.md) ---------------------------------
+// --- motion utilities (04-motion-easing.md) ---------------------------------
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a, b, p) => a + (b - a) * p;
 const seg = (t, a, b) => clamp((t - a) / (b - a));
@@ -83,7 +83,7 @@ function makeNoise(seed = 1) {
   return { n, fbm };
 }
 const N = makeNoise(42);
-// erf для speed ramp в закрытой форме
+// erf for a closed-form speed ramp
 function erf(x) { const s = Math.sign(x); x = Math.abs(x); const t = 1 / (1 + .3275911 * x);
   const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - .284496736) * t + .254829592) * t * Math.exp(-x * x); return s * y; }
 const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -91,7 +91,7 @@ const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},$
 const mix = (a, b, p) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(lerp(v, B[i], p))).join(',')})`; };
 const fmtTime = s => { const m = Math.floor(s / 60), r = s - m * 60; return `${m}:${r.toFixed(1).padStart(4, '0')}`; };
 
-// --- буферы и состояние кисти ------------------------------------------------
+// --- buffers and brush state -------------------------------------------------
 function buf(w = W, h = H) { const c = new OffscreenCanvas(w, h); return { c, x: c.getContext('2d') }; }
 const A = buf(), B = buf(), termB = buf(), vizB = buf(), palA = buf(), palB = buf(), finB = buf(), thumbB = buf();
 function reset(c) {
@@ -124,7 +124,7 @@ function vignette(c, strength = .45, col = '0,0,0') {
   c.save(); c.fillStyle = g; c.fillRect(0, 0, W, H); c.restore();
 }
 
-// --- текст (08-kinetic-typography.md) ---------------------------------------
+// --- text (08-kinetic-typography.md) ---------------------------------------
 const _pref = new Map();
 function prefixes(c, text) {
   const k = c.font + '|' + c.letterSpacing + '|' + text; let v = _pref.get(k);
@@ -152,7 +152,7 @@ function maskText(c, text, x, y, t, t0, size, o = {}) {
   c.restore(); return w;
 }
 
-// --- WebGL-раннер для переходов и постобработки (05-transitions.md) ----------
+// --- WebGL runner for transitions and post-processing (05-transitions.md) ---
 const GL_HEAD = `precision highp float;
 uniform sampler2D from, to; uniform float progress, ratio, time, amount; uniform vec2 origin; varying vec2 uv;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -225,7 +225,7 @@ const CRT_FRAG = `void main(){
 }`;
 
 // ============================================================================
-// План как данные
+// Plan as data
 // ============================================================================
 const SCENES = [
   { id: 'terminal', start: 0,    end: 4 },
@@ -245,13 +245,13 @@ const TRANS = [
   { at: 38, dur: .5, type: 'whip',        from: 'game',    to: 'catalog', dir: 1 },
   { at: 46, dur: .8, type: 'wipe',        from: 'catalog', to: 'sound' },
 ];
-// что показываем как «данные» в каталоге переходов
+// what the transition catalog shows as "data"
 const TRANS_LISTING = [
   ['4',    'particles'], ['10', 'zoomThrough'], ['16', 'matchCut'], ['22', 'burn'],
   ['28.5', 'smashCut'], ['38', 'whip'], ['46', 'wipe'], ['52', 'pullOut'],
 ];
 
-// --- события: их читают и звук, и картинка (09-audio-sync.md) ---------------
+// --- events: read by both sound and picture (09-audio-sync.md) --------------
 const TERM = { size: 68, L1: 'function draw(ctx, t) {', L2: '// every frame is code', t1: 1.0, per1: .042, t2: 2.05, per2: .03, y1: 500, y2: 585 };
 const FIN = { size: 150, text: 'motion-kit', url: 'github.com/kiselas/every-frame-is-code', tType: 53.0, per: .06, tUrl: 54.0, perUrl: .028, y: 540 };
 const EV = [];
@@ -272,7 +272,7 @@ const add = (t, type, o = {}) => EV.push({ t, type, ...o });
   add(28.5, 'impact');
   add(37.72, 'whoosh', { dur: .55 }); add(45.6, 'whoosh', { dur: .8, soft: true }); add(51.2, 'whoosh', { dur: .8, rev: true });
   add(58.35, 'crtoff');
-  // музыка
+  // music
   const PROG = [[110, 130.81, 164.81, 220], [87.31, 110, 130.81, 174.61], [130.81, 164.81, 196, 261.63], [98, 123.47, 146.83, 196]];
   const ROOT = [55, 43.65, 65.41, 49];
   let k = 0;
@@ -291,7 +291,7 @@ const add = (t, type, o = {}) => EV.push({ t, type, ...o });
   for (let t = 28.75; t < 52; t += BEAT) add(t, 'hat');
   for (let t = 22.5; t < 27.5; t += 1) add(t, 'snare');
   for (let t = 29; t < 52; t += 1) add(t, 'snare');
-  // игра
+  // game
   [30, 33, 34.5].forEach(t => add(t, 'jump'));
   [30.75, 33.8].forEach(t => add(t, 'land'));
   add(31, 'hit'); add(35, 'slam');
@@ -300,7 +300,7 @@ const add = (t, type, o = {}) => EV.push({ t, type, ...o });
 EV.sort((a, b) => a.t - b.t);
 
 // ============================================================================
-// Сцена 1. Терминал · стиль «Фосфор»
+// Scene 1. Terminal · "Phosphor" style
 // ============================================================================
 const PH = { bg: '#020402', shadow: '#0a1a0a', mid: '#1f7a1f', light: '#b6ffb6', hot: '#ffffff' };
 const P_SPARK = [1400, 330];
@@ -348,14 +348,14 @@ function drawTerminal(c, t) {
   b.fillStyle = PH.bg; b.fillRect(0, 0, W, H);
   const push = 1 + .04 * ease.inOutCubic(seg(t, 0, 4));
   const dis = seg(t, 3.0, 3.5);
-  // дальний план: наш же код, почти невидимый, медленный дрейф
+  // background: our own code, barely visible, drifting slowly
   b.save(); zoomAt(b, 1 + (push - 1) * .3, W / 2, H / 2);
   b.font = `400 22px ${F.mono}`; b.fillStyle = PH.mid;
   b.globalAlpha = .13 * seg(t, .4, 1.6) * (1 - dis);
   BG_CODE.forEach((ln, i) => { const yy = 70 + i * 38 - t * 9; b.fillText(ln, 110, yy); });
   BG_CODE.slice().reverse().forEach((ln, i) => { const yy = 90 + i * 38 - t * 6; b.fillText(ln, 1180, yy); });
   b.restore();
-  // средний план: печать
+  // midground: typing
   b.save(); zoomAt(b, push, W / 2, H / 2);
   const ta = 1 - seg(t, 3.0, 3.25);
   const f1 = `700 ${TERM.size}px ${F.mono}`, s2 = Math.round(TERM.size * .66), f2 = `400 ${s2}px ${F.mono}`;
@@ -371,7 +371,7 @@ function drawTerminal(c, t) {
     b.globalAlpha = 1;
   }
   b.restore();
-  // текст рассыпается в частицы и стягивается в искру
+  // the text scatters into particles that collapse into a spark
   if (t >= 3.0) {
     b.save(); b.globalCompositeOperation = 'lighter';
     const [px, py] = P_SPARK;
@@ -399,7 +399,7 @@ function drawTerminal(c, t) {
 }
 
 // ============================================================================
-// Сцена 2. Огонь · стиль «Диафильм»
+// Scene 2. Fire · "Filmstrip" style
 // ============================================================================
 const FIRE = { x: 1400, base: 840 };
 const FIRE_RAMP = [[255, 250, 230], [255, 214, 120], [255, 140, 60], [220, 60, 30], [90, 20, 10], [20, 5, 5]];
@@ -442,25 +442,25 @@ function drawFire(c, t) {
   const baseY = FIRE.base + cam;
   const shake = t > 4.5 && t < 4.8 ? (1 - seg(t, 4.5, 4.8)) ** 2 * 6 : 0;
   c.translate((N.n(t * 40, 1) - .5) * shake, (N.n(t * 40, 2) - .5) * shake);
-  // фон: стена в тёплом свете
+  // background: a wall in warm light
   c.fillStyle = '#1c1a17'; c.fillRect(-20, -20, W + 40, H + 40);
   const land = t >= 4.5 ? Math.exp(-(t - 4.5) * 6) : 0;
   const lg = c.createRadialGradient(FIRE.x, baseY - 180, 0, FIRE.x, baseY - 180, 1100);
   lg.addColorStop(0, `rgba(214,110,50,${(.34 * I * flick + .5 * land).toFixed(3)})`); lg.addColorStop(.5, `rgba(120,60,30,${(.14 * I * flick).toFixed(3)})`); lg.addColorStop(1, 'rgba(0,0,0,0)');
   c.fillStyle = lg; c.fillRect(-20, -20, W + 40, H + 40);
-  // дальние искры (параллакс 0.3)
+  // distant embers (parallax 0.3)
   c.save(); c.globalCompositeOperation = 'lighter';
   for (const e of farEmbers) {
     const y = ((e.y - t * e.sp + cam * .3) % H + H) % H, a = (.25 + .25 * Math.sin(t * 2 + e.ph)) * (.3 + .7 * I);
     c.globalAlpha = a; c.drawImage(SPR.ember, e.x - 6 * e.s, y - 6 * e.s, 12 * e.s, 12 * e.s);
   }
   c.restore();
-  // пол и световое пятно
+  // floor and light pool
   c.fillStyle = '#100d0b'; c.fillRect(-20, baseY + 18, W + 40, H);
   c.save(); c.translate(FIRE.x, baseY + 30); c.scale(1, .18);
   const pg = c.createRadialGradient(0, 0, 0, 0, 0, 900); pg.addColorStop(0, `rgba(255,140,60,${(.5 * I * flick + .6 * land).toFixed(3)})`); pg.addColorStop(1, 'rgba(0,0,0,0)');
   c.fillStyle = pg; c.fillRect(-900, -900, 1800, 1800); c.restore();
-  // поленья с контровым светом
+  // logs with rim light
   c.save(); c.translate(FIRE.x, baseY + 8);
   [[-.28, -70, 210], [.3, 60, 200], [-.05, 0, 240]].forEach(([rot, dx, len]) => {
     c.save(); c.rotate(rot); c.translate(dx, 0);
@@ -469,7 +469,7 @@ function drawFire(c, t) {
     c.restore();
   });
   c.restore();
-  // дым
+  // smoke
   if (I > 0) {
     for (const p of smokeParts) {
       const s = cyc(p, t); const y = baseY - 140 + p.vy * s.tt, x = FIRE.x + p.x0 + (N.n(s.tt * .6 + p.off, 5) - .5) * 180 * s.age;
@@ -478,7 +478,7 @@ function drawFire(c, t) {
     }
     c.globalAlpha = 1;
   }
-  // пламя
+  // flames
   c.save(); c.globalCompositeOperation = 'lighter';
   if (I > 0) {
     const sc = .35 + .65 * I;
@@ -499,7 +499,7 @@ function drawFire(c, t) {
       c.globalAlpha = (1 - s.age) * I; c.drawImage(SPR.ember, x - r, y - r, r * 2, r * 2);
     }
   }
-  // искра, падающая из терминала
+  // the spark falling from the terminal
   if (t < 4.62) {
     const q = seg(t, 4.0, 4.5), y = lerp(P_SPARK[1], baseY - 10, ease.inQuad(q));
     for (let k = 5; k >= 0; k--) {
@@ -515,7 +515,7 @@ function drawFire(c, t) {
     c.beginPath(); c.ellipse(FIRE.x, baseY + 10, 30 + 520 * ease.outExpo(q), (30 + 520 * ease.outExpo(q)) * .16, 0, 0, TAU); c.stroke();
   }
   c.restore();
-  // передний план: крупные расфокусированные угли (параллакс 1.6)
+  // foreground: large out-of-focus embers (parallax 1.6)
   c.save(); c.globalCompositeOperation = 'lighter';
   for (const p of bokehParts) {
     const y = ((H + 200 - ((t + p.off) * p.speed) + cam * 1.6) % (H + 400) + H + 400) % (H + 400) - 200;
@@ -523,7 +523,7 @@ function drawFire(c, t) {
     c.globalAlpha = .16 * I; c.drawImage(SPR.bokeh, x - p.size, y - p.size, p.size * 2, p.size * 2);
   }
   c.restore();
-  // титр
+  // title
   c.setTransform(1, 0, 0, 1, 0, 0);
   const out = 1 - seg(t, 9.3, 9.6);
   if (out > 0) {
@@ -544,7 +544,7 @@ function drawFire(c, t) {
 }
 
 // ============================================================================
-// Сцена 3. Гравюра
+// Scene 3. Engraving
 // ============================================================================
 const EN = { paper: '#efe6d2', ink: '#3b3226', mid: '#8a7a60', light: '#fbf7ee', acc: '#9e2b25', cx: 960, cy: 540, R: 320 };
 let paperCanvas;
@@ -577,15 +577,15 @@ const ROMAN = ['XII', 'I', 'II', 'III', 'IIII', 'V', 'VI', 'VII', 'VIII', 'IX', 
 function drawAstrolabe(c, st) {
   const { cx, cy, R, ink, acc } = EN;
   c.strokeStyle = ink; c.lineCap = 'round'; c.lineJoin = 'round';
-  // подвес
+  // hanging ring
   const hp = seg(st, 0, .5);
   c.lineWidth = 3; inkPath(c, circlePts(cx, cy - R - 30, 18, 60, Math.PI / 2), st, 1, hp);
   c.lineWidth = 2.2; inkPath(c, [[cx - 26, cy - R + 2], [cx - 14, cy - R - 16], [cx + 14, cy - R - 16], [cx + 26, cy - R + 2]], st, 2, hp);
-  // внешние кольца
+  // outer rings
   c.lineWidth = 3.4; inkPath(c, circlePts(cx, cy, R, 220), st, 3, ease.inOutCubic(seg(st, .05, 1.05)));
   c.lineWidth = 1.6; inkPath(c, circlePts(cx, cy, R - 18, 200), st, 4, ease.inOutCubic(seg(st, .25, 1.15)));
   c.lineWidth = 1.2; inkPath(c, circlePts(cx, cy, R - 72, 200), st, 5, ease.inOutCubic(seg(st, .45, 1.3)));
-  // шкала
+  // scale ticks
   const rTick = (1 - spring(st - .5, .5, 9)) * -.6;
   for (let i = 0; i < 120; i++) {
     const p = seg(st, .5 + i * .008, .62 + i * .008); if (p <= 0) continue;
@@ -594,7 +594,7 @@ function drawAstrolabe(c, st) {
     c.lineWidth = long ? 2 : 1.1;
     inkPath(c, [[cx + Math.cos(a) * r1, cy + Math.sin(a) * r1], [cx + Math.cos(a) * lerp(r1, r2, p), cy + Math.sin(a) * lerp(r1, r2, p)]], st, 10 + i, 1, .8);
   }
-  // римские цифры
+  // roman numerals
   c.save(); c.font = `700 22px ${F.serif}`; c.fillStyle = ink; c.textAlign = 'center'; c.textBaseline = 'middle';
   ROMAN.forEach((s, i) => {
     const p = seg(st, 1.0 + i * .05, 1.3 + i * .05); if (p <= 0) return;
@@ -602,7 +602,7 @@ function drawAstrolabe(c, st) {
     c.save(); c.globalAlpha = p; c.translate(cx + Math.cos(a) * (R - 56), cy + Math.sin(a) * (R - 56)); c.rotate(a + Math.PI / 2); c.fillText(s, 0, 0); c.restore();
   });
   c.restore();
-  // пластина и штриховка тени (свет сверху слева)
+  // plate and shadow hatching (light from the top left)
   const pr = 210;
   c.lineWidth = 2; inkPath(c, circlePts(cx, cy, pr, 180, Math.PI), st, 30, ease.inOutCubic(seg(st, 1.1, 1.9)));
   const hpg = seg(st, 1.8, 2.6);
@@ -617,13 +617,13 @@ function drawAstrolabe(c, st) {
     }
     c.restore();
   }
-  // альмукантараты
+  // almucantars
   for (let i = 0; i < 5; i++) {
     c.save(); c.beginPath(); c.arc(cx, cy, pr, 0, TAU); c.clip();
     c.lineWidth = 1; inkPath(c, circlePts(cx, cy + 40 - i * 34, 190 - i * 34, 140), st, 40 + i, ease.inOutCubic(seg(st, 1.5 + i * .1, 2.3 + i * .1)), 1);
     c.restore();
   }
-  // рете: вращается с пружиной
+  // rete: rotates in on a spring
   const ra = -1.1 * (1 - spring(st - 1.7, .38, 8)) + .04 * st;
   c.save(); c.translate(cx, cy); c.rotate(ra);
   const rp = ease.inOutCubic(seg(st, 1.7, 2.5));
@@ -636,7 +636,7 @@ function drawAstrolabe(c, st) {
     c.fillStyle = EN.ink; c.beginPath(); c.arc(tx, ty, 3.2, 0, TAU); c.fill();
   }
   c.restore();
-  // алидада
+  // alidade
   const aa = 1.25 * (1 - spring(st - 2.15, .34, 9)) - .42;
   const ap = ease.inOutCubic(seg(st, 2.15, 2.7));
   if (ap > 0) {
@@ -647,7 +647,7 @@ function drawAstrolabe(c, st) {
     c.lineWidth = 1; for (let i = -6; i <= 6; i++) { if (!i) continue; c.beginPath(); c.moveTo(i * L / 7, -5); c.lineTo(i * L / 7, 5); c.stroke(); }
     c.restore();
   }
-  // центральная ось: курсор мотива
+  // center pin: the cursor motif
   const pp = ease.outBack(seg(st, 2.4, 2.8), 2.4);
   if (pp > 0) {
     c.fillStyle = EN.paper; c.beginPath(); c.arc(cx, cy, 16 * pp, 0, TAU); c.fill();
@@ -663,7 +663,7 @@ function drawEngrave(c, t) {
   zoomAt(c, 1 + .03 * ease.inOutCubic(seg(lt, 0, 6)), EN.cx, EN.cy);
   drawAstrolabe(c, st);
   c.restore();
-  // интерфейс перемотки
+  // rewind UI
   const ui = ease.outCubic(seg(lt, .6, 1.2));
   if (ui > 0) {
     c.save(); c.globalAlpha = ui;
@@ -677,7 +677,7 @@ function drawEngrave(c, t) {
     c.fillText('MULBERRY32 · LINE BOIL 10 FPS · LINEDASH DRAW-ON · SPRINGS', 110, 190);
     c.restore();
   }
-  // титр нижней трети
+  // lower-third title
   c.save(); c.font = `700 46px ${F.sans}`; c.fillStyle = EN.ink; c.letterSpacing = '1px';
   const words = ['Seeded.', 'Deterministic.', 'Frame-exact.'];
   const ws = words.map(w => c.measureText(w + ' ').width), total = ws.reduce((a, b) => a + b, 0) - c.measureText(' ').width;
@@ -692,7 +692,7 @@ function drawEngrave(c, t) {
 }
 
 // ============================================================================
-// Сцена 4. 3D-сфера · «Чертёж» в объёме
+// Scene 4. 3D sphere · "Blueprint" in volume
 // ============================================================================
 const BP = { bg: '#1d3557', shadow: '#13243b', mid: '#457b9d', light: '#e8f1f7', acc: '#f4a261' };
 let three = null;
@@ -725,7 +725,7 @@ function initThree() {
   scene.add(core);
   const halo = new THREE.Mesh(new THREE.SphereGeometry(.3, 32, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, .7, .25), transparent: true, opacity: .25, depthWrite: false }));
   scene.add(halo);
-  // 20 000 частиц на шейдере: позиция = функция времени
+  // 20,000 shader particles: position = function of time
   const n = 20000, r = mulberry32(21);
   const aR = new Float32Array(n), aA = new Float32Array(n), aH = new Float32Array(n), aS = new Float32Array(n), aC = new Float32Array(n);
   for (let i = 0; i < n; i++) {
@@ -790,7 +790,7 @@ function drawSphere(c, t) {
   T.disk.rotation.y = .1 * lt;
   T.composer.render();
   c.drawImage(T.renderer.domElement, 0, 0);
-  // чертёжные выноски
+  // blueprint callouts
   const notes = [
     { v: new THREE.Vector3(0, 0, 0), dx: 250, dy: -210, text: 'CORE · EMISSIVE · BLOOM', t0: 16.7 },
     { v: new THREE.Vector3(.72, .69, 0), dx: 230, dy: -120, text: 'WIRE SPHERE · FOG · ACES', t0: 17.0 },
@@ -811,11 +811,11 @@ function drawSphere(c, t) {
     c.fillText(nt.text, nt.dx > 0 ? ex + 4 : ex - tw - 4, ey - 10);
   }
   c.restore();
-  // метки обреза
+  // crop marks
   c.save(); c.strokeStyle = rgba(BP.light, .5); c.lineWidth = 2;
   [[60, 60, 1, 1], [W - 60, 60, -1, 1], [60, H - 60, 1, -1], [W - 60, H - 60, -1, -1]].forEach(([x0, y0, sx, sy]) => { c.beginPath(); c.moveTo(x0, y0 + sy * 40); c.lineTo(x0, y0); c.lineTo(x0 + sx * 40, y0); c.stroke(); });
   c.restore();
-  // титр
+  // title
   c.save(); c.globalAlpha = fo;
   c.font = `700 20px ${F.mono}`; c.letterSpacing = '3px'; c.fillStyle = BP.acc;
   maskText(c, 'THREE.JS · UNREALBLOOMPASS · SHADER POINTS', 140, 880, t, 17.8, 20, { dur: .6 });
@@ -826,7 +826,7 @@ function drawSphere(c, t) {
 }
 
 // ============================================================================
-// Сцена 5. Монтаж палитр: одна композиция, двенадцать стилей
+// Scene 5. Palette montage: one composition, twelve styles
 // ============================================================================
 const PAL_FRAMES = [];
 for (let i = 0; i < 4; i++) PAL_FRAMES.push({ s: i, start: 22 + i * .5, end: 22.5 + i * .5 });
@@ -1002,7 +1002,7 @@ function drawPalFrame(c, fr, t, idx) {
   c.save(); zoomAt(c, punch, S.sx, S.sy);
   st.draw(c, t, S);
   c.restore();
-  // общий текст: та же строка, новый стиль
+  // shared text: same line, new style
   c.save(); c.font = st.font; c.textBaseline = 'alphabetic';
   const lines = ['every frame', 'is code'];
   if (st.box) { c.fillStyle = 'rgba(0,0,0,.88)'; c.fillRect(110, 420, 740, 250); }
@@ -1030,7 +1030,7 @@ function drawPalettes(c, t) {
 }
 
 // ============================================================================
-// Сцена 6. Пауза
+// Scene 6. Pause
 // ============================================================================
 function drawPause(c, t) {
   reset(c); c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
@@ -1038,7 +1038,7 @@ function drawPause(c, t) {
 }
 
 // ============================================================================
-// Сцена 7. Игра · пиксель-арт, game feel (10-games-juice.md)
+// Scene 7. Game · pixel art, game feel (10-games-juice.md)
 // ============================================================================
 const GW = 160, GH = 90, GS = W / GW;
 const gB = buf(GW, GH);
@@ -1116,16 +1116,16 @@ function drawGame(c, t) {
   const shx = Math.round((N.n(s * 30, 7) - .5) * 2 * 3 * trauma), shy = Math.round((N.n(s * 30, 8) - .5) * 2 * 3 * trauma);
   g.drawImage(SPRITES.sky, 0, 0);
   g.translate(shx, shy);
-  // звёзды
+  // stars
   const sr = mulberry32(3); for (let i = 0; i < 26; i++) { const x = sr() * GW, y = sr() * 30, ph = sr() * 6; if (Math.sin(s * 3 + ph) > -.3) { g.fillStyle = PICO.white; g.fillRect(Math.round(x - cx * .02), Math.round(y), 1, 1); } }
-  // солнце-курсор на горизонте
+  // the cursor sun on the horizon
   const sunX = Math.round(118 - cx * .04), sunY = 50;
   for (let y = -14; y <= 14; y++) for (let x = -14; x <= 14; x++) { const d = x * x + y * y; if (d <= 196) { g.fillStyle = d < 90 ? PICO.yellow : PICO.orange; if ((y > 4 && (y % 3 === 0))) continue; g.fillRect(sunX + x, sunY + y, 1, 1); } }
-  // горы (параллакс 0.15) и холмы (0.45)
+  // mountains (parallax 0.15) and hills (0.45)
   g.fillStyle = PICO.lav; for (let x = 0; x < GW; x++) { const wx = x + cx * .15, h = Math.round(10 + N.fbm(wx * .03, 1, 4) * 26); g.fillRect(x, 64 - h, 1, h + 8); }
   g.fillStyle = PICO.navy; for (let x = 0; x < GW; x++) { const wx = x + cx * .45, h = Math.round(4 + N.fbm(wx * .05, 4, 3) * 14); g.fillRect(x, 70 - h, 1, h + 4); }
   for (let k = 0; k < 20; k++) { const tx = Math.round(k * 23 - (cx * .45) % 23), th = 5 + (k * 7) % 5; g.fillStyle = PICO.navy; g.fillRect(tx, 66 - th, 3, th); g.fillRect(tx - 1, 66 - th + 1, 5, th - 3); }
-  // земля
+  // ground
   g.save(); g.translate(-Math.round(cx), 0);
   const x0 = Math.floor(cx) - 8, x1 = Math.ceil(cx) + GW + 8;
   for (let x = x0; x < x1; x++) {
@@ -1134,7 +1134,7 @@ function drawGame(c, t) {
     g.fillStyle = PICO.brown; g.fillRect(x, GROUND + 3, 1, GH);
     const hsh = mulberry32(x * 31)(); if (hsh < .22) { g.fillStyle = PICO.dgray; g.fillRect(x, GROUND + 5 + Math.floor(hsh * 60) % 12, 1, 1); }
   }
-  // монеты
+  // coins
   const coinFrame = [4, 3, 1, 3][Math.floor(s * 8) % 4];
   for (const cs of COINS) {
     if (s >= cs) continue;
@@ -1142,13 +1142,13 @@ function drawGame(c, t) {
     g.fillStyle = PICO.yellow; g.fillRect(Math.round(cxw - coinFrame / 2), Math.round(cyw - 2 + Math.sin(s * 5 + cs) * .8), coinFrame, 4);
     g.fillStyle = PICO.orange; if (coinFrame > 1) g.fillRect(Math.round(cxw - coinFrame / 2), Math.round(cyw + 1 + Math.sin(s * 5 + cs) * .8), coinFrame, 1);
   }
-  // слайм
+  // slime
   if (s < 31) {
     const bob = Math.sin(s * 9), sy = 1 - .15 * bob, sx = 1 / sy;
     g.drawImage(SPRITES.slime, Math.round(124 - 4 * sx), Math.round(GROUND - 6 * sy), 8 * sx, 6 * sy);
   }
   burst(g, s, 31.0, 124, GROUND - 4, 26, 91, [PICO.lime, PICO.green, PICO.white, PICO.yellow], 70, 140, .7);
-  // ящик-босс
+  // crate boss
   if (s < 35) {
     const wob = s > 34.3 ? Math.sin(s * 60) * (s - 34.3) * 2 : 0;
     g.drawImage(SPRITES.crate, Math.round(CRATE_X - 8 + wob), GROUND - 16);
@@ -1162,10 +1162,10 @@ function drawGame(c, t) {
     burst(g, s, 35.0, CRATE_X, GROUND - 2, 30, 66, [PICO.lgray, PICO.white, PICO.orange], 90, 60, .9);
     const q = seg(s, 35, 35.35); if (q < 1) { g.strokeStyle = PICO.white; g.lineWidth = 1; g.beginPath(); g.ellipse(CRATE_X, GROUND - 1, 4 + 40 * ease.outCubic(q), 1 + 5 * ease.outCubic(q), 0, 0, TAU); g.stroke(); }
   }
-  // пыль приземлений
+  // landing dust
   LANDS.forEach((l, i) => burst(g, s, l, heroX(l), GROUND - 1, 10, 200 + i, [PICO.lgray, PICO.white], 30, 40, .45));
   COINS.forEach((cs, i) => burst(g, s, cs, heroX(cs), heroY(cs) - 5, 8, 300 + i, [PICO.yellow, PICO.white], 30, 0, .35, 0));
-  // герой
+  // hero
   const hx = heroX(s), hy = heroY(s);
   let sq = 0; for (const l of LANDS) { const d = s - l; if (d >= 0 && d < .5) sq += .55 * Math.exp(-d * 9) * Math.cos(d * 26); }
   for (const j of JUMPS) { const d = s - j.s0; if (d >= 0 && d < .25) sq -= .4 * Math.exp(-d * 10); }
@@ -1174,29 +1174,29 @@ function drawGame(c, t) {
   const spr = airborne ? SPRITES.jump : s < 29 ? SPRITES.idle : (Math.floor(s * 10) % 2 ? SPRITES.run1 : SPRITES.run2);
   const lunge = s >= 30.92 && s < 31.15 ? 2 : 0;
   const bob = !airborne && s > 29 && Math.floor(s * 10) % 2 ? 1 : 0;
-  // шарф с запаздыванием (follow-through)
+  // trailing scarf (follow-through)
   g.fillStyle = PICO.red;
   for (let k = 1; k <= 4; k++) { const ss = s - k * .035; g.fillRect(Math.round(heroX(ss) - 4 - k * 1.6), Math.round(heroY(ss) - 5 + Math.sin(s * 22 - k) * .8 - bob), 2, 1); }
   g.drawImage(spr, Math.round(hx - 4 * sx + lunge), Math.round(hy - 8 * sy - bob), Math.round(8 * sx), Math.round(8 * sy));
   g.restore();
-  // вспышки
+  // flashes
   for (const h of HITSTOP) if (s === h.t || (t >= h.t && t < h.t + h.d + .02)) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = 'rgba(255,241,232,.75)'; g.fillRect(0, 0, GW, GH); }
   c.imageSmoothingEnabled = false; c.drawImage(gB.c, 0, 0, W, H); c.imageSmoothingEnabled = true;
-  // HUD: счётчик монет на пружине
+  // HUD: coin counter on a spring
   let got = 0, lastGot = -9; for (const cs of COINS) if (s >= cs + .45) { got++; lastGot = cs + .45; }
   c.save(); c.font = `400 44px ${F.pixel}`; c.textAlign = 'right';
   const bump = 1 + .5 * (1 - spring(s - lastGot, .3, 18)) * (s - lastGot < 1 ? 1 : 0);
   c.translate(W - 90, 96); c.scale(bump, bump);
   c.fillStyle = '#000'; c.fillText(`◆ ${String(got).padStart(2, '0')}`, 5, 5); c.fillStyle = PICO.yellow; c.fillText(`◆ ${String(got).padStart(2, '0')}`, 0, 0);
   c.restore();
-  // монеты летят к счётчику
+  // coins fly to the counter
   for (const cs of COINS) {
     const q = seg(s, cs, cs + .45); if (q <= 0 || q >= 1) continue;
     const fx = (heroX(cs) - cx) * GS, fy = (heroY(cs) - 5) * GS, e = ease.inOutCubic(q);
     const x = lerp(fx, W - 190, e), y = lerp(fy, 80, e) - Math.sin(q * Math.PI) * 160;
     c.fillStyle = PICO.yellow; c.fillRect(x - 18, y - 18, 36, 36); c.fillStyle = PICO.orange; c.fillRect(x - 18, y + 12, 36, 6);
   }
-  // подписи приёмов
+  // technique labels
   c.save(); c.font = `400 30px ${F.pixel}`; c.textAlign = 'center'; c.lineJoin = 'round';
   for (const tg of JUICE_TAGS) {
     const d = s - tg.s; if (d < 0 || d > 1.0) continue;
@@ -1206,7 +1206,7 @@ function drawGame(c, t) {
     c.lineWidth = 8; c.strokeStyle = '#000'; c.strokeText(tg.text, 0, 0); c.fillStyle = PICO.white; c.fillText(tg.text, 0, 0); c.restore();
   }
   c.restore();
-  // главный титр на удар
+  // main title on the hit
   const jt = t - 31.0;
   if (jt >= 0 && jt < 1.7) {
     const sc = 1 + .8 * (1 - spring(jt, .32, 16)), a = 1 - seg(jt, 1.4, 1.7);
@@ -1219,7 +1219,7 @@ function drawGame(c, t) {
 }
 
 // ============================================================================
-// Сцена 8. Каталог переходов · «Швейцарский плакат»
+// Scene 8. Transition catalog · "Swiss poster" style
 // ============================================================================
 const SW = { bg: '#f2f0eb', ink: '#111111', mid: '#7d7d7d', light: '#ffffff', acc: '#e3242b' };
 const CW = 480, CH = 270;
@@ -1259,7 +1259,7 @@ function drawCatalog(c, t) {
   c.fillStyle = SW.bg; c.fillRect(0, 0, W, H);
   c.fillStyle = SW.acc; c.fillRect(740, 0, 3, H * ease.outExpo(seg(t, 37.8, 38.6)));
   c.strokeStyle = 'rgba(17,17,17,.12)'; c.lineWidth = 1; c.beginPath(); c.moveTo(0, 96); c.lineTo(W, 96); c.moveTo(0, H - 96); c.lineTo(W, H - 96); c.stroke();
-  // левая колонка
+  // left column
   c.font = `700 24px ${F.sans}`; c.letterSpacing = '6px'; c.fillStyle = SW.acc;
   maskText(c, '05 — MONTAGE', 120, 250, t, 38.4, 24, { dur: .6 });
   c.letterSpacing = '-2px'; c.fillStyle = SW.ink; c.font = `900 100px ${F.sans}`;
@@ -1269,7 +1269,7 @@ function drawCatalog(c, t) {
   c.fillText('13 types in the kit: Canvas 2D and GLSL.', 120, 600);
   c.fillText('One array drives picture and sound.', 120, 642);
   c.globalAlpha = 1;
-  // правая часть: сетка 2×2 → листинг
+  // right side: 2×2 grid → listing
   const push = ease.inOutExpo(seg(t, 44.0, 44.7));
   c.save(); c.beginPath(); c.rect(744, 0, W - 744, H); c.clip();
   if (push < 1) {
@@ -1307,7 +1307,7 @@ function drawCatalog(c, t) {
       c.restore();
     });
     c.font = `700 30px ${F.mono}`; c.fillStyle = SW.ink; c.globalAlpha = ease.outCubic(seg(t, 44.9, 45.2)); c.fillText('];', 800, 250 + TRANS_LISTING.length * 50);
-    // таймлайн ролика
+    // film timeline
     const rx0 = 800, rx1 = 1800, ry = 790, rp = ease.outExpo(seg(t, 44.5, 45.2));
     c.globalAlpha = 1; c.fillStyle = SW.ink; c.fillRect(rx0, ry, (rx1 - rx0) * rp, 3);
     c.font = `400 18px ${F.mono}`; c.fillStyle = SW.mid;
@@ -1317,13 +1317,13 @@ function drawCatalog(c, t) {
     c.restore();
   }
   c.restore();
-  // номер страницы
+  // page footer
   c.font = `700 20px ${F.sans}`; c.letterSpacing = '4px'; c.fillStyle = SW.ink; c.textAlign = 'right'; c.fillText('MOTION-KIT / 05-TRANSITIONS.MD', W - 120, H - 50);
   reset(c);
 }
 
 // ============================================================================
-// Сцена 9. Звук и QA · «Ночной город»
+// Scene 9. Sound and QA · "Night city" style
 // ============================================================================
 const NC = { bg: '#0b0d17', shadow: '#1a1f35', mid: '#4a4e8c', light: '#f2e9ff', acc: '#ff3d7f' };
 const THUMB_T = [0.6, 2.0, 3.4, 5.2, 7.0, 8.8, 11.2, 13.1, 14.8, 17.0, 19.0, 21.0, 22.8, 23.2, 24.6, 26.3, 28.6, 30.4, 31.3, 33.4, 35.2, 39.6, 43.0];
@@ -1343,7 +1343,7 @@ function drawViz(c, t) {
   reset(c);
   const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, NC.bg); g.addColorStop(1, NC.shadow); c.fillStyle = g; c.fillRect(0, 0, W, H);
   const cx = 960, cy = 520;
-  // бочка → кольцо
+  // kick → ring
   c.save(); c.globalCompositeOperation = 'lighter';
   for (const e of EV) {
     if (e.type !== 'kick' || e.t > t || t - e.t > 1.3) continue;
@@ -1355,7 +1355,7 @@ function drawViz(c, t) {
   c.globalAlpha = .5 + .5 * kp; c.drawImage(SPR.pink, cx - 90 - 60 * kp, cy - 90 - 60 * kp, 180 + 120 * kp, 180 + 120 * kp);
   c.globalAlpha = 1; c.fillStyle = NC.light; c.beginPath(); c.arc(cx, cy, 30 + 16 * kp, 0, TAU); c.fill();
   c.restore();
-  // шкала: хэты, снейры, бочки проезжают через playhead
+  // strip: hats, snares and kicks pass through the playhead
   const sy = 820, pxs = 420;
   c.strokeStyle = rgba(NC.mid, .6); c.lineWidth = 2; c.beginPath(); c.moveTo(0, sy); c.lineTo(W, sy); c.stroke();
   for (const e of EV) {
@@ -1367,11 +1367,11 @@ function drawViz(c, t) {
     c.fillRect(x - (e.type === 'hat' ? 2 : 4), sy - h, e.type === 'hat' ? 4 : 8, h * 2);
   }
   c.fillStyle = NC.light; c.fillRect(cx - 1.5, sy - 70, 3, 140);
-  // пэд → волна
+  // pad → wave
   c.strokeStyle = rgba(NC.light, .55); c.lineWidth = 3; c.beginPath();
   for (let x = 0; x <= W; x += 8) { const y = 975 + Math.sin(x * .006 + t * 1.8) * 26 + Math.sin(x * .013 - t * 2.6) * 14; x ? c.lineTo(x, y) : c.moveTo(x, y); }
   c.stroke();
-  // подписи
+  // labels
   c.font = `700 18px ${F.mono}`; c.letterSpacing = '3px'; c.fillStyle = NC.mid;
   c.fillText('KICK → RING', cx + 70, cy - 40); c.fillText('HAT · SNARE → TICKS', 120, sy - 60); c.fillText('PAD → WAVE', 120, 930);
   c.fillText('ONE EVENTS[] ARRAY · WEB AUDIO · OFFLINE RENDER', 120, 1050 - 12);
@@ -1410,7 +1410,7 @@ function drawSound(c, t) {
       if (dotK > 0) { c.globalAlpha = dotK; c.drawImage(SPR.phos, dx - 22, dy - 22, 44, 44); c.fillStyle = PH.light; c.beginPath(); c.arc(dx, dy, 4, 0, TAU); c.fill(); }
       c.restore();
     }
-    // проверка: красные рамки на двух кадрах
+    // review: red frames on two cells
     [[7, 50.3], [18, 50.7]].forEach(([i, t0]) => {
       const p = seg(t, t0, t0 + .4), fo = 1 - seg(k, 0, .3); if (p <= 0 || fo <= 0) return;
       const [x, y, w, h] = cellRect(i);
@@ -1421,7 +1421,7 @@ function drawSound(c, t) {
       c.restore();
     });
   }
-  // титр
+  // title
   c.save(); c.globalAlpha = 1 - seg(t, 51.0, 51.4);
   c.font = `700 56px ${F.sans}`; c.fillStyle = NC.light;
   maskText(c, 'Rendered frame by frame.', 110, 150, t, 46.6, 56);
@@ -1433,7 +1433,7 @@ function drawSound(c, t) {
 }
 
 // ============================================================================
-// Сцена 10. Финал · «Фосфор», круг замыкается
+// Scene 10. Finale · "Phosphor", the loop closes
 // ============================================================================
 let finX = 0, finCW = 0;
 function drawFinale(c, t) {
@@ -1441,7 +1441,7 @@ function drawFinale(c, t) {
   b.fillStyle = PH.bg; b.fillRect(0, 0, W, H);
   const f1 = `700 ${FIN.size}px ${F.mono}`;
   const curX = finX, curY = FIN.y;
-  // точки контакт-листа стягиваются в курсор
+  // contact sheet dots collapse into the cursor
   const gather = seg(t, 52.0, 52.75);
   if (t < 52.8) {
     b.save(); b.globalCompositeOperation = 'lighter';
@@ -1457,7 +1457,7 @@ function drawFinale(c, t) {
     const fl = seg(t, 52.45, 52.8); if (fl > 0) { const rr = 40 + 160 * Math.sin(fl * Math.PI); b.globalAlpha = Math.sin(fl * Math.PI); b.drawImage(SPR.phos, curX + 30 - rr, curY - FIN.size * .3 - rr, rr * 2, rr * 2); }
     b.restore();
   }
-  // печать названия и адреса
+  // typing the name and the URL
   b.font = f1;
   const n1 = drawTyped(b, FIN.text, finX, FIN.y, finCW, t, FIN.tType, FIN.per, PH.light);
   const s2 = 50, cw2 = finCW * s2 / FIN.size;
@@ -1474,14 +1474,14 @@ function drawFinale(c, t) {
     if (i < feat.length - 1) { b.fillText(' · ', fx, FIN.y + 215); fx += sep; }
   });
   b.globalAlpha = 1; b.letterSpacing = '0px';
-  // курсор
+  // cursor
   if (t >= 52.7 && t < 58.4) {
     let x = finX, y = FIN.y, sz = FIN.size;
     if (n2 > 0) { x = urlX + n2 * cw2; y = FIN.y + 120; sz = s2; } else if (n1 > 0) x = finX + n1 * finCW;
     const typing = (t >= FIN.tType && t < FIN.tType + FIN.text.length * FIN.per + .05) || (t >= FIN.tUrl && t < FIN.tUrl + FIN.url.length * FIN.perUrl + .05);
     if (typing || ((t * 2) % 1) < .55) drawCursorBlock(b, x, y, sz);
   }
-  // CRT: изображение гаснет в линию, линия в точку
+  // CRT: the picture collapses into a line, the line into a dot
   reset(c); c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
   const post = crtGL(finB.c, null, 0, { time: t, amount: 1 - .5 * seg(t, 57, 58.3) });
   const off1 = seg(t, 58.35, 58.6), off2 = seg(t, 58.6, 58.85);
@@ -1500,7 +1500,7 @@ function drawFinale(c, t) {
 }
 
 // ============================================================================
-// Переходы (05-transitions.md)
+// Transitions (05-transitions.md)
 // ============================================================================
 function drawScaled(c, img, cx, cy, s) { c.save(); c.translate(cx, cy); c.scale(s, s); c.translate(-cx, -cy); c.drawImage(img, 0, 0); c.restore(); }
 const TR = {
@@ -1547,7 +1547,7 @@ const TR = {
 };
 
 // ============================================================================
-// Кадр
+// Frame
 // ============================================================================
 const DRAW = { terminal: drawTerminal, fire: drawFire, engrave: drawEngrave, sphere: drawSphere, palettes: drawPalettes, pause: drawPause, game: drawGame, catalog: drawCatalog, sound: drawSound, finale: drawFinale };
 function sceneAt(t) { let s = SCENES[0]; for (const x of SCENES) if (t >= x.start) s = x; return s; }
@@ -1562,7 +1562,7 @@ function renderFrame(c, t) {
 function draw(t) { renderFrame(ctx, clamp(t, 0, DURATION - 1e-6)); }
 
 // ============================================================================
-// Звук на Web Audio (09-audio-sync.md)
+// Sound with Web Audio (09-audio-sync.md)
 // ============================================================================
 function buildScore(ac, out, t0 = 0) {
   const nb = (() => { const b = ac.createBuffer(1, ac.sampleRate * 4, ac.sampleRate), d = b.getChannelData(0), r = mulberry32(9); for (let i = 0; i < d.length; i++) d[i] = r() * 2 - 1; return b; })();
@@ -1581,7 +1581,7 @@ function buildScore(ac, out, t0 = 0) {
     o.connect(g).connect(out); o.start(T(t)); o.stop(T(t) + dur + .05);
   };
   const kick = (t, gain = .8) => { tone(t, 'sine', 150, 42, .42, gain, .002); noise(t, .02, 'highpass', 3000, 0, .12 * gain); };
-  const skip = x => ac.currentTime > 0 && T(x) < ac.currentTime; // живой старт с середины
+  const skip = x => ac.currentTime > 0 && T(x) < ac.currentTime; // live start from the middle
   for (const e of EV) {
     const t = e.t;
     if (skip(t)) continue;
@@ -1620,7 +1620,7 @@ function buildScore(ac, out, t0 = 0) {
       case 'coin': tone(t, 'square', 988, 988, .07, .06); tone(t + .07, 'square', 1319, 1319, .22, .06); break;
     }
   }
-  // блипы на каждой смене палитры
+  // a blip on every palette change
   PAL_FRAMES.forEach((f, i) => skip(f.start) || tone(f.start, 'sine', 660 * 2 ** ((i % 12) / 12), 660 * 2 ** ((i % 12) / 12), .06, .05));
 }
 function encodeWavBase64(ab) {
@@ -1649,7 +1649,7 @@ window.__renderAudio = async () => {
 };
 
 // ============================================================================
-// Инициализация и два режима
+// Init and the two modes
 // ============================================================================
 window.__meta = { W, H, FPS, DURATION };
 window.__draw = draw;

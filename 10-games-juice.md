@@ -1,50 +1,50 @@
-# Игры: game feel и juice
+# Games: game feel and juice
 
-Разница между «работает» и «приятно играть» почти целиком в обратной связи на действия. Классика темы: доклады «Juice it or lose it» (Martin Jonasson, Petri Purho) и «Math for Game Programmers: Juicing Your Cameras With Math» (Squirrel Eiserloh, GDC).
+The difference between "it works" and "it feels good to play" comes almost entirely from feedback on actions. Classic references on the topic: the talks "Juice it or lose it" (Martin Jonasson, Petri Purho) and "Math for Game Programmers: Juicing Your Cameras With Math" (Squirrel Eiserloh, GDC).
 
-## Игровой цикл
+## Game loop
 
-Физика с фиксированным шагом, отрисовка с интерполяцией. Иначе поведение зависит от частоты кадров.
+Physics on a fixed step, rendering with interpolation. Otherwise behavior depends on frame rate.
 
 ```js
 const STEP = 1 / 120; let acc = 0, last = performance.now() / 1000;
 function frame(){
   const now = performance.now() / 1000; acc += Math.min(.1, now - last); last = now;
   while (acc >= STEP) { update(STEP); acc -= STEP; }
-  render(acc / STEP);            // alpha для интерполяции между прошлым и текущим состоянием
+  render(acc / STEP);            // alpha for interpolating between the previous and current state
   requestAnimationFrame(frame);
 }
 ```
 
-## Управление
+## Controls
 
-- **Coyote time:** прыжок разрешён ещё 80–120 мс после схода с платформы.
-- **Jump buffer:** нажатие прыжка за 100 мс до приземления срабатывает при приземлении.
-- **Переменная высота прыжка:** отпустил кнопку раньше, гравитация ×2–3.
-- **Разная гравитация:** падение быстрее подъёма (×1.5–2), вершина прыжка с пониженной гравитацией.
-- **Ускорение и торможение:** не мгновенная скорость, а быстрый разгон (0.05–0.1 с) и чуть более долгое торможение. Для «тяжёлого» персонажа дольше.
-- **Ввод без задержки:** реакция на нажатие в том же кадре, анимация может догонять.
+- **Coyote time:** jumping is still allowed for 80–120 ms after leaving a platform.
+- **Jump buffer:** pressing jump within 100 ms before landing triggers on landing.
+- **Variable jump height:** release the button early, gravity ×2–3.
+- **Different gravity:** falling faster than rising (×1.5–2), reduced gravity at the peak of the jump.
+- **Acceleration and deceleration:** not instant velocity, but a fast ramp-up (0.05–0.1 s) and a slightly longer deceleration. Longer for a "heavy" character.
+- **No-delay input:** react to a press on the same frame; the animation can catch up.
 
-## Juice-чек-лист
+## Juice checklist
 
-| Событие | Реакция |
+| Event | Reaction |
 |---|---|
-| Удар попал | хитстоп 50–120 мс, белая вспышка цели 1–2 кадра, частицы, звук, тряска |
-| Прыжок | squash перед, stretch в полёте, пыль при отрыве |
-| Приземление | squash, пыль, лёгкая тряска при высоком падении |
-| Получил урон | отбрасывание, мигание неуязвимости, красный край экрана, хитстоп |
-| Смерть врага | разлёт частиц, осколки, замедление 0.2–0.4 с, звук с хвостом |
-| Подбор | предмет летит к счётчику, счётчик «прыгает» на spring |
-| Выстрел | отдача оружия и камеры, гильза, вспышка у ствола |
-| UI | кнопки реагируют на наведение и нажатие, числа тикают, а не прыгают |
+| Hit lands | hitstop 50–120 ms, white flash on the target for 1–2 frames, particles, sound, screen shake |
+| Jump | squash before, stretch in the air, dust on takeoff |
+| Landing | squash, dust, light screen shake on a high fall |
+| Takes damage | knockback, invulnerability flicker, red screen edge, hitstop |
+| Enemy dies | particle burst, debris, 0.2–0.4 s slowdown, sound with a tail |
+| Pickup | item flies to the counter, counter "bounces" on a spring |
+| Shot fired | weapon and camera recoil, shell casing, muzzle flash |
+| UI | buttons react to hover and press, numbers tick up instead of jumping |
 
-## Тряска камеры через «травму»
+## Screen shake via trauma
 
 ```js
-let trauma = 0;                                  // 0..1, события добавляют: trauma = Math.min(1, trauma + .4)
+let trauma = 0;                                  // 0..1, events add to it: trauma = Math.min(1, trauma + .4)
 function cameraShake(t, dt){
   trauma = Math.max(0, trauma - dt * 1.4);
-  const s = trauma * trauma;                     // квадрат: слабая травма почти не трясёт, сильная трясёт сильно
+  const s = trauma * trauma;                     // squared: low trauma barely shakes, high trauma shakes hard
   return {
     x:   (N.n(t * 25, 0)   - .5) * 2 * 28 * s,
     y:   (N.n(0, t * 25)   - .5) * 2 * 28 * s,
@@ -53,43 +53,43 @@ function cameraShake(t, dt){
 }
 ```
 
-Шум вместо случайных чисел даёт гладкую тряску, а не дёрганье.
+Noise instead of random numbers gives smooth shake instead of jitter.
 
-## Хитстоп
+## Hitstop
 
 ```js
 let freeze = 0;
 function hit(){ freeze = 0.08; trauma = Math.min(1, trauma + .35); }
 function update(dt){
-  if (freeze > 0) { freeze -= dt; return; }     // мир стоит, но эффекты можно продолжать
+  if (freeze > 0) { freeze -= dt; return; }     // the world is frozen, but effects can keep going
   // ...
 }
 ```
 
-## Камера
+## Camera
 
-- Следует за игроком с lerp (`cam += (target - cam) * (1 - Math.exp(-dt * 8))`), а не жёстко.
-- Опережение по направлению движения (look-ahead) на 10–20% ширины экрана.
-- Мёртвая зона в центре, внутри которой камера не двигается.
-- Лёгкий зум наружу на высокой скорости.
+- Follows the player with lerp (`cam += (target - cam) * (1 - Math.exp(-dt * 8))`), not rigidly.
+- Look-ahead in the direction of movement, 10–20% of screen width.
+- A dead zone at the center where the camera doesn't move.
+- A slight zoom-out at high speed.
 
-## Звук
+## Sound
 
-- Каждое действие со звуком, с вариацией высоты ±5–10%.
-- Хитстоп сопровождается звуком: пауза без звука кажется лагом.
-- Музыка реагирует на состояние (интенсивность боя, низкое здоровье).
+- Every action has a sound, with ±5–10% pitch variation.
+- Hitstop is accompanied by sound: a pause with no sound feels like lag.
+- Music reacts to game state (combat intensity, low health).
 
-## Оформление
+## Visual style
 
-- Читаемость важнее красоты: игрок, враги, опасность и фон должны различаться силуэтом и цветом.
-- Фон тише по контрасту и насыщенности, чем игровые объекты.
-- Частицы и эффекты не должны закрывать опасность.
-- Экран смерти и рестарт быстрые: 1 клавиша, меньше секунды до новой попытки.
-- Пауза и сброс обязательны.
+- Readability matters more than beauty: the player, enemies, hazards, and background must differ in silhouette and color.
+- The background is quieter in contrast and saturation than gameplay objects.
+- Particles and effects must not obscure hazards.
+- Death screen and restart are fast: 1 key, under a second to the next attempt.
+- Pause and reset are mandatory.
 
-## Промпт-подсказки для игр
+## Prompt tips for games
 
-- Проси один уровень, но отполированный, а не десять сырых.
-- Физику и столкновения лучше писать без библиотек: модель тогда контролирует ощущение.
-- Называй ощущение от управления словами: «отзывчиво, как в Celeste», «тяжело и инерционно», «скользко».
-- Требуй таблицу juice-реакций на события в плане до кода.
+- Ask for one polished level rather than ten rough ones.
+- Write physics and collisions without libraries: that way the model controls the feel.
+- Describe the feel of the controls in words: "responsive, like Celeste," "heavy and inertial," "slippery."
+- Require a table of juice reactions to events in the plan before code.

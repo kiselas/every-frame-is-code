@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Контакт-лист: N кадров в секунду в одну картинку.
-# Использование: ./contact-sheet.sh input.mp4 [sheet.png] [fps=2] [cols=8]
+# Contact sheet: N frames per second tiled into one image.
+# Usage: ./contact-sheet.sh input.mp4 [sheet.png] [fps=2] [cols=8]
 set -euo pipefail
 IN="${1:?usage: contact-sheet.sh input.mp4 [sheet.png] [fps] [cols]}"
 OUT="${2:-sheet.png}"

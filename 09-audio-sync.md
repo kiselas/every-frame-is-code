@@ -1,8 +1,8 @@
-# Звук и синхронизация
+# Audio and Sync
 
-## Одна шкала времени
+## One timeline
 
-Картинка и звук читают одни и те же данные: BPM, список событий, тайминги озвучки. Тогда удар звучит ровно в момент удара на экране, и склейки ложатся на бит.
+Picture and sound read the same data: BPM, an event list, voice-over timings. Then a hit sounds exactly at the moment of impact on screen, and cuts land on the beat.
 
 ```js
 const BPM = 100, BEAT = 60 / BPM, BAR = BEAT * 4;
@@ -14,9 +14,9 @@ const events = [
 ];
 ```
 
-## Синтез на Web Audio
+## Synthesis with Web Audio
 
-Все функции принимают контекст (обычный или офлайн), время начала и выход.
+All functions take a context (real-time or offline), a start time, and an output.
 
 ```js
 function noiseBuffer(ac, seconds = 1, seed = 9){
@@ -50,7 +50,7 @@ function pad(ac, t, dur, out, freqs = [110, 164.8, 220, 277.2], gain = .12){
   }));
 }
 
-function riser(ac, t, dur, out, gain = .3){          // нарастание перед пиком
+function riser(ac, t, dur, out, gain = .3){          // build-up before the peak
   const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
   s.buffer = noiseBuffer(ac, dur + .1); f.type = 'bandpass'; f.Q.value = 4;
   f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(8000, t + dur);
@@ -58,7 +58,7 @@ function riser(ac, t, dur, out, gain = .3){          // нарастание п�
   s.connect(f).connect(g).connect(out); s.start(t); s.stop(t + dur);
 }
 
-function impact(ac, t, out){                         // удар: низ + шумовой хвост
+function impact(ac, t, out){                         // impact: low end + noise tail
   kick(ac, t, out, 1);
   const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
   s.buffer = noiseBuffer(ac, 2.5, 3); f.type = 'lowpass'; f.frequency.setValueAtTime(3000, t); f.frequency.exponentialRampToValueAtTime(200, t + 2);
@@ -73,18 +73,18 @@ function buildScore(ac, out){
     if (e.type === 'riser') riser(ac, e.t, e.dur, out);
     if (e.type === 'impact') impact(ac, e.t, out);
   }
-  // пример ритма: хэты на каждую восьмую со второго такта
+  // example rhythm: hi-hats on every eighth note from the second bar
   for (let t = BAR * 2; t < DURATION; t += BEAT / 2) hat(ac, t, out);
 }
 ```
 
-Мастер-цепочка: всё в один `GainNode`, затем `DynamicsCompressorNode` (threshold −18, ratio 4), затем выход. Это склеивает микс и срезает пики.
+Master chain: everything into one `GainNode`, then a `DynamicsCompressorNode` (threshold −18, ratio 4), then the output. This glues the mix together and shaves off peaks.
 
-## Живое воспроизведение и офлайн-рендер
+## Live playback and offline rendering
 
-В живом режиме звук стартует по клику (браузеры блокируют автозапуск), время картинки берётся из `ac.currentTime - startTime`, а не из `performance.now()`. Так они не расходятся.
+In live mode, sound starts on a click (browsers block autoplay), and the picture's time is taken from `ac.currentTime - startTime`, not from `performance.now()`. This keeps them from drifting apart.
 
-Для рендера звук генерируется офлайн и отдаётся рендер-скрипту как WAV:
+For rendering, sound is generated offline and handed to the render script as a WAV:
 
 ```js
 window.__renderAudio = async () => {
@@ -115,21 +115,21 @@ function encodeWavBase64(ab){
 }
 ```
 
-Рендер-скрипт в `render/` сам вызывает `__renderAudio`, если функция есть, и сводит звук в MP4.
+The render script in `render/` calls `__renderAudio` itself, if the function exists, and mixes the sound into the MP4.
 
-## Озвучка
+## Voice-over
 
-1. Напиши текст с разбивкой на фразы.
-2. Сгенерируй голос любым TTS.
-3. Получи тайминги слов: Whisper с включёнными word timestamps (faster-whisper, whisper.cpp, WhisperX) выдаёт начало и конец каждого слова.
-4. Сохрани как JSON `[{ word, start, end }]` и встрой в HTML как данные.
-5. Сцены и титры строй от этих таймингов. Смены сцен ставь в паузы между фразами.
+1. Write the text broken into phrases.
+2. Generate the voice with any TTS.
+3. Get word timings: Whisper with word timestamps enabled (faster-whisper, whisper.cpp, WhisperX) outputs the start and end of each word.
+4. Save as JSON `[{ word, start, end }]` and embed it in the HTML as data.
+5. Build scenes and captions from these timings. Place scene changes in the pauses between phrases.
 
-Готовую озвучку при рендере можно подмешать ffmpeg-ом вместе с музыкой из `__renderAudio` (см. `render/README.md`).
+The finished voice-over can be mixed in at render time with ffmpeg together with the music from `__renderAudio` (see `render/README.md`).
 
-## Микс
+## Mix
 
-- Музыка под голосом на 10–15 дБ тише. Приглушение (ducking): в местах, где звучит голос, автоматизируй gain музыки вниз с атакой 0.1 с и отпусканием 0.4 с.
-- Нет одиночных громких ударов после тишины: в тишине удар пугает. Внутри грува тот же удар звучит нормально.
-- Финальная громкость для площадок около −14 LUFS. ffmpeg: `-af loudnorm=I=-14:TP=-1.5:LRA=11`.
-- Каждое действие на экране получает звук: появление (мягкий «вух»), удар, щелчок, шорох. Высоту и громкость слегка варьируй сидированно, иначе повтор режет слух.
+- Music under the voice is 10–15 dB quieter. Ducking: where the voice speaks, automate the music's gain down with a 0.1 s attack and a 0.4 s release.
+- No lone loud hits after silence: a hit in silence startles. The same hit inside a groove sounds fine.
+- Final loudness for platforms is around −14 LUFS. ffmpeg: `-af loudnorm=I=-14:TP=-1.5:LRA=11`.
+- Every action on screen gets a sound: appearance (a soft "whoosh"), hit, click, rustle. Vary pitch and volume slightly with a seed, otherwise repetition grates on the ear.
