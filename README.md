@@ -11,7 +11,7 @@
 Исходник: <a href="examples/demo/demo.html">examples/demo/demo.html</a> · сценарий: <a href="examples/demo/SCRIPT.md">examples/demo/SCRIPT.md</a></sub>
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-black)](LICENSE)
-[![Claude Code skill](https://img.shields.io/badge/Claude_Code-skill-d97757)](SKILL.md)
+[![Agent Skill: Claude · Codex · ChatGPT](https://img.shields.io/badge/Agent_Skill-Claude_·_Codex_·_ChatGPT-d97757)](SKILL.md)
 ![Canvas 2D · WebGL · Three.js · Web Audio](https://img.shields.io/badge/Canvas_2D_·_WebGL_·_Three.js_·_Web_Audio-1d3557)
 
 </div>
@@ -53,27 +53,32 @@ motion-kit — это правила и рецепты, которые закр�
 
 ## Быстрый старт
 
-**Как скилл Claude Code** (рекомендуется):
+motion-kit оформлен как скилл в открытом формате [Agent Skills](https://agentskills.io): папка с `SKILL.md`. Один и тот же скилл работает в Claude и в ChatGPT, установка отличается только местом.
 
-```bash
-git clone https://github.com/kiselas/every-frame-is-code ~/.claude/skills/motion-kit
-```
+| Где | Как подключить |
+|---|---|
+| **Claude Code** | `git clone https://github.com/kiselas/every-frame-is-code ~/.claude/skills/motion-kit` |
+| **Codex** (CLI, IDE, приложение) | `git clone https://github.com/kiselas/every-frame-is-code ~/.agents/skills/motion-kit` |
+| **ChatGPT** | скачай [motion-kit.zip](https://github.com/kiselas/every-frame-is-code/releases/latest/download/motion-kit.zip), затем Plugins → Skills → Create → Upload from computer |
+| **Claude.ai / Claude Desktop** | тот же [motion-kit.zip](https://github.com/kiselas/every-frame-is-code/releases/latest/download/motion-kit.zip), затем Customize → Skills → Upload |
 
-Claude Code подхватит `SKILL.md` и сам прочитает нужные файлы, когда задача про графику или анимацию. Попробуй:
+Для одного проекта клонируй в `.claude/skills/motion-kit` или `.agents/skills/motion-kit` внутри репозитория. Агент сам подхватит скилл, когда задача про графику или анимацию. Позвать явно: `/motion-kit` в Claude Code, `$motion-kit` в Codex, `@motion-kit` в ChatGPT. Попробуй:
 
 ```
 Сделай 20-секундный ролик про историю часов в стиле гравюры, 1080p, с музыкой.
 Сначала покажи план как данные, потом код, потом отрендери и посмотри контакт-лист.
 ```
 
-**Как документация в проекте.** Скопируй папку в `docs/motion/` и добавь в `CLAUDE.md`:
+Рендер в MP4 требует Node, Chrome и ffmpeg, так что он работает там, где у агента есть терминал: в Claude Code и Codex. В ChatGPT и Claude.ai скилл помогает спланировать и написать ролик, а рендеришь ты у себя командой из раздела ниже.
+
+**Без поддержки скиллов.** Скопируй папку в `docs/motion/` и добавь в `CLAUDE.md` или `AGENTS.md`:
 
 ```
 Перед любой работой с графикой, анимацией или играми прочитай docs/motion/00-agent-brief.md,
 затем файлы, относящиеся к задаче.
 ```
 
-**В чате.** Прикрепи `00-agent-brief.md` и один-два тематических файла.
+В обычном чате прикрепи `00-agent-brief.md` и один-два тематических файла.
 
 ## Рендер
 
@@ -111,6 +116,7 @@ node render.mjs ../examples/demo/demo.html ../examples/demo/demo.mp4
 | [12-render-qa.md](12-render-qa.md) | Рендер, контакт-листы, чек-лист проверки |
 | [render/](render/) | Скрипты рендера (Node + Playwright + ffmpeg) |
 | [examples/demo/](examples/demo/) | Демо-ролик: сценарий и исходник |
+| [scripts/pack-skill.sh](scripts/pack-skill.sh) | Сборка `motion-kit.zip` для ChatGPT и Claude.ai: `bash scripts/pack-skill.sh`, затем приложить к релизу |
 | [sources.md](sources.md) | Источники и что почитать |
 
 ## Вклад
