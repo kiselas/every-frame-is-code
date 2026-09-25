@@ -1581,7 +1581,7 @@ function buildScore(ac, out, t0 = 0) {
     o.connect(g).connect(out); o.start(T(t)); o.stop(T(t) + dur + .05);
   };
   const kick = (t, gain = .8) => { tone(t, 'sine', 150, 42, .42, gain, .002); noise(t, .02, 'highpass', 3000, 0, .12 * gain); };
-  const skip = x => ac.currentTime > 0 && T(x) < ac.currentTime; // live start from the middle
+  const skip = x => T(x) < ac.currentTime; // live start from the middle: drop events already in the past
   for (const e of EV) {
     const t = e.t;
     if (skip(t)) continue;
