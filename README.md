@@ -116,7 +116,7 @@ node render.mjs ../examples/demo/demo.html ../examples/demo/demo.mp4
 | [12-render-qa.md](12-render-qa.md) | Рендер, контакт-листы, чек-лист проверки |
 | [render/](render/) | Скрипты рендера (Node + Playwright + ffmpeg) |
 | [examples/demo/](examples/demo/) | Демо-ролик: сценарий и исходник |
-| [scripts/pack-skill.sh](scripts/pack-skill.sh) | Сборка `motion-kit.zip` для ChatGPT и Claude.ai: `bash scripts/pack-skill.sh`, затем приложить к релизу |
+| [scripts/pack-skill.sh](scripts/pack-skill.sh) | Сборка `motion-kit.zip` для ChatGPT и Claude.ai. Релиз собирает его сам: достаточно запушить тег `vX.Y.Z` |
 | [sources.md](sources.md) | Источники и что почитать |
 
 ## Вклад

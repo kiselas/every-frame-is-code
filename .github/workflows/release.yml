@@ -1,0 +1,31 @@
+# По тегу vX.Y.Z собирает motion-kit.zip и прикладывает к релизу.
+# Ссылка releases/latest/download/motion-kit.zip в README всегда ведёт на свежую версию.
+name: release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Тег релиза, к которому приложить архив'
+        required: true
+permissions:
+  contents: write
+jobs:
+  skill-zip:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - run: bash scripts/pack-skill.sh motion-kit.zip
+      - name: Attach to release
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" motion-kit.zip --clobber
+          else
+            gh release create "$TAG" motion-kit.zip --title "motion-kit $TAG" --generate-notes
+          fi
