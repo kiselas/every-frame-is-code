@@ -8,7 +8,7 @@ videos, explainers, kinetic typography, 3D scenes and games, and then render the
 <img src="examples/demo/teaser.gif" width="720" alt="Demo film teaser: fire, engraving, 3D sphere, palette montage, pixel game, transition catalog, contact sheet, final title">
 
 <sub>Not a single generated pixel: the whole film is one HTML file that draws every frame.<br>
-Source: <a href="examples/demo/demo.html">examples/demo/demo.html</a> · script: <a href="examples/demo/SCRIPT.md">examples/demo/SCRIPT.md</a></sub>
+<b><a href="https://kiselas.github.io/every-frame-is-code/">▶ Watch it live in your browser</a></b> · source: <a href="examples/demo/demo.html">examples/demo/demo.html</a> · script: <a href="examples/demo/SCRIPT.md">examples/demo/SCRIPT.md</a></sub>
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-black)](LICENSE)
 [![Agent Skill: Claude · Codex · ChatGPT](https://img.shields.io/badge/Agent_Skill-Claude_·_Codex_·_ChatGPT-d97757)](SKILL.md)
@@ -49,7 +49,7 @@ The one-minute film was made strictly by this kit. Each scene shows one capabili
 </tr>
 </table>
 
-Watch it live: open [`examples/demo/demo.html`](examples/demo/demo.html) in Chrome. Click to turn on sound, space pauses, arrow keys seek.
+Watch it live at [kiselas.github.io/every-frame-is-code](https://kiselas.github.io/every-frame-is-code/): the page draws every frame in your browser as you watch. Or open [`examples/demo/demo.html`](examples/demo/demo.html) locally in Chrome. Click to turn on sound, space pauses, arrow keys seek.
 
 ## Quick start
 

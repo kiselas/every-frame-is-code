@@ -1,0 +1,37 @@
+# Publishes the demo film to GitHub Pages: the page draws every frame live in the browser.
+# index.html is examples/demo/demo.html with social preview tags added at build time.
+name: pages
+on:
+  push:
+    branches: [main]
+    paths: ['examples/demo/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      SITE_URL: https://kiselas.github.io/every-frame-is-code/
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build site
+        run: |
+          mkdir -p _site
+          cp examples/demo/stills/04-sphere.jpg _site/preview.jpg
+          desc="A one-minute film drawn entirely by code in your browser. Made with motion-kit, an Agent Skill for Claude Code, Codex and ChatGPT."
+          meta="<meta name=\"description\" content=\"$desc\">\n<meta property=\"og:title\" content=\"motion-kit · every frame is code\">\n<meta property=\"og:description\" content=\"$desc\">\n<meta property=\"og:image\" content=\"${SITE_URL}preview.jpg\">\n<meta property=\"og:url\" content=\"$SITE_URL\">\n<meta name=\"twitter:card\" content=\"summary_large_image\">"
+          sed "s|</title>|</title>\n$meta|" examples/demo/demo.html > _site/index.html
+          grep -q 'og:image' _site/index.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+      - id: deployment
+        uses: actions/deploy-pages@v4
