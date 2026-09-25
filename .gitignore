@@ -4,4 +4,4 @@ node_modules/
 *.wav
 sheet*.png
 .DS_Store
-!examples/demo/demo.gif
+!examples/demo/teaser.gif
