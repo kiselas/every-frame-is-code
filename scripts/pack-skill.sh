@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # Builds motion-kit.zip for uploading the skill to ChatGPT or Claude.ai:
-# a motion-kit/ folder with SKILL.md, the reference docs and the render scripts, without examples/.
+# a motion-kit/ folder with SKILL.md, the reference docs, the runtime, the render scripts and the
+# long-form example (the demo film and its stills stay out).
 # Usage: bash scripts/pack-skill.sh [out.zip]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 OUT="${1:-motion-kit.zip}"
 git archive --format=zip --prefix=motion-kit/ -o "$OUT" HEAD \
   SKILL.md LICENSE sources.md [0-9][0-9]-*.md \
-  render/README.md render/package.json render/render.mjs render/contact-sheet.sh
+  runtime/film.js runtime/inline.mjs runtime/README.md \
+  render/README.md render/package.json render/render.mjs render/contact-sheet.sh \
+  render/still.mjs render/analyze.mjs render/beatmap.mjs render/audio-analysis.mjs \
+  examples/gps/film.html examples/gps/SCRIPT.md
 echo "skill archive: $OUT"

@@ -49,6 +49,17 @@ Timecodes:
 4.20-9.80 "..."
 ```
 
+### Explainer or story of 1-3 minutes
+```
+[Topic]: a [length] film for [audience], [format]. Build it on runtime/film.js by 14-long-form.md.
+Thesis in one sentence: "[what the viewer knows at the end]" (or: propose three and pick the strongest).
+Spine: [how it works / timeline / one number / myth vs fact / life of a thing], [N] chapters.
+Through-line in the HUD: [a metric that changes, with at least one reversal].
+Write SCRIPT.md first: thesis, spine, through-line, the shot table with statements, pictures,
+HUD changes and transitions, and the sources for every number. Wait for my OK, then build
+an animatic (text and HUD only), then the drawings chapter by chapter.
+```
+
 ### Kinetic typography
 ```
 Kinetic typography for [text/poem/quote], [length], [format].
@@ -97,4 +108,4 @@ Edits tied to specific frames work better than general ones:
 - Ask for the plan first, then the code. Checking a plan is cheaper.
 - Don't ask the model to "think step by step": modern models (Claude Opus, GPT) reason on their own, and such phrases only slow things down.
 - Hand over the whole task at once, not as a series of separate commands.
-- If the video is long (more than 60-90 s), build it in parts within a single project with a shared style and timeline.
+- If the video is long (more than 45-60 s), build it on `runtime/film.js`: one shot table, one tempo map, themes and a HUD shared by every shot (14-long-form.md). Iterate with `--shot` and `still.mjs` instead of rendering the whole film.

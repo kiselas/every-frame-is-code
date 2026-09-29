@@ -12,7 +12,8 @@ ROWS=$(( (N + COLS - 1) / COLS ))
 # drawtext needs a font; Windows builds of ffmpeg often have no fontconfig, so point at a system font
 FONT="${FONTFILE:-}"
 [ -z "$FONT" ] && [ -f /c/Windows/Fonts/consola.ttf ] && FONT='C\:/Windows/Fonts/consola.ttf'
-FONTOPT=${FONT:+:fontfile=$FONT}
+# quoted: ffmpeg 5+ no longer accepts the escaped drive colon unquoted
+FONTOPT=${FONT:+:fontfile=\'$FONT\'}
 ffmpeg -v error -y -i "$IN" \
   -vf "fps=${FPS},scale=320:-1,drawtext=text='%{pts\:hms}':x=6:y=6:fontsize=16:fontcolor=white:box=1:boxcolor=black@0.6${FONTOPT},tile=${COLS}x${ROWS}:padding=4:margin=4" \
   -frames:v 1 "$OUT"
