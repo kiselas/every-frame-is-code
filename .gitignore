@@ -5,3 +5,4 @@ node_modules/
 sheet*.png
 .DS_Store
 !examples/demo/teaser.gif
+!examples/pixel/teaser.gif
