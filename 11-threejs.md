@@ -106,6 +106,10 @@ const mat = new THREE.ShaderMaterial({
 - Procedural textures via `CanvasTexture` (draw noise, hatching, or a pattern in a 2D canvas).
 - Stylization: `MeshToonMaterial` with a gradient map for cel-shading; outlines via an enlarged copy of the mesh with `side: BackSide`.
 
+## Pixel look for a 3D scene
+
+Render the scene as usual (`preserveDrawingBuffer: true`), then pass `renderer.domElement` to `Pixel.post` from `runtime/pixel.js`: it downsamples, adds a Bayer threshold and snaps to a palette, the look of *Return of the Obra Dinn*. Light the scene with strong contrast, since the palette has few steps. See [15-pixel-retro.md](15-pixel-retro.md).
+
 ## Common problems
 
 - Everything is black: no light or environment, or roughness/metalness are at their extremes.

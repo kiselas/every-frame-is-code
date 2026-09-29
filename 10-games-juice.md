@@ -25,6 +25,8 @@ function frame(){
 - **Acceleration and deceleration:** not instant velocity, but a fast ramp-up (0.05–0.1 s) and a slightly longer deceleration. Longer for a "heavy" character.
 - **No-delay input:** react to a press on the same frame; the animation can catch up.
 
+For pixel-art games, the same feedback in whole pixels (integer camera and shake, palette flash for a hit, dithered fades) and a ready runtime are in [15-pixel-retro.md](15-pixel-retro.md).
+
 ## Juice checklist
 
 | Event | Reaction |

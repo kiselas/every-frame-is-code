@@ -27,6 +27,8 @@ Build a palette of 4-6 colors with roles: background, shadow, midtone, light, ac
 
 Rule: shadows aren't black — they're a dark variant of the color complementary to the light. Warm light gives cool shadows, and vice versa.
 
+For a fixed-palette pixel look, start from a ready palette (`pico8`, `sweetie16`, `gameboy`, `cga`, `mono`, or one from [Lospec](https://lospec.com/palette-list)) and see [15-pixel-retro.md](15-pixel-retro.md): draw with palette indexes, and the whole film can change palette, fade or cycle colors without a redraw.
+
 ## Light
 
 - One key light source, coming from somewhere specific. All lighting, highlights, and shadows agree with it.

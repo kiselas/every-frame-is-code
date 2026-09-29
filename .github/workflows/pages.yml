@@ -1,11 +1,11 @@
 # Publishes the films to GitHub Pages: each page draws every frame live in the browser.
-# / is examples/demo/demo.html, /gps/ is examples/gps/film.html folded into one file by
-# runtime/inline.mjs; social preview tags are added at build time.
+# / is examples/demo/demo.html, /gps/ and /pixel/ are examples/gps/film.html and examples/pixel/film.html folded
+# into one file by runtime/inline.mjs; social preview tags are added at build time.
 name: pages
 on:
   push:
     branches: [main]
-    paths: ['examples/demo/**', 'examples/gps/**', 'runtime/**', '.github/workflows/pages.yml']
+    paths: ['examples/demo/**', 'examples/gps/**', 'examples/pixel/**', 'runtime/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -51,6 +51,25 @@ jobs:
           rm _site/gps/film.html _site/gps/meta.html
           grep -q 'og:image' _site/gps/index.html
           grep -q 'inlined: ../../runtime/film.js' _site/gps/index.html
+          # the pixel film: one self-contained page
+          mkdir -p _site/pixel
+          cp examples/pixel/preview.jpg _site/pixel/preview.jpg
+          pixel_url="${SITE_URL}pixel/"
+          pixel_desc="Sixteen Colors: a 64-second pixel film drawn entirely by code in your browser: palettes, dithering, Mode 7, demoscene effects and a chiptune score. Made with motion-kit."
+          cat > _site/pixel/meta.html <<'META'
+          <meta name="description" content="@DESC@">
+          <meta property="og:title" content="Sixteen Colors · a pixel film made of code">
+          <meta property="og:description" content="@DESC@">
+          <meta property="og:image" content="@URL@preview.jpg">
+          <meta property="og:url" content="@URL@">
+          <meta name="twitter:card" content="summary_large_image">
+          META
+          sed -i "s|@DESC@|$pixel_desc|; s|@URL@|$pixel_url|" _site/pixel/meta.html
+          node runtime/inline.mjs examples/pixel/film.html _site/pixel/film.html
+          sed '/<\/title>/r _site/pixel/meta.html' _site/pixel/film.html > _site/pixel/index.html
+          rm _site/pixel/film.html _site/pixel/meta.html
+          grep -q 'og:image' _site/pixel/index.html
+          grep -q 'inlined: ../../runtime/pixel.js' _site/pixel/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
       - id: deployment

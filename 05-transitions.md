@@ -152,6 +152,10 @@ function scratch(){
 }
 ```
 
+## Dithered and pixel transitions
+
+For pixel and retro films `runtime/pixel.js` ships four Canvas 2D transitions that plug into `Film.create({ transitions: Pixel.transitions })`: `bayer` (an ordered-dither dissolve), `bayerwipe` (a dithered edge sweeping across), `pixelate` (the frame turns to chunky cells and back), `squares` (squares shrink away in a wave). They are stateless masks, so they seek and render in parallel like everything else. Details and options: [15-pixel-retro.md](15-pixel-retro.md).
+
 ## Shader transitions (WebGL)
 
 Noise dissolve, distortion, waves, luma wipes need a fragment shader. A minimal runner that takes two 2D buffers and returns a canvas with the result:

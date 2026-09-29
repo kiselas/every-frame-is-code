@@ -119,6 +119,10 @@ The render script in `render/` calls `__renderAudio` itself, if the function exi
 
 With `runtime/film.js` all of this is built in: write `score(ac, bus, f, at)`, schedule notes at `at(f.time(beat))`, and the same function drives the offline render and the live preview. The instruments above and a few more (`tick`, `ping`, `pluck`, `bass`, `sub`, `whoosh`) are in `Film.audio`; `f.hits` lists the moments payoff words land, for accents. See `runtime/README.md`.
 
+## Chiptune from text
+
+For a pixel or retro film, write the score as MML strings on four channels with `runtime/chip.js`: a whole loop is a few lines an agent can write and revise, and it plays on the same clock as the picture. Sound effects (`coin`, `hit`, `jump`, `explode`...) are one-line presets. See [16-chiptune.md](16-chiptune.md).
+
 ## Cutting to an existing track
 
 ```bash

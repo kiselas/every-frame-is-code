@@ -40,6 +40,12 @@ Short rules. Details in the neighboring files.
 21. Expensive composites (motion blur, whip, bloom) run on a half- or quarter-size buffer and are scaled up once.
 22. Caches are keyed by look (glyph, color, blur level), never by time or frame order: parallel workers render chunks out of order. Details and measurements in 13-performance.md.
 
+## Pixel and retro (15-17)
+27. Say the limits in the plan (resolution, palette, sound channels) and keep to them: 160x90, one fixed palette, 4-6 colors per scene. Draw with `runtime/pixel.js` in palette indexes, never CSS colors, so palette maps and swaps work.
+28. Pixel motion is whole-pixel: round positions, camera and shake; scale and rotate by nearest neighbor only; never let `imageSmoothingEnabled` stay on.
+29. Fades, shadows and transparency are dither (`scr.dither`, `Pixel.transitions`) and palette maps (`Pixel.fadeMap`), not alpha.
+30. Retro sound is text: MML on four channels with `runtime/chip.js`, placed on the film's tempo map. Retro backdrops are per-pixel formulas of (x, y, t) from `runtime/pixel-fx.js`: stateless, so they seek and render in parallel.
+
 ## Review
 23. Iterate on fragments with `render.mjs --draft`; run `--profile` when a render is slow, it names the slowest timecodes.
 24. After every version, render a contact sheet (one frame every 0.5 s) and look at it yourself. Look for: text overlaps, empty frames, static stretches longer than 2 s, elements running off the edges, brightness jumps.

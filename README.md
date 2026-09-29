@@ -3,7 +3,7 @@
 # motion-kit
 
 **Every frame is code.** A knowledge kit that lets an AI agent make graphics with code:<br>
-videos, explainers, kinetic typography, 3D scenes and games, and then render them to MP4 on its own.
+videos, explainers, kinetic typography, 3D scenes, pixel-art films and games, and then render them to MP4 on its own.
 
 <img src="examples/demo/teaser.gif" width="720" alt="Demo film teaser: fire, engraving, 3D sphere, palette montage, pixel game, transition catalog, contact sheet, final title">
 
@@ -58,6 +58,37 @@ Long films need more than good frames: a question, a through-line, chapters, cal
 **[▶ Watch Four Clocks live in your browser](https://kiselas.github.io/every-frame-is-code/gps/)** · source: [examples/gps/film.html](examples/gps/film.html) · script and sources: [examples/gps/SCRIPT.md](examples/gps/SCRIPT.md)
 
 To learn from someone else's film: `node render/analyze.mjs reference.mp4 out/` writes a report on its shots, pace, tempo and cuts, with contact sheets.
+
+## Pixel and retro
+
+A limit is a style. 160×90 pixels, 16 colors and four sound channels take away the defaults a model reaches for (gradients, glow, navy and amber) and leave what it does well: composition, timing, shapes. The pixel toolkit borrows the best ideas of [Pyxel](https://github.com/kitao/pyxel), PICO-8 and the demoscene and rebuilds them around `draw(t)`:
+
+<div align="center">
+<img src="examples/pixel/teaser.gif" width="720" alt="Sixteen Colors: a blinking pixel, one landscape in three palettes, plasma and tunnel, a Mode 7 road with a text-drawn hero, a full-color sunset squeezed into 16 colors">
+</div>
+
+**[▶ Watch Sixteen Colors live in your browser](https://kiselas.github.io/every-frame-is-code/pixel/)** · source: [examples/pixel/film.html](examples/pixel/film.html) · script: [examples/pixel/SCRIPT.md](examples/pixel/SCRIPT.md)
+
+| | What you get | Read |
+|---|---|---|
+| **Pixel screen** | an indexed-color framebuffer: `pal`, `dither(alpha)`, `clip`, `camera`, sprites written as text, a 3×5 font, a Mode 7 perspective floor with billboards. Palette maps fade, flash and cycle a whole picture without redrawing | [15-pixel-retro.md](15-pixel-retro.md) · [runtime/pixel.js](runtime/pixel.js) |
+| **Post pass** | any canvas, a Three.js scene included, shrunk and snapped to a palette with an ordered Bayer dither on the GPU: the *Obra Dinn* look, stateless | [15-pixel-retro.md](15-pixel-retro.md) |
+| **Dithered transitions** | `bayer`, `bayerwipe`, `pixelate`, `squares`, drop-in for `Film.create({ transitions })` | [15-pixel-retro.md](15-pixel-retro.md) |
+| **Chiptune from text** | a whole score as a short MML string on four channels, plus 8-bit sound effect presets, on the film's tempo map | [16-chiptune.md](16-chiptune.md) · [runtime/chip.js](runtime/chip.js) |
+| **Demoscene effects** | plasma, tunnel, rotozoom, copper bars, metaballs, starfield, a stateless fire and more: a formula of (x, y, t) through a palette ramp | [17-demoscene.md](17-demoscene.md) · [runtime/pixel-fx.js](runtime/pixel-fx.js) |
+
+<table>
+<tr>
+<td width="33%"><img src="examples/pixel/stills/01-one.jpg" alt="One pixel becomes a screen"><br><b>One pixel, one screen</b><br><sub>A counter runs 1 to 14,400 while the screen lights up.</sub></td>
+<td width="33%"><img src="examples/pixel/stills/02-palettes.jpg" alt="One landscape, three palettes"><br><b>One drawing, many palettes</b><br><sub>Indexes, not colors: Game Boy, CGA, then 16 colors.</sub></td>
+<td width="33%"><img src="examples/pixel/stills/03-plasma.jpg" alt="Plasma"><br><b>Every pixel is a formula</b><br><sub>Stateless effects: seek anywhere.</sub></td>
+</tr>
+<tr>
+<td><img src="examples/pixel/stills/04-world.jpg" alt="Mode 7 road with a hero"><br><b>Sprites are text</b><br><sub>A hero from a grid of characters on a Mode 7 road.</sub></td>
+<td><img src="examples/pixel/stills/05-anything.jpg" alt="A full-color picture squeezed into 16 colors"><br><b>Squeeze anything</b><br><sub>The post pass turns 16.7 million colors into 16.</sub></td>
+<td><img src="examples/pixel/stills/06-end.jpg" alt="Ending"><br><b>The callback</b><br><sub>Back to one pixel, with the three limits typed under it.</sub></td>
+</tr>
+</table>
 
 ## Quick start
 
@@ -127,10 +158,14 @@ node render.mjs ../examples/demo/demo.html ../examples/demo/demo.mp4
 | [12-render-qa.md](12-render-qa.md) | Rendering, contact sheets, review checklist |
 | [13-performance.md](13-performance.md) | Fast pages and fast renders: measured costs of canvas operations, render pipeline, profiling |
 | [14-long-form.md](14-long-form.md) | Films of 1-3 minutes: thesis, spine, through-line, statements, chapters, callbacks, script as data |
-| [runtime/](runtime/) | `film.js`: the runtime for long films, and `inline.mjs` to fold a film into one file |
+| [15-pixel-retro.md](15-pixel-retro.md) | Pixel art and retro looks: fixed palettes, dithering, sprites as text, Mode 7, the palette post pass, dithered transitions |
+| [16-chiptune.md](16-chiptune.md) | A score as text: MML on four channels, 8-bit sound effects, synced to the film's tempo map |
+| [17-demoscene.md](17-demoscene.md) | Per-pixel effects as functions of (x, y, t): plasma, tunnel, rotozoom, copper bars, fire and more |
+| [runtime/](runtime/) | `film.js`: the runtime for long films, `pixel.js`, `pixel-fx.js` and `chip.js` for pixel and retro films, and `inline.mjs` to fold a film into one file |
 | [render/](render/) | Render, contact sheets, stills, reference breakdown, beat maps (Node + Playwright + ffmpeg) |
 | [examples/demo/](examples/demo/) | Demo film: script and source |
 | [examples/gps/](examples/gps/) | Four Clocks: a 90 s explainer built on the runtime, with its script and sources |
+| [examples/pixel/](examples/pixel/) | Sixteen Colors: a 64 s pixel film that uses the whole pixel toolkit, with its script |
 | [scripts/pack-skill.sh](scripts/pack-skill.sh) | Builds `motion-kit.zip` for ChatGPT and Claude.ai. Releases build it automatically: just push a `vX.Y.Z` tag |
 | [sources.md](sources.md) | Sources and further reading |
 

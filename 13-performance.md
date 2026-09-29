@@ -64,7 +64,7 @@ Rules that follow:
 2. **One sprite, many draws.** Particles, glows, bokeh, embers: pre-render a sprite per look (for fire, 16 sprites along the color ramp) and never create gradients per particle.
 3. **Static layers are rendered once.** Paper texture, sky gradients, backgrounds that only move: draw them into an offscreen canvas at init and `drawImage` it each frame.
 4. **Cheap copies for expensive composites.** Motion blur, whip pans, bloom, glow: do them on a half- or quarter-size buffer and scale the result up. The blur hides the lost resolution.
-5. **Low resolution on purpose.** Pixel art is drawn at its internal resolution (the demo game runs at 160×90) and upscaled once with `imageSmoothingEnabled = false`.
+5. **Low resolution on purpose.** Pixel art is drawn at its internal resolution (the demo game runs at 160×90) and upscaled once with `imageSmoothingEnabled = false`. `Pixel.screen` in `runtime/pixel.js` does exactly this: an indexed buffer, one `putImageData` on a tiny canvas and one nearest-neighbor `drawImage` per frame.
 6. **Reuse buffers.** Allocate offscreen canvases at init and reuse them. Never create a canvas, a large typed array or an image per frame.
 7. **Cache text measurements.** `measureText` in a per-frame loop adds up; cache widths per font and string.
 8. **Measure before batching.** Batching draw calls is the classic advice for WebGL, but Chrome's Canvas 2D already batches internally, and a single huge path can be slower than many small ones.
