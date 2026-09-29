@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Sixteen Colors</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block}</style>
+</head><body><canvas></canvas>
+<script src="../../runtime/film.js"></script>
+<script src="../../runtime/pixel.js"></script>
+<script src="../../runtime/pixel-fx.js"></script>
+<script src="../../runtime/chip.js"></script>
+<script>
+// Sixteen Colors: a 64-second film about limits, on runtime/film.js + the pixel toolkit.
+// Script, beat grid and reasoning: SCRIPT.md next to this file. Chapter: 15-pixel-retro.md.
+const { util: { clamp, lerp, ease, mulberry32 } } = Film;
+const P = Pixel, FX = Pixel.fx;
+const seg = (x, a, b) => clamp((x - a) / (b - a));
+const cyc = (x, n) => ((Math.floor(x) % n) + n) % n;                    // a frame index that survives negative time (the incoming shot of a transition runs before its start)
+const commas = n => Math.round(n).toLocaleString('en-US');
+const scr = P.screen({ w: 160, h: 90, palette: 'pico8' });         // the picture
+const ov = P.screen({ w: 160, h: 90, palette: 'pico8' });          // the HUD, drawn over it with index 0 see-through
+const SW = 160, SH = 90;
+
+// ---------------------------------------------------------------- palettes: one night variant for the dusk-to-night fade
+const SWEETIE = P.palette('sweetie16');
+const NIGHT = P.palette(SWEETIE.rgb.map(([r, g, b]) => '#' + [r * .32, g * .38, b * .72].map(v => Math.round(v).toString(16).padStart(2, '0')).join('')));
+
+// ---------------------------------------------------------------- text helpers (all pixel font, whole pixels)
+const typed = (str, s, b0, per = .2) => str.slice(0, Math.floor(clamp(s.beat - b0, 0, 1e9) / per));
+const cursorOn = s => (s.beat * 2) % 1 < .6;
+function tx(scr, str, x, y, col, o = {}) { if (str) scr.text(x, y, str, col, o); }
+function typeLine(scr, s, str, b0, x, y, col, o = {}) {              // typed on, with a block cursor while it is being typed
+  const sc = o.scale || 1, shown = typed(str, s, b0, o.per ?? .2), full = P.textWidth(str, sc);
+  const left = o.align === 'center' ? Math.round(x - full / 2) : o.align === 'right' ? x - full : x;     // laid out for the whole line, so it doesn't shift while typing
+  if (!shown) return;
+  tx(scr, shown, left, y, col, { ...o, align: 'left' });
+  if (shown.length < str.length && cursorOn(s)) scr.rect(left + P.textWidth(shown, sc) + sc, y, 3 * sc, 5 * sc, col);
+}
+
+// ---------------------------------------------------------------- shot 1: one pixel -> one screen
+const RANK = (() => {                                                  // a fixed random order in which the screen lights up
+  const a = Uint16Array.from({ length: SW * SH }, (_, i) => i), r = mulberry32(7);
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  const rank = new Uint16Array(SW * SH); a.forEach((px, k) => { rank[px] = k; });
+  const c = 45 * SW + 80, k0 = rank[c]; const other = a[0]; a[0] = c; a[k0] = other; rank[c] = 0; rank[other] = k0;   // the center pixel is first
+  return rank;
+})();
+function drawOne(scr, s) {
+  const b = s.beat, n = b < 4 ? 1 : Math.floor(Math.exp(lerp(0, Math.log(SW * SH), ease.inOutCubic(seg(b, 4, 12)))));
+  scr.cls(0);
+  if (b < 4) { if ((b * 2) % 1 < .65) scr.pset(80, 45, 1); if (b > 2) { const e = ease.outExpo(seg(b, 2, 3.4)); const half = Math.round(e * 80); scr.rect(80 - half, 45, half * 2, 1, 1); } }
+  else { const px = scr.px; for (let i = 0; i < px.length; i++) if (RANK[i] < n) px[i] = 1; }
+  if (b < 4) typeLine(scr, s, 'ONE PIXEL.', 1, 80, 52, 1, { align: 'center', scale: 2, per: .22 });
+  else {
+    const c = `${commas(n)} ${n === 1 ? 'PIXEL' : 'PIXELS'}`; scr.text(80, 34, c, 1, { align: 'center', scale: 2, bg: 0 });
+    if (b > 12.5) typeLine(scr, s, 'ONE SCREEN.', 12.5, 80, 52, 1, { align: 'center', scale: 2, per: .2, bg: 0 });
+    if (b > 14) tx(scr, '160 X 90', 80, 64, 1, { align: 'center', bg: 0 });
+  }
+}
+
+// ---------------------------------------------------------------- shots 2-3: one landscape, many palettes
+// C = the palette indexes for each role, per palette; the drawing code never names a color.
+const LAND = {
+  gameboy:   { sky: [3, 3], glow: 2, sun: 1, far: 2, mid: 1, near: 0, bird: 0, star: null },
+  cga:       { sky: [0, 0], glow: 2, sun: 3, far: 2, mid: 1, near: 0, bird: 3, star: 3 },
+  sweetie16: { sky: [8, 1, 2, 3, 4], glow: 4, sun: 12, far: 7, mid: 6, near: 15, bird: 0, star: 12 },
+};
+const BIRD = [P.sprite(['1...1', '.1.1.', '..1..']), P.sprite(['..1..', '.111.', '1...1'])];
+for (const C of Object.values(LAND)) C.birds = BIRD.map(b => P.recolor(b, { 1: C.bird }));
+function landscape(scr, t, C, o = {}) {
+  const hor = 56, n = C.sky.length, rise = o.rise ?? 1, dusk = o.night ?? 0;
+  scr.cls(C.sky[0]);
+  for (let i = 1; i < n; i++) {                                        // sky bands with a dithered ramp above each boundary
+    const y0 = Math.round(hor * i / n);
+    for (let k = 0; k < 6; k++) scr.dither((k + 1) / 7).rect(0, y0 - 6 + k, SW, 1, C.sky[i]);
+    scr.dither().rect(0, y0, SW, hor - y0 + 40, C.sky[i]);
+  }
+  if (C.star && dusk > 0) { const r = mulberry32(3); for (let k = 0; k < 40; k++) { const x = Math.floor(r() * SW), y = Math.floor(r() * 40), ph = r() * 9; if ((Math.floor(t * 2 + ph) % 3) !== 0) scr.dither(dusk).pset(x, y, C.star); } scr.dither(); }
+  const sy = Math.round(lerp(hor + 16, 24, ease.outCubic(rise))), sx = 112;
+  scr.dither(.5).circ(sx, sy, 15, C.glow).dither().circ(sx, sy, 9, C.sun);
+  const hill = (base, amp, off, col, k) => { for (let x = 0; x < SW; x++) { const y = Math.round(base - amp * (Math.sin((x + off) * .045 + k) * .6 + Math.sin((x + off) * .11 + k * 2) * .4)); scr.rect(x, y, 1, SH - y, col); } };
+  hill(hor - 2, 7, t * 2, C.far, 1); hill(hor + 7, 6, t * 6, C.mid, 4); hill(hor + 17, 5, t * 14, C.near, 8);
+  for (let k = 0; k < 3; k++) { const bx = Math.round(((t * 14 + k * 61) % 190) - 15), by = 14 + k * 9 + Math.round(Math.sin(t * 4 + k) * 2); scr.blt(C.birds[cyc(t * 5 + k, 2)], bx, by); }
+}
+function swatches(scr, s, pal, b0, y) {                                // the palette builds itself, one swatch at a time
+  const n = pal.size, w = Math.min(10, Math.floor(150 / n)), x0 = Math.round(80 - n * w / 2);
+  for (let i = 0; i < n; i++) if (s.beat > b0 + i * .12) { scr.rect(x0 + i * w, y, w, 5, i); scr.rectb(x0 + i * w, y, w, 5, 0); }
+}
+const nameFor = { gameboy: 'GAME BOY', cga: 'CGA', sweetie16: 'SWEETIE 16' };
+function drawFour(scr, s) {
+  const first = s.beat < 6, name = first ? 'gameboy' : 'cga', C = LAND[name], pal = P.palette(name), b0 = first ? 0 : 6;
+  landscape(scr, s.t, C, { rise: seg(s.beat, 0, 6) });
+  tx(scr, typed(`${nameFor[name]}: ${pal.size} COLORS`, s, b0 + .25, .12), 4, 12, first ? 0 : 3, { bg: first ? 3 : 0 });
+  swatches(scr, s, pal, b0 + 1, 76);
+}
+function flipFour(s) {
+  const name = s.beat < 6 ? 'gameboy' : 'cga', pal = P.palette(name), sw = s.beat >= 6 && s.beat < 6.25;    // a flash on the palette switch
+  return { palette: pal, map: sw ? P.flashMap(pal, pal.size - 1) : undefined };
+}
+const ui = P.screen({ w: 160, h: 90, palette: 'sweetie16' });          // words and swatches on their own layer: the night mix must not dim them
+function drawSixteen(ctx, s) {
+  const night = ease.inOutCubic(seg(s.beat, 4, 8));
+  scr.reset(); landscape(scr, s.t + 20, LAND.sweetie16, { rise: seg(s.beat, 0, 1.5), night });
+  scr.flip(ctx, { palette: P.palette.mix(SWEETIE, NIGHT, night) });
+  ui.cls(255);                                                           // index 255 has no color: see-through
+  tx(ui, typed('SWEETIE 16: 16 COLORS', s, .25, .1), 4, 12, 12, { outline: 0 });
+  swatches(ui, s, SWEETIE, 1, 76);
+  typeLine(ui, s, 'ENOUGH FOR A WORLD.', 8.5, 80, 30, 12, { align: 'center', outline: 0, per: .16 });
+  ui.flip(ctx);
+}
+
+// ---------------------------------------------------------------- shots 4-7: the machines
+function drawPlasma(scr, s) {
+  FX.plasma(scr, s.t, { speed: 1 });
+  typeLine(scr, s, 'EVERY PIXEL', .5, 80, 30, 7, { align: 'center', scale: 2, bg: 0, per: .18 });
+  typeLine(scr, s, 'IS A FORMULA.', 2, 80, 44, 7, { align: 'center', scale: 2, bg: 0, per: .16 });
+  if (s.beat > 4.5) tx(scr, typed('COLOR = F(X, Y, T)', s, 4.5, .12), 80, 66, 10, { align: 'center', bg: 0 });
+}
+function drawTunnel(scr, s) {
+  FX.tunnel(scr, s.t, { speed: 1 });
+  typeLine(scr, s, 'NO STATE.', .5, 80, 28, 7, { align: 'center', scale: 2, bg: 0, per: .2 });
+  typeLine(scr, s, 'SEEK ANYWHERE.', 2.5, 80, 42, 7, { align: 'center', scale: 2, bg: 0, per: .16 });
+  if (s.beat > 5) tx(scr, typed('FRAME = F(TIME)', s, 5, .12), 80, 64, 10, { align: 'center', bg: 0 });
+}
+const TILE = P.sprite(`
+  7777aaaa
+  7bbb7aaa
+  7b7b7a9a
+  7bbb7aaa
+  eeee5555
+  eaaaeb55
+  ea9aeb5b
+  eaaaeb55
+`);
+function drawRoto(scr, s) {
+  FX.rotozoom(scr, s.t, { tex: TILE, speed: 1 });
+  typeLine(scr, s, 'A SPRITE IS TEXT.', .5, 80, 12, 7, { align: 'center', scale: 2, bg: 0, per: .14 });
+  if (s.beat > 3) {                                                     // the 8x8 sprite, spelled out next to its picture
+    const rows = ['7777AAAA', '7BBB7AAA', '7B7B7A9A', '7BBB7AAA', 'EEEE5555', 'EAAAEB55', 'EA9AEB5B', 'EAAAEB55'];
+    scr.rect(100, 30, 46, 53, 0).rectb(100, 30, 46, 53, 7);
+    rows.forEach((r, i) => { if (s.beat > 3 + i * .15) scr.text(103, 33 + i * 6, r, 10); });
+    scr.rect(14, 38, 40, 40, 0).rectb(14, 38, 40, 40, 7); scr.blt(TILE, 18, 42, { scale: 4 });
+    if (s.beat > 4.5) scr.text(58, 55, '=', 7, { scale: 2 });
+  }
+}
+function drawCopper(scr, s) {
+  FX.copper(scr, s.t, { speed: 1 });
+  FX.wobble(scr, s.t, { amp: 2 });
+  FX.sinescroll(scr, s.t + 1.4, '16 COLORS - 160 X 90 - 4 CHANNELS', { line: 45, amp: 12, scale: 3, speed: 125, loop: false });
+}
+
+// ---------------------------------------------------------------- shot 8: a world (Mode 7 floor, sprites as text)
+const HERO_SRC = ['..CCCCC..', '.CDDDDDC.', '.CD0D0DC.', '.CDDDDDC.', '..22222..', '.2222222.', '.2.222.2.', '..2.2.2..'];
+const RUN = [
+  P.sprite(['..ccccc..', '.cdddddc.', '.cd0d0dc.', '.cdddddc.', '..22222..', '.2222222.', '.2.222.2.', '..2.2.2..']),
+  P.sprite(['..ccccc..', '.cdddddc.', '.cd0d0dc.', '.cdddddc.', '..22222..', '.2222222.', '..2222...', '..2..2...']),
+  P.sprite(['..ccccc..', '.cdddddc.', '.cd0d0dc.', '.cdddddc.', '..22222..', '.2222222.', '.2.222.2.', '...2.2...']),
+  P.sprite(['..ccccc..', '.cdddddc.', '.cd0d0dc.', '.cdddddc.', '..22222..', '.2222222.', '...2222..', '...2..2..']),
+];
+const COIN = [P.sprite(['.44.', '4444', '4444', '.44.']), P.sprite(['.4..', '.44.', '.44.', '.4..']), P.sprite(['..4.', '..4.', '..4.', '..4.']), P.sprite(['.4..', '.44.', '.44.', '.4..'])];
+const SPEED = 30, HERO_AHEAD = 50;                                      // world units per second; the hero runs this far in front of the camera
+const beatSec = b => b * .5;                                           // 120 BPM
+const COINS = [4, 8, 10, 12, 16, 18, 20].map((b, i) => ({ beat: b, lane: [0, 0, -14, 14, 0, -14, 0][i] }));
+const HIT_BEAT = 24;
+const JUMPS = [8, 16];                                                  // jump takes off on these beats; the coin at 8 is collected in the air
+const heroJump = b => JUMPS.reduce((z, j) => Math.max(z, b >= j && b < j + 1.5 ? Math.sin((b - j) / 1.5 * Math.PI) * 9 : 0), 0);
+const camY = b => SPEED * beatSec(b);
+const FLOOR = (x, y) => {
+  const ax = Math.abs(x);
+  if (ax < 22) return ax < 1.6 ? (Math.floor(y / 10) & 1 ? 12 : 14) : (Math.floor(y / 16) & 1 ? 14 : 15);   // road: dashed center line, two greys
+  if (ax < 25) return 5;
+  return (Math.floor(x / 20) + Math.floor(y / 20)) & 1 ? 6 : 7;
+};
+function drawWorld(scr, s) {
+  const b = s.beat, t = s.t, cy = camY(b);
+  const hit = b >= HIT_BEAT ? b - HIT_BEAT : -1;                           // beats since the crash
+  const trauma = hit >= 0 && hit < 2 ? Math.max(0, 1 - hit / 1.2) : 0;
+  const [dx, dy] = P.shake(t, trauma, 3);
+  const cam = { pos: [Math.sin(t * .6) * 5, cy, 20], rot: [12, Math.sin(t * .5) * 3, 0], fov: 68, rect: [0, 32, SW, SH - 32] };
+  scr.cls(9).camera(dx, dy);
+  for (let i = 0; i < 6; i++) scr.dither((i + 1) / 7).rect(0, 4 + i * 5, SW, 5, 10).dither();     // dithered sky
+  scr.rect(0, 30, SW, 12, 10).dither(.5).circ(120, 30, 16, 4).dither().circ(120, 30, 10, 12);
+  { const r = mulberry32(11); for (let k = 0; k < 24; k++) { const x = Math.floor(r() * SW), y = Math.floor(r() * 26), ph = r() * 7; if (Math.floor(t * 3 + ph) % 3) scr.pset(x, y, 12); } }
+  for (let x = 0; x < SW; x++) { const y = Math.round(34 - 6 * (Math.sin((x + t * 3) * .07) * .6 + Math.sin((x + t * 3) * .19) * .4)); scr.rect(x, y, 1, 40 - y, 8); }
+  scr.blt3d(0, 32, SW, SH - 32, FLOOR, { ...cam, fog: { color: 8, near: 120, far: 520 } });
+  // billboards, far to near: coins, the rock, the hero
+  const items = [];
+  for (const c of COINS) if (b < c.beat + .1 && c.beat - b < 5) items.push({ kind: 'coin', x: c.lane, y: HERO_AHEAD + camY(c.beat), z: 4, c });
+  items.push({ kind: 'rock', x: 0, y: HERO_AHEAD + camY(HIT_BEAT), z: 0 });
+  const hz = heroJump(b);
+  items.push({ kind: 'hero', x: 0, y: cy + HERO_AHEAD, z: hz });
+  items.sort((a, c) => c.y - a.y);
+  for (const it of items) {
+    const p = P.project(it.x, it.y, it.z, cam); if (!p) continue;
+    const sc = Math.max(1, Math.round(p.scale * 6));
+    if (it.kind === 'coin') { const cs = sc * 2; scr.blt(COIN[cyc(t * 8, 4)], Math.round(p.x - 2 * cs), Math.round(p.y - 4 * cs), { scale: cs }); }
+    else if (it.kind === 'rock' && b < HIT_BEAT + .3) { scr.circ(Math.round(p.x), Math.round(p.y - 2 * sc), 3 * sc, 13); scr.circ(Math.round(p.x - sc), Math.round(p.y - 3 * sc), 2 * sc, 14); }
+    else if (it.kind === 'hero') {
+      const fl = P.project(0, it.y, 0, cam);
+      scr.dither(.5).elli(Math.round(fl.x - 5 * sc), Math.round(fl.y - sc), 10 * sc, 2 * sc, 15).dither();               // shadow on the floor
+      const frame = hit >= 0 && hit < 1.5 ? RUN[0] : hz > 0 ? RUN[2] : RUN[cyc(t * 10, 4)];
+      const tint = hit >= 0 && hit < 1.5 && Math.floor(hit * 12) % 2 ? P.recolor(frame, { 2: 12, 12: 12, 13: 12 }) : frame;
+      scr.blt(P.outline(tint, 0), Math.round(p.x - 5.5 * sc), Math.round(p.y - 10 * sc), { scale: sc, rot: hit >= 0 && hit < .6 ? hit * 600 : 0 });
+    }
+  }
+  scr.camera();
+  const got = COINS.filter(c => b >= c.beat).length;
+  tx(scr, `COINS ${got}`, 156, 4, 4, { align: 'right', outline: 0 });
+  if (b > 1 && b < 14) {                                               // the source of the hero, next to the hero
+    const k = ease.outCubic(seg(b, 1, 2)) * (1 - seg(b, 12.5, 14)), x = Math.round(lerp(-50, 3, k));
+    scr.rect(x, 30, 42, 53, 0).rectb(x, 30, 42, 53, 7);
+    HERO_SRC.forEach((r, i) => scr.text(x + 3, 33 + i * 6, r, 10));
+    scr.blt(P.outline(RUN[0], 0), x + 46, 44, { scale: 3 });
+    tx(scr, 'SPRITES ARE TEXT', 80, 12, 12, { align: 'center', outline: 0 });
+  }
+  if (hit >= 0 && hit < 1.5) tx(scr, 'OUCH', 80, 14, 4, { align: 'center', scale: 3, outline: 2 });
+  if (b > 26) typeLine(scr, s, 'FORMULAS. TEXT. FOUR BEATS.', 26, 80, 8, 12, { align: 'center', outline: 0, per: .12 });
+}
+const flipWorld = s => { const h = s.beat - HIT_BEAT; return { palette: SWEETIE, map: h >= 0 && h < .25 ? P.flashMap(SWEETIE, 12) : undefined }; };
+
+// ---------------------------------------------------------------- shot 9: anything, squeezed
+const hi = document.createElement('canvas'); hi.width = 1920; hi.height = 1080; const hx = hi.getContext('2d');
+function hiScene(g, t) {                                               // a deliberately un-pixel picture: gradients, glow, smooth curves
+  const W = 1920, H = 1080;
+  const sky = g.createLinearGradient(0, 0, 0, H * .8); sky.addColorStop(0, '#1a1656'); sky.addColorStop(.45, '#c23b7c'); sky.addColorStop(.8, '#ff9a4d'); sky.addColorStop(1, '#ffe08a');
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+  const sy = H * .5 + Math.sin(t * .4) * 30, sx = W * .68;
+  const glow = g.createRadialGradient(sx, sy, 20, sx, sy, 520); glow.addColorStop(0, 'rgba(255,240,190,.95)'); glow.addColorStop(.25, 'rgba(255,190,110,.45)'); glow.addColorStop(1, 'rgba(255,140,90,0)');
+  g.fillStyle = glow; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#fff6d6'; g.beginPath(); g.arc(sx, sy, 120, 0, 7); g.fill();
+  for (const [base, amp, col, sp, k] of [[.66, 90, '#5a2a63', 6, 1], [.74, 80, '#33214f', 16, 4], [.86, 60, '#171334', 34, 8]]) {
+    g.fillStyle = col; g.beginPath(); g.moveTo(0, H);
+    for (let x = 0; x <= W; x += 16) g.lineTo(x, H * base - amp * (Math.sin((x + t * sp) * .0035 + k) * .6 + Math.sin((x + t * sp) * .009 + k * 2) * .4));
+    g.lineTo(W, H); g.fill();
+  }
+  g.font = '900 190px "Arial Black", Impact, sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(255,255,255,.96)'; g.fillText('ANYTHING', W * .36, H * .3);
+}
+const Q = [
+  { q: P.post({ w: 320, h: 180, palette: 'pico8', dither: 'bayer8', spread: .18 }), name: 'PICO 8 - BAYER 8' },
+  { q: P.post({ w: 320, h: 180, palette: 'pico8', dither: 'bayer4', spread: .18 }), name: 'PICO 8 - BAYER 4' },
+  { q: P.post({ w: 320, h: 180, palette: 'pico8', dither: 'none' }), name: 'PICO 8 - NO DITHER' },
+  { q: P.post({ w: 320, h: 180, palette: 'sweetie16', dither: 'bayer8', spread: .16 }), name: 'SWEETIE 16 - BAYER 8' },
+  { q: P.post({ w: 160, h: 90, palette: 'gameboy', dither: 'bayer4', spread: .3, contrast: 1.15 }), name: 'GAME BOY - 4 COLORS' },
+];
+const MODE_AT = [0, 9.5, 11, 12.5, 14];                                  // when each look starts (beats), from the divider's arrival on
+function drawAnything(ctx, s) {
+  const b = s.beat, W = 1920, H = 1080, mode = MODE_AT.reduce((m, at, i) => b >= at ? i : m, 0);
+  hiScene(hx, s.t);
+  const divider = b < 1 ? 0 : b < 9 ? Math.round(ease.inOutCubic(seg(b, 1, 9)) * W) : W;
+  ctx.drawImage(hi, 0, 0);
+  if (divider >= W) Q[mode].q.apply(hi, ctx);                              // the divider has arrived: all of it
+  else if (divider > 0) {
+    ctx.save(); ctx.beginPath(); ctx.rect(divider, 0, W - divider, H); ctx.clip();
+    Q[mode].q.apply(hi, ctx); ctx.restore();                              // the quantized picture on the right of the divider
+    ctx.fillStyle = '#fff'; ctx.fillRect(divider - 6, 0, 12, H);
+  }
+  ov.cls(0);
+  const name = b < 1 ? 'A FULL-COLOR PICTURE' : b < 9.5 ? 'SQUEEZED INTO 16 COLORS' : Q[mode].name;
+  ov.text(80, 74, name, 7, { align: 'center', outline: 0 });
+  ov.flip(ctx, { key: 0 });
+}
+
+// ---------------------------------------------------------------- shot 10: the callback
+function drawEnd(scr, s) {
+  const b = s.beat; scr.cls(0);
+  if ((b * 2) % 1 < .65 && b < 4) scr.pset(80, 30, 7);
+  typeLine(scr, s, '16 COLORS.', .25, 80, 38, 7, { align: 'center', scale: 2, per: .16 });
+  typeLine(scr, s, '160 X 90.', 1.25, 80, 50, 7, { align: 'center', scale: 2, per: .16 });
+  typeLine(scr, s, '4 CHANNELS.', 2.25, 80, 62, 7, { align: 'center', scale: 2, per: .16 });
+  if (b > 4) { scr.rect(0, 26, SW, 60, 0); typeLine(scr, s, 'EVERY FRAME', 4.25, 80, 34, 12, { align: 'center', scale: 3, per: .1 }); typeLine(scr, s, 'IS CODE.', 5, 80, 52, 10, { align: 'center', scale: 3, per: .1 }); }
+}
+const flipEnd = s => ({ palette: 'pico8', map: P.fadeMap('pico8', seg(s.beat, 7, 7.9), 0) });
+
+// ---------------------------------------------------------------- the HUD: chapter, the COLORS through-line, a progress rail (pixel text, index 0 see-through)
+function hud(ctx, h, f) {
+  ov.cls(0);
+  if (h.chapter) ov.text(4, 3, h.chapter, 7, { outline: 0 });
+  const colors = h.val('colors');
+  ov.text(4, 83, `COLORS ${commas(colors)}`, colors > 20 && colors < 1e6 ? 8 : 7, { outline: 0 });
+  const x0 = 100, w = 56;
+  ov.rect(x0, 86, w, 1, 5);
+  for (const c of f.chapters) ov.pset(x0 + Math.round(w * c.start / f.DURATION), 85, 7);
+  ov.rect(x0, 86, Math.round(w * h.progress), 1, 7);
+  ov.flip(ctx, { key: 0 });
+}
+
+// ---------------------------------------------------------------- the score: four channels of MML per section, sfx on the same clock
+// C major for the palette and the world, A minor for the machines. Every count is in bars of 8 eighths (T120: a bar is 2 s).
+const B8 = (root, n = 1) => `[${root} ${root} >${root}< ${root} ${root} >${root}< ${root} ${root}]${n}`;     // a bass bar of eighths with octave jumps
+const HAT = n => `@3 V40 O6 L16 [C R C C]${n}`, KICK = n => `@3 V85 O2 L4 [C R C R]${n}`;
+const LEAD_C = 'E8 G8 >C8< G8 E8 G8 >C4<  D8 G8 B8 G8 D4 R4  C8 E8 A8 E8 C8 E8 A4  A8 >C8< A8 F8 A4 R4';     // C  G  Am  F
+const ARP = (...bars) => bars.map(r => `[[${r[0]} ${r[1]} ${r[2]}]5 ${r[0]}]1`).join(' ');
+const SEC = {
+  one: [
+    'T120 @0 V80 Q100 O2 L1 A A F G',
+    'T120 @2 V35 O5 L8 R1 R1 [A R E R]4',
+    'T120 @3 V35 O6 L8 R1 R1 [C C]8',
+  ],
+  palette: [                                                              // shots four + sixteen: 6 bars
+    `T120 @0 V95 O2 L8 ${B8('C')} ${B8('G')} ${B8('A')} ${B8('F')} ${B8('C')} ${B8('G')}`,
+    `T120 @1 V50 O5 L8 ${LEAD_C}  E8 G8 >C8 E8 G4< R4  D8 G8 B8 G8 D2`,
+    `T120 @2 V38 O4 L16 R1 R1 R1 ${ARP(['F', 'A', '>C<'], ['C', 'E', 'G'], ['G', 'B', '>D<'])}`,
+    'T120 @3 V40 O6 L16 R1 [C R C C]20',
+    'T120 @3 V85 O2 L4 R1 [C R C R]5',
+  ],
+  formula: [                                                              // shots plasma..copper: 8 bars of A minor
+    `T120 @0 V90 O2 L8 [${B8('A')} ${B8('A')} ${B8('F')} ${B8('G')}]2`,
+    'T120 @1 V52 O5 L8 [A8 C8 E8 C8 A8 C8 E4  E8 D8 C8 D8 E4 R4  F8 A8 F8 A8 >C4< A4  G8 B8 >D8< B8 G4 R4]2',
+    `T120 @2 V42 O4 L16 [[[A >C E<]5 A]2 [[F A >C<]5 F]1 [[G B >D<]5 G]1]2`,
+    'T120 @3 V40 O6 L16 [C R C C]32',
+    'T120 @3 V85 O2 L4 [C R C R]8',
+  ],
+  world: [                                                                // 8 bars, C major, the song at full drive
+    `T120 @0 V95 O2 L8 [${B8('C')} ${B8('G')} ${B8('A')} ${B8('F')}]2`,
+    `T120 @1 V52 O5 L8 [${LEAD_C}]2`,
+    `T120 @2 V40 O4 L16 [${ARP(['C', 'E', 'G'], ['G', 'B', '>D<'], ['A', '>C', 'E<'], ['F', 'A', '>C<'])}]2`,
+    'T120 @3 V42 O6 L16 [C R C C]32',
+    'T120 @3 V88 O2 L4 [C R C R]8',
+  ],
+  anything: [                                                             // 4 bars, F G Am C: a build and a landing
+    `T120 @0 V95 O2 L8 ${B8('F')} ${B8('G')} ${B8('A')} ${B8('C')}`,
+    'T120 @1 V48 O5 L4 F A >C F<  G B >D G<  A >C E A<  >C2 G2<',
+    `T120 @2 V42 O4 L16 ${ARP(['F', 'A', '>C<'], ['G', 'B', '>D<'], ['A', '>C', 'E<'], ['C', 'E', 'G'])}`,
+    'T120 @3 V45 O6 L16 [C R C C]16',
+    'T120 @3 V88 O2 L4 [C R C R]4',
+  ],
+  end: [
+    'T120 @0 V70 Q100 O2 L1 A A',
+    'T120 @2 V35 O5 L8 [A E C E]2 R1',
+  ],
+};
+const SFX = [                                                             // [shot, local beat, preset]: the events the picture makes
+  ['four', 6, 'select'], ['sixteen', 0, 'powerup'], ['sixteen', 8.5, 'blip'],
+  ['tunnel', 0, 'select'], ['roto', 0, 'select'], ['copper', 0, 'powerup'],
+  ...COINS.map(c => ['world', c.beat, 'coin']), ['world', 8, 'jump'], ['world', 9.5, 'land'], ['world', 16, 'jump'], ['world', 17.5, 'land'], ['world', HIT_BEAT, 'hit'],
+  ['anything', 9, 'powerup'], ['anything', 9.5, 'select'], ['anything', 11, 'select'], ['anything', 12.5, 'select'], ['anything', 14, 'select'],
+  ['end', 4, 'powerup'],
+];
+function score(ac, bus, f, at) {
+  const zero = at(f.DURATION) - f.DURATION, T = (id, beat = 0) => zero + f.time(f.shot(id).b0 + beat);      // film time -> context time, also mid-film in the live preview
+  const now = ac.currentTime || 0;
+  const play = (id, key) => { const t = T(id); if (t + 20 > now) Chip.play(ac, t, bus.out, SEC[key]); };
+  play('one', 'one'); play('four', 'palette'); play('plasma', 'formula'); play('world', 'world'); play('anything', 'anything'); play('end', 'end');
+  for (const [id, beat, name] of SFX) { const t = T(id, beat); if (t >= now) Chip.sfx[name](ac, t, bus.out, { gain: .5 }); }
+}
+
+Film.create({
+  W: 1920, H: 1080, FPS: 30,
+  tempo: 120,
+  themes: { pixel: { bg: '#000', ink: '#fff', muted: '#888', accent: '#ff004d', hud: '#fff', texture: 'none', grain: 0, vignette: 0 } },
+  transitions: P.transitions,
+  initial: { colors: 2 }, tween: 1,
+  hud, score,
+  post: () => {},
+  shots: [
+    { id: 'one', bars: 4, chapter: 'I ONE', bg: false, hud: true, set: { colors: 2 }, draw: P.shot(scr, drawOne, { palette: 'mono' }) },
+    { id: 'four', bars: 3, chapter: 'II PALETTE', bg: false, in: { type: 'bayerwipe', beats: 2, dir: 'l' }, set: { colors: 4 }, draw: P.shot(scr, drawFour, flipFour) },
+    { id: 'sixteen', bars: 3, bg: false, in: { type: 'bayer', beats: 1 }, set: { colors: { to: 16, from: 4, b: [0, 2] } }, draw: drawSixteen },
+    { id: 'plasma', bars: 2, chapter: 'III FORMULA', bg: false, in: { type: 'pixelate', beats: 1.5 }, draw: P.shot(scr, drawPlasma, { palette: 'pico8' }) },
+    { id: 'tunnel', bars: 2, bg: false, in: { type: 'squares', beats: 1.5 }, draw: P.shot(scr, drawTunnel, { palette: 'pico8' }) },
+    { id: 'roto', bars: 2, bg: false, in: { type: 'bayerwipe', beats: 1.5, dir: 'd' }, draw: P.shot(scr, drawRoto, { palette: 'pico8' }) },
+    { id: 'copper', bars: 2, bg: false, in: { type: 'pixelate', beats: 1.5 }, draw: P.shot(scr, drawCopper, { palette: 'pico8' }) },
+    { id: 'world', bars: 8, chapter: 'IV WORLD', bg: false, in: { type: 'squares', beats: 1.5, order: 'radial' }, draw: P.shot(scr, drawWorld, flipWorld) },
+    { id: 'anything', bars: 4, chapter: 'V ANYTHING', bg: false, in: { type: 'bayerwipe', beats: 2, dir: 'r' }, set: { colors: { to: 16, from: 16777216, b: [1, 9], log: true } }, draw: drawAnything },
+    { id: 'end', bars: 2, bg: false, hud: false, in: { type: 'bayer', beats: 1 }, draw: P.shot(scr, drawEnd, flipEnd) },
+  ],
+});
+</script>
+</body></html>
