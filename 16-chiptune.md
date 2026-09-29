@@ -1,6 +1,6 @@
 # Chiptune: a score as a string
 
-A code-drawn film needs sound that is also code. `Film.audio` gives you instruments to schedule one by one; `runtime/chip.js` gives you a whole score as one short string, the way the [Pyxel](https://github.com/kitao/pyxel) retro engine does: four channels, four tones, a compact text notation (MML, music macro language) that a model can write and read back.
+A code-drawn film needs sound that is also code. `Film.audio` gives you instruments to schedule one by one; `runtime/chip.js` gives you a whole score as one short string, the way the [Pyxel](https://github.com/kitao/pyxel) retro engine does: four channels, four tones, a compact text notation (MML, music macro language) that a model can write and read back. For full arrangements with real drums, dynamics, echo and ducking there is a second path: a **Score** (music as data), described in [Scores: music as data](#scores-music-as-data) below; `compose.js` generates them.
 
 ```html
 <script src="../../runtime/film.js"></script>
@@ -18,7 +18,9 @@ The constraint is the brief, the same idea as a 16-color palette ([15-pixel-retr
 | `@0` | triangle | bass, kick, soft lead |
 | `@1` | square | lead, hard bass |
 | `@2` | pulse, 25% duty | arps, thin lead that cuts through |
-| `@3` | noise | hats, snare, hiss; the note is brightness, not pitch |
+| `@3` | noise | hiss, cymbal-ish washes; the note is brightness, not pitch |
+| `@4` `@5` `@6` `@7` | drums | kick, snare, hat, open hat: real drum hits, see [Drums](#drums) |
+| `@8` `@9` `@10` | drums | tom (the note is its pitch), crash, clap |
 
 Add or replace tones with `opts.tones`: `{ 4: { type: 'sine', gain: .8 } }`, `{ 5: { type: 'pulse', duty: .125 } }`, `{ 6: { type: 'wave', real: [0, .5], imag: [1, 0] } }` (Fourier coefficients). `gain` balances loudness between tones.
 
@@ -139,6 +141,167 @@ Measured on this loop (offline render, 48 kHz, soft limiter on): peak 0.53-0.56 
 
 Patterns worth copying: `[A>A<]4` an octave-bouncing bass in one repeat per bar; `>C<` for one note above the octave and back; `[ ...bar... ]8` for a drum bar built from named one-step strings (`K`, `S`, `H`, `_`); `B4&8` tying a quarter to an eighth for a long last note.
 
+## Scores: music as data
+
+MML is good for a riff by hand. For anything with drums, dynamics, several sections or a generator behind it, use a **Score**: plain data that `Chip.playScore` plays and `Chip.scoreEvents` reads. [`runtime/compose.js`](runtime/compose.js) generates Scores from a short plan (chords, feel, sections); see [18-music-generation.md](18-music-generation.md). You can also write one by hand:
+
+```js
+const SCORE = {
+  bpm: 120, beatsPerBar: 4, length: 8,                       // length in beats
+  tracks: [
+    { name: 'bass', role: 'bass', voice: 'triangle', duck: true,
+      events: [{ b: 0, d: .5, n: 33 }, { b: .5, d: .5, n: 33, v: .6 }, { b: 1, d: .5, n: 45 }, { b: 2, d: 2, n: 36 }] },
+    { name: 'lead', role: 'lead', voice: 'square', gain: .4, vib: { delay: .3, rate: 5, depth: 15 },
+      echo: { time: .75, fb: .4, mix: .3 },
+      events: [{ b: 0, d: 1.5, n: 76 }, { b: 1.5, d: .5, n: 72, g: 79 }, { b: 2, d: 2, n: 69 }] },
+    { name: 'drums', role: 'drums',
+      events: [{ b: 0, voice: 'kick' }, { b: 1, voice: 'snare' }, { b: 1.5, voice: 'hat', v: .4 }, { b: 2, voice: 'kick' }, { b: 3, voice: 'snare' }] },
+  ],
+  duck: [{ b: 0, depth: .5, rel: .2 }, { b: 2, depth: .5, rel: .2 }],   // the ducked tracks dip under each kick
+};
+const { end } = Chip.playScore(ac, t0, bus.out, SCORE);
+```
+
+Everything is in **beats**; seconds come from `bpm` (or from a `timeOf` you pass, see the Film section). Fields, all optional unless marked:
+
+| Score | |
+|---|---|
+| `bpm` | tempo, default 120 |
+| `beatsPerBar`, `length` | metadata (4, and the length in beats) for you and for `compose.js`; `playScore()` returns `length` as the context time of beat `length`, the point where a loop restarts |
+| `tracks` | required, an array of tracks |
+| `duck` | `[{ b, depth 0..1, rel seconds }]`: dip events for the tracks that have `duck: true` |
+
+| Track | |
+|---|---|
+| `name`, `role` | `role` is `'bass' \| 'lead' \| 'arp' \| 'pad' \| 'drums' \| 'fx'`. It picks the default voice and the default envelope; a `'drums'` track takes a drum name on every event |
+| `voice` | `'triangle' \| 'square' \| 'pulse' \| 'saw' \| 'sine' \| 'noise'`, the default voice of the events (default from the role) |
+| `gain` (`.5`), `pan` (`-1..1`) | track level and stereo position |
+| `duty` | pulse width: `.125`, `.25`, `.5` (any `0.02..0.98`), or `[from, to]` for a PWM sweep over each note |
+| `env` | `{ a, d, s, r }` in seconds, `s` is the sustain level 0..1; partial objects merge with the role default |
+| `vib` | `{ delay, rate, depth }`: seconds, Hz, cents (peak) |
+| `echo` | `{ time, fb, mix }`: `time` in beats, `fb` 0..0.6, `mix` 0..1 |
+| `duck` | `true` = this track dips on `score.duck` events |
+| `events` | required |
+
+| Event | |
+|---|---|
+| `b`, `d` | start and duration in beats (drums ignore `d`) |
+| `n` | MIDI note number, 60 = C4, 69 = A4 (a tom takes it as its pitch) |
+| `v` | velocity 0..1, default `.8`; loudness follows `v^1.5` |
+| `voice` | overrides the track voice; **required on every drum event**: `'kick' \| 'snare' \| 'hat' \| 'ohat' \| 'tom' \| 'crash' \| 'clap' \| 'rim'` |
+| `g`, `gd` | glide: the pitch starts at MIDI note `g` and slides to `n` over `gd` beats (default 60 ms) |
+
+```js
+Chip.playScore(ac, t0, out, score, opts)     // -> { end, tail, length }: context times; end = last note off, tail = end plus the echo decay, length = beat `length`
+Chip.scoreEvents(score, opts)                // -> [{ t, dur, midi, drum, voice, vel, gain, track, ti, role, b, d, glide }], pure, works in Node
+Chip.scoreDucks(score, opts)                 // -> [{ t, depth, rel }] on absolute time
+Chip.validateScore(score)                    // throws a readable error, or returns true
+```
+
+`opts`: `timeOf(beat)` maps a beat to context time (default `t0 + beat * 60 / bpm`), `from` (skip events that start before this context time; default "now", so a live seek plays only what is still ahead), `gain` (master, 1), `limit: false` (no soft limiter), `seed` (only noise start offsets). `scoreEvents` takes `timeOf`, `t0` and `from` too and is the way to make visuals follow the notes (`e.t`, `e.dur`, `e.track`, `e.drum`, `e.vel`).
+
+A bad Score throws before any sound is made, with the path: `Chip score: track "dr" event 0: a drum event needs voice: one of kick, snare, ...`, `event 3: d (duration) must not be negative, got -1`, `track "lead": unknown voice "wobble" (...)`, `bpm must be a finite number, got NaN`.
+
+## Voices and envelopes
+
+| Voice | What it is | Use |
+|---|---|---|
+| `triangle` | soft, hollow | bass, pads, a gentle lead |
+| `square` | 50% pulse, hard | lead, punchy bass |
+| `pulse` | pulse with `duty`; `[from, to]` sweeps it over each note (PWM) | arps, thin leads; a sweep is the classic C64 shimmer |
+| `saw` | bright, buzzy | pads, thick basses, brass-like leads |
+| `sine` | pure | sub bass, soft bells |
+| `noise` | seeded noise through a band-pass centred on the note (higher `n`, brighter) | hiss, risers, wind; for drums use the drum voices |
+
+Envelope defaults follow the `role` (or the voice when there is none). Override any field with `env`:
+
+| Role | a | d | s | r | Sounds like |
+|---|---|---|---|---|---|
+| `bass` | .004 | .06 | .9 | .06 | tight, full sustain |
+| `lead` | .012 | .12 | .75 | .14 | gentle attack, a little bloom |
+| `arp` | .002 | .12 | .3 | .05 | a pluck |
+| `pad` | .22 | .3 | .8 | .45 | slow swell, long tail |
+| `fx` | .004 | .25 | .3 | .2 | a short swell that dies away |
+
+Attack is linear, decay and release are exponential (they sound even). A note shorter than `a + d` releases from wherever the envelope is; every note starts and ends at exactly 0, so there are no clicks. Vibrato is a sine on `detune` scheduled per note (nothing free-runs), starts after `delay` and fades in over its first cycle. Use it on notes of a beat or more; on 16ths it only smears. Glide is an exponential frequency ramp.
+
+Levels are balanced so the same `gain` and `v` sit in the same range across voices (solo, gain .5, v .8: about -17 to -21 LUFS for a sustained note, noise a little lower). Balance roles with track `gain` first, velocity second.
+
+## Drums
+
+Real drum voices, not noise notes: each hit has its own pitch drop or filter, envelope and level, and is deterministic (`seed` only picks the noise slice). Same signature as `Chip.sfx`:
+
+```js
+Chip.drums.kick(ac, t, out, { gain: 1, pitch: 1, decay: 1, seed: 0 });   // -> { end }
+```
+
+`gain` multiplies the fixed level (1 = a full hit), `pitch` multiplies frequencies, `decay` multiplies the length. `Chip.drums.lengths` (or `Chip.drums.length(name)`) tells when each is silent.
+
+| Drum | Sounds like | Length, s | Use |
+|---|---|---|---|
+| `kick` | sine falling 150 to 45 Hz, saturated, plus a click | 0.40 | the pulse: beats 1 and 3, syncopations, the drop |
+| `snare` | band-passed noise crack + a 190 Hz tone body | 0.30 | backbeat on 2 and 4; rolls for fills |
+| `hat` | very short high-passed noise | 0.07 | eighths or sixteenths, the grid |
+| `ohat` | the same, longer | 0.42 | off-beat lift; a following `hat` **chokes** it (cuts it short) |
+| `tom` | sine dropping from 1.9x its pitch; `n` sets the pitch (60 = about 118 Hz) | 0.45 | fills: run down the notes |
+| `crash` | long high-passed noise, bright burst then a slow shimmer | 1.70 | bar 1 of a section, the end of a fill |
+| `clap` | three short noise bursts and a longer fourth | 0.32 | with or instead of the snare |
+| `rim` | a click and two short tones | 0.09 | soft accents, half-time verses |
+
+**Groove basics.** Kick on 1 and 3, snare on 2 and 4, hats on eighths (accent the on-beats: `v .7` on, `v .4` off). Then vary: a kick a sixteenth before beat 3, an `ohat` on the last off-beat of every fourth bar, a **ghost** snare (`v .3`) just before beat 4. Low velocity is what makes a groove breathe; a flat `v` is a drum machine on a bad day. **Fills** in the last beat or two of a phrase: sixteenth snares rising in `v` (`.5` to `1`), or toms falling in pitch (`n` 55, 52, 48, 45), then a `crash` and a `kick` on the downbeat of the next section.
+
+```js
+const fill = [55, 55, 52, 52, 48, 48, 45, 45].map((n, i) => ({ b: 30 + i / 4, voice: 'tom', n, v: .8 + i * .02 }));
+drums.events.push(...fill, { b: 32, voice: 'crash' }, { b: 32, voice: 'kick' });
+```
+
+**In MML.** Tones `@4` to `@10` are the drums: `@4` kick, `@5` snare, `@6` hat, `@7` ohat, `@8` tom, `@9` crash, `@10` clap. `V` is the velocity, the note length and `Q` and `@ENV` do not apply (the drum has its own envelope), and the note's pitch matters only for the tom.
+
+```js
+Chip.play(ac, t0, out, [
+  { mml: 'T120 @4 V110 O3 [C4 R4 C4 R4]4', gain: .5 },                       // kick on every other beat
+  { mml: 'T120 @5 V100 O4 [R4 C4]8', gain: .4 },                             // snare on 2 and 4
+  { mml: 'T120 @6 V60 O4 L8 [C C]16', gain: .25 },                           // hats on eighths
+]);
+```
+
+## Echo, pan and ducking
+
+```js
+{ name: 'lead', echo: { time: .75, fb: .4, mix: .3 }, pan: .2, duck: false, /* ... */ }
+```
+
+- **`echo`**: a feedback delay. `time` is in beats at the tempo of the track's first event (`.75` = a dotted eighth, the classic; `.5` an eighth; `1` a quarter), `fb` the feedback (clamped to 0.6), `mix` the level of the repeats relative to the dry signal, which stays at 1. The feedback path is low-passed at 3.2 kHz, so every repeat is darker and sits behind the note. It works best on a sparse lead; on a busy arp it is mud. `playScore().tail` says when the repeats have died away.
+- **`pan`** -1..1. Bass and kick stay at 0; spread arps and pads (`-.3`, `.3`).
+- **`duck`**: `true` puts the track in a group that dips at every event in `score.duck`: instantly to `1 - depth` (over 3 ms, no click), then linearly back to 1 over `rel` seconds. Put a duck event on every kick (`{ b, depth: .5, rel: .2 }`) and duck the bass, pads and arp: the kick gets its room and the mix pumps in time (the sidechain sound). Overlapping events never jump: a new dip starts from the current level.
+
+**Deterministic by construction.** Chrome sums many inputs of one node in no fixed order, and a float sum of three or more terms depends on the order, so a bus with many overlapping hits does not render the same twice: 12 renders of 48 overlapping drum hits into one gain node gave 12 different files. `playScore` deals overlapping sounds to lanes (a sound sits on the first lane that is free, so at most one sound is audible per lane, and adding silence is exact), and adds lanes, tracks, the ducked group and the echo's wet and dry pairwise. The same score gives the same samples, bit for bit: 12 of 12 renders identical in the lane version.
+
+Measured on the 8-bar demo (bass, arp, lead with echo, drums with a fill, ducking on bass and arp; offline, 48 kHz): integrated **-13.4 LUFS**, sample peak **-2.7 dBFS** (true peak -2.6 dBTP). With the default gains (`.5`) the stems sit at bass -19, lead -18, drums -18, arp -23 LUFS. For a film bed under words, take the master `gain` down to `.5`-`.6` and let `render.mjs --loudnorm` do the final level.
+
+## Using a Score in a Film
+
+Pass the Film's tempo map as `timeOf` and derive the clock once, as in [runtime/README.md](runtime/README.md), so the score also works when the preview starts in the middle:
+
+```js
+function score(ac, bus, f, at) {
+  const zero = at(f.DURATION) - f.DURATION;                       // film time 0 on the context clock, also after a live seek
+  const b0 = f.shot('world').b0;                                  // the score starts with this shot
+  Chip.playScore(ac, zero, bus.out, SCORE, { timeOf: b => zero + f.time(b0 + b) });
+  // sfx and ducks for words on the same clock
+  for (const h of f.hits) { const t = zero + h.t; if (t >= ac.currentTime) Chip.sfx.select(ac, t, bus.out, { seed: h.t * 100 | 0 }); }
+}
+```
+
+`timeOf` follows tempo changes and ramps because it goes through `f.time`; `from` defaults to the context's current time, so after a seek `playScore` starts only the notes that are still ahead (a note that began before the seek is skipped, like `Chip.play`). A render starts at 0 and needs none of this. To loop a section, call `playScore` again at `zero + f.time(b0 + score.length)`. To make the picture follow the music (a flash on every kick, a bar that jumps with the bass):
+
+```js
+const hits = Chip.scoreEvents(SCORE, { timeOf: b => f.time(b0 + b) });        // film time, no context needed
+const kicks = hits.filter(e => e.drum === 'kick').map(e => e.t);
+```
+
+Duck the music under a voice or a sfx by adding `{ b, depth, rel }` events to `score.duck` before you play it, or with a gain node as in Mix below.
+
 ## Sound effects
 
 `Chip.sfx.name(ac, t, out, { gain, pitch, seed })` plays a one-shot; `Chip.sfx.length(name)` (or the table `Chip.sfx.lengths`) tells you when it is silent, so you can schedule what follows or size a gap. `gain` defaults to `.5` (peaks 0.3-0.5), `pitch` multiplies every frequency, `seed` adds a small seeded change (about ±5% pitch, ±8% level): pass a different seed per occurrence so repeats do not grate.
@@ -180,7 +343,8 @@ They match the kit's [juice checklist](10-games-juice.md): every action on scree
 - **Gate 80 cuts every note.** That is right for a lead and wrong for a drum with an envelope or a pad: use `Q100`.
 - **Different pitch after `&` is legato, not a repeated note.** For a re-struck same pitch write it without `&`.
 - **`-` after a note is a flat.** `B-` is B♭; `O-1` (with `O`) is octave −1; in JS `noteToMidi('Bb3')` uses `b`, in MML `B-`.
-- **Noise has no pitch.** The note number sets how bright it is: `O1`-`O3` a thud, `O5` a snare-like body, `O7` a hat. Make a kick from tone `@0` with `@GLI` starting two octaves up.
+- **Noise has no pitch.** The note number sets how bright it is: `O1`-`O3` a thud, `O5` a snare-like body, `O7` a hat. For drums use the drum tones `@4`-`@10` (or a Score); they have a real kick, snare and hat.
+- **Drum tones ignore `Q`, `@ENV` and note length.** The hit has its own envelope; `V` is its velocity. Only `@8` (tom) reads the note's pitch.
 - **Infinite `[ ... ]` needs a limit.** The default is 60 s of notes; with 4 tracks that is thousands of nodes for a 15-second film. Pass `maxSeconds`.
 - **A very long score** (over 100000 notes) throws "runaway repeat"; pass `maxEvents` in `opts` only if you mean it.
 - **Two renders are bit-identical only through `Chip.play`.** It adds the tracks pairwise: Chrome sums many inputs of one node in no fixed order and the float sum then differs by an ulp between runs. If you connect many sources to a single node yourself, expect 1-ulp differences (inaudible, but a byte compare of two WAVs fails).

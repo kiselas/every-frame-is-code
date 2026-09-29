@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 const Chip = createRequire(import.meta.url)('../chip.js');
-const { parse, midiToHz, noteToMidi } = Chip;
+const { parse, midiToHz, noteToMidi, scoreEvents } = Chip;
 
 const close = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
 const times = mml => parse(mml).events.map(e => +e.t.toFixed(6));
@@ -152,7 +152,7 @@ test('opts.prefix and opts.tones', () => {
   const r = parse('C', { prefix: 'T60 @ENV1 { 100 } @ENV1' }).events[0];
   assert.equal(r.dur, 1); assert.ok(r.env);
   const t = parse('@4 C', { tones: { 4: { type: 'sine' } } }).events[0]; assert.equal(t.tone, 4);
-  assert.throws(() => parse('@4 C'), /unknown tone @4/);
+  assert.throws(() => parse('@11 C'), /unknown tone @11/);       // 4..10 are the built-in drum tones
 });
 
 test('comments, bar lines, whitespace, line breaks', () => {
@@ -199,4 +199,180 @@ test('Chip API surface', () => {
   for (const k of ['coin', 'jump', 'hit', 'explode', 'laser', 'powerup', 'blip', 'select', 'fall', 'land']) { assert.equal(typeof Chip.sfx[k], 'function', k); assert.ok(Chip.sfx.length(k) > 0); assert.equal(Chip.sfx.lengths[k], Chip.sfx.length(k)); }
   assert.throws(() => Chip.sfx.length('nope'), /unknown sfx/);
   assert.equal(Chip.TICKS, 192);
+});
+
+// ---------------------------------------------------------------- scores: scoreEvents, validation, and playScore against a recording fake AudioContext
+const mini = () => ({
+  bpm: 120, length: 8,
+  tracks: [
+    { name: 'bass', role: 'bass', voice: 'triangle', gain: .6, events: [{ b: 0, d: 1, n: 36 }, { b: 2, d: .5, n: 43, v: .5 }] },
+    { name: 'drums', role: 'drums', events: [{ b: 0, voice: 'kick' }, { b: 1, voice: 'snare', v: 1 }, { b: 1.5, voice: 'tom', n: 72 }] },
+  ],
+  duck: [{ b: 0, depth: .5, rel: .2 }],
+});
+const err = (fn, re) => assert.throws(fn, e => { assert.match(e.message, /^Chip score: /); assert.match(e.message, re); return true; });
+
+test('scoreEvents: default timing is beats * 60 / bpm from t0, sorted by time', () => {
+  const ev = scoreEvents(mini());
+  assert.deepEqual(ev.map(e => e.t), [0, 0, .5, .75, 1]);
+  assert.equal(ev[0].track, 'bass'); assert.equal(ev[1].track, 'drums');           // equal times: track order
+  close(ev[0].dur, .5); close(ev[4].dur, .25);
+  assert.deepEqual(scoreEvents(mini(), { t0: 10 }).map(e => e.t), [10, 10, 10.5, 10.75, 11]);
+  const fast = scoreEvents({ ...mini(), bpm: 240 }); close(fast[4].t, .5);
+  assert.equal(ev[0].midi, 36); assert.equal(ev[0].voice, 'triangle'); assert.equal(ev[0].ti, 0); assert.equal(ev[0].role, 'bass');
+});
+
+test('scoreEvents: a custom timeOf (tempo map) sets start and duration', () => {
+  const timeOf = b => b < 4 ? b * .5 : 2 + (b - 4) * .25;            // 120 bpm, then 240 bpm from beat 4
+  const s = { bpm: 120, tracks: [{ voice: 'square', events: [{ b: 3, d: 2, n: 60 }, { b: 6, d: 1, n: 62 }] }] };
+  const [a, c] = scoreEvents(s, { timeOf });
+  close(a.t, 1.5); close(a.dur, .5 + .25); close(c.t, 2.5); close(c.dur, .25);
+  assert.equal(a.track, 'track0');
+  assert.throws(() => scoreEvents(s, { timeOf: () => NaN }), /timeOf\(3\) returned NaN/);
+});
+
+test('scoreEvents: velocity maps to gain monotonically (v^1.5 times the track gain)', () => {
+  const vs = [0, .1, .25, .5, .75, .8, 1];
+  const ev = scoreEvents({ bpm: 120, tracks: [{ voice: 'square', gain: .4, events: vs.map((v, i) => ({ b: i, d: 1, n: 60, v })) }] });
+  const g = ev.map(e => e.gain);
+  for (let i = 1; i < g.length; i++) assert.ok(g[i] > g[i - 1], `${g[i]} > ${g[i - 1]}`);
+  close(g[0], 0); close(g[6], .4); close(g[3], .4 * .5 ** 1.5); close(ev[5].vel, .8 ** 1.5);
+  close(scoreEvents({ bpm: 120, tracks: [{ voice: 'square', events: [{ b: 0, d: 1, n: 60 }] }] })[0].gain, .5 * .8 ** 1.5);   // default gain .5, velocity .8
+});
+
+test('scoreEvents: from skips events that start before it (a live seek)', () => {
+  const all = scoreEvents(mini()), late = scoreEvents(mini(), { from: .6 });
+  assert.equal(all.length, 5); assert.deepEqual(late.map(e => e.t), [.75, 1]);
+  assert.equal(scoreEvents(mini(), { from: .5 }).length, 3);          // starting exactly at `from` still plays
+  assert.equal(scoreEvents(mini(), { from: 100 }).length, 0);
+});
+
+test('scoreEvents: drum events resolve to a drum name, toms keep their note, glide resolves to seconds', () => {
+  const ev = scoreEvents(mini());
+  const kick = ev.find(e => e.drum === 'kick'), tom = ev.find(e => e.drum === 'tom');
+  assert.equal(kick.midi, undefined); assert.equal(kick.dur, 0); assert.equal(kick.voice, 'kick'); assert.equal(tom.midi, 72);
+  assert.equal(ev.find(e => e.track === 'bass').drum, undefined);
+  const g = scoreEvents({ bpm: 120, tracks: [{ voice: 'sine', events: [{ b: 0, d: 1, n: 60, g: 72 }, { b: 1, d: 1, n: 60, g: 55, gd: .5 }, { b: 2, d: 1, n: 60 }] }] });
+  assert.deepEqual(g[0].glide, { midi: 72, dur: .06 }); close(g[1].glide.dur, .25); assert.equal(g[2].glide, null);
+  const mix = scoreEvents({ bpm: 120, tracks: [{ voice: 'triangle', events: [{ b: 0, n: 40, d: 1 }, { b: 1, voice: 'hat' }] }] });   // a drum event on a melodic track
+  assert.equal(mix[1].drum, 'hat');
+});
+
+test('scoreDucks: duck events on absolute time, sorted', () => {
+  const d = Chip.scoreDucks({ bpm: 120, tracks: [], duck: [{ b: 4, depth: .5, rel: .3 }, { b: 1, depth: 1, rel: .1 }] }, { t0: 1 });
+  assert.deepEqual(d, [{ t: 1.5, depth: 1, rel: .1 }, { t: 3, depth: .5, rel: .3 }]);
+});
+
+test('validation: readable errors for malformed scores', () => {
+  const ev = e => ({ bpm: 120, tracks: [{ name: 'lead', voice: 'square', events: [e] }] });
+  err(() => scoreEvents(null), /must be an object/);
+  err(() => scoreEvents({ bpm: 120 }), /tracks must be an array/);
+  err(() => scoreEvents({ bpm: NaN, tracks: [] }), /bpm must be a finite number, got NaN/);
+  err(() => scoreEvents({ bpm: 0, tracks: [] }), /bpm must be/);
+  err(() => scoreEvents({ bpm: 120, tracks: [{ name: 'x', voice: 'wobble', events: [] }] }), /track "x": unknown voice "wobble" \(triangle, square/);
+  err(() => scoreEvents(ev({ b: 0, d: 1, n: 60, voice: 'wobble' })), /track "lead" event 0: unknown voice "wobble"/);
+  err(() => scoreEvents(ev({ b: 0, d: -1, n: 60 })), /event 0: d \(duration\) must not be negative, got -1/);
+  err(() => scoreEvents(ev({ b: 0, d: Infinity, n: 60 })), /d \(duration in beats\) must be a finite number, got Infinity/);
+  err(() => scoreEvents(ev({ b: NaN, d: 1, n: 60 })), /b \(start beat\) must be a finite number/);
+  err(() => scoreEvents(ev({ d: 1, n: 60 })), /b \(start beat\) must be a finite number, got "?undefined/);
+  err(() => scoreEvents(ev({ b: -1, d: 1, n: 60 })), /b \(start beat\) must be 0\.\./);
+  err(() => scoreEvents(ev({ b: 0, d: 1, n: '60' })), /n \(MIDI note\) must be a finite number/);
+  err(() => scoreEvents(ev({ b: 0, d: 1, n: 200 })), /n \(MIDI note\) must be 0\.\.127, got 200/);
+  err(() => scoreEvents(ev({ b: 0, d: 1 })), /a note event needs n/);
+  err(() => scoreEvents(ev({ b: 0, d: 1, n: 60, v: 2 })), /v \(velocity\) must be 0\.\.1, got 2/);
+  err(() => scoreEvents({ bpm: 120, tracks: [{ name: 'dr', role: 'drums', events: [{ b: 0 }] }] }), /track "dr" event 0: a drum event needs voice: one of kick, snare/);
+  err(() => scoreEvents({ bpm: 120, tracks: [{ name: 'dr', role: 'drums', events: [{ b: 0, voice: 'square' }] }] }), /a drum event needs voice.*got "square"/);
+  err(() => scoreEvents({ bpm: 120, tracks: [{ role: 'choir', events: [] }] }), /unknown role "choir"/);
+  err(() => scoreEvents({ bpm: 120, tracks: [{ gain: NaN, events: [] }] }), /gain must be a finite number/);
+  err(() => scoreEvents({ bpm: 120, tracks: [{ pan: 2, events: [] }] }), /pan must be -1\.\.1/);
+  err(() => scoreEvents({ bpm: 120, tracks: [{ env: { s: 1.5 }, events: [] }] }), /env\.s must be 0\.\.1/);
+  err(() => scoreEvents({ bpm: 120, tracks: [{ echo: { time: 0 }, events: [] }] }), /echo\.time must be 0\.001\.\./);
+  err(() => scoreEvents({ bpm: 120, tracks: [{ duty: [.1], events: [] }] }), /duty as a sweep is \[from, to\]/);
+  err(() => scoreEvents({ bpm: 120, tracks: [], duck: [{ b: 0, depth: 2, rel: .2 }] }), /duck 0: depth must be 0\.\.1/);
+  err(() => scoreEvents({ bpm: 120, tracks: [], duck: [{ b: 0, depth: .5, rel: 0 }] }), /duck 0: rel/);
+  assert.equal(Chip.validateScore(mini()), true);
+});
+
+// A recording fake of the parts of AudioContext that playScore touches. Every AudioParam records its automation.
+function fakeContext(sampleRate = 48000) {
+  const params = [], counts = {}, started = [];
+  const param = (v = 0) => { const p = { value: v, ev: [] }; for (const m of ['setValueAtTime', 'linearRampToValueAtTime', 'exponentialRampToValueAtTime', 'setTargetAtTime']) p[m] = (val, t) => { p.ev.push([m, val, t]); return p; }; params.push(p); return p; };
+  const node = kind => {
+    const n = { kind, connect(d) { return d; }, start(t) { started.push([kind, t]); }, stop() {}, setPeriodicWave() {} };
+    counts[kind] = (counts[kind] || 0) + 1;
+    for (const k of ['gain', 'frequency', 'detune', 'delayTime', 'Q', 'pan']) n[k] = param(k === 'gain' ? 1 : 0);
+    return n;
+  };
+  const ac = { sampleRate, currentTime: 0, destination: node('dest'), counts, params, started };
+  for (const k of ['Gain', 'Oscillator', 'BufferSource', 'BiquadFilter', 'Delay', 'WaveShaper', 'StereoPanner']) ac['create' + k] = () => node(k);
+  ac.createBuffer = (c, n) => ({ getChannelData: () => new Float32Array(n) });
+  ac.createPeriodicWave = () => ({});
+  return ac;
+}
+const ascending = ac => {
+  for (const p of ac.params) {
+    let last = -Infinity;
+    for (const [m, v, t] of p.ev) { assert.ok(Number.isFinite(t) && Number.isFinite(v), `${m} ${v} ${t}`); assert.ok(t >= last - 1e-12, `automation out of order: ${t} after ${last}`); if (m === 'exponentialRampToValueAtTime') assert.ok(v > 0, 'exponential ramp target must be > 0'); last = t; }
+  }
+};
+
+test('playScore: schedules on a fake context, returns end / tail / length, automation stays in time order', () => {
+  const ac = fakeContext(), sc = mini();
+  sc.tracks[0].duck = true; sc.tracks[0].echo = { time: .5, fb: .9, mix: .3 };
+  sc.duck.push({ b: 0.01, depth: .8, rel: .5 }, { b: 0.5, depth: .5, rel: .05 }, { b: 3, depth: .5, rel: 1 }, { b: 3.5, depth: .5, rel: 1 });
+  const r = Chip.playScore(ac, .25, ac.destination, sc);
+  assert.ok(r.end > .25 + 1.25, `end ${r.end}`); assert.ok(r.tail > r.end, 'the echo tail is longer than the notes');
+  close(r.length, .25 + 4);                                            // 8 beats at 120 bpm
+  assert.ok(ac.counts.Delay === 1 && ac.counts.Oscillator >= 3);       // one echo, a triangle note x2 + kick body + snare tone + tom body...
+  ascending(ac);
+});
+
+test('playScore: from skips the events that already sounded, timeOf is honored', () => {
+  const all = fakeContext(), seek = fakeContext(), mapped = fakeContext();
+  Chip.playScore(all, 0, all.destination, mini());
+  Chip.playScore(seek, 0, seek.destination, mini(), { from: .6 });      // the kick, the snare and the first bass note are past: the tom (.75 s) and the second bass note (1 s) remain
+  assert.ok(seek.counts.Oscillator < all.counts.Oscillator);
+  Chip.playScore(mapped, 0, mapped.destination, mini(), { timeOf: b => 100 + b, from: 0 });
+  assert.ok(mapped.started.every(([, t]) => t >= 100), 'every source starts on the mapped clock');
+  ascending(mapped);
+  const empty = fakeContext(); const r = Chip.playScore(empty, 0, empty.destination, mini(), { from: 1000 });
+  assert.equal(empty.counts.Oscillator ?? 0, 0); assert.equal(r.end, 0);
+});
+
+test('playScore: a long open hat is choked by the next closed hat, overlapping drums use lanes', () => {
+  const ac = fakeContext();
+  const ev = [{ b: 0, voice: 'ohat' }, { b: .5, voice: 'hat' }, { b: .5, voice: 'kick' }, { b: .5, voice: 'snare' }, { b: 1, voice: 'crash' }];
+  const r = Chip.playScore(ac, 0, ac.destination, { bpm: 120, tracks: [{ role: 'drums', events: ev }] });
+  assert.ok(r.end > 1.5); ascending(ac);
+  const nochoke = fakeContext(); Chip.playScore(nochoke, 0, nochoke.destination, { bpm: 120, tracks: [{ role: 'drums', events: [{ b: 0, voice: 'ohat' }] }] });
+  const choked = ac.params.filter(p => p.ev.some(e => e[0] === 'exponentialRampToValueAtTime' && e[2] > .25 && e[2] < .3));
+  assert.ok(choked.length >= 1, 'an envelope ends right after the choke time (.25 s) instead of running the natural .32 s');
+});
+
+test('Chip.drums: every drum returns its end, rejects bad options, has a length', () => {
+  const ac = fakeContext();
+  for (const name of ['kick', 'snare', 'hat', 'ohat', 'tom', 'crash', 'clap', 'rim']) {
+    const r = Chip.drums[name](ac, 1, ac.destination, { gain: .7, seed: 3 });
+    assert.equal(r.end, 1 + Chip.drums.length(name)); assert.equal(Chip.drums.lengths[name], Chip.drums.length(name));
+    assert.ok(Chip.drums.length(name) > 0);
+    assert.throws(() => Chip.drums[name](ac, 0, ac.destination, { pitch: 0 }), /pitch must be > 0/);
+  }
+  assert.throws(() => Chip.drums.length('gong'), /unknown drum "gong"/);
+  assert.equal(Chip.drums.crash(ac, 0, ac.destination, { decay: .5 }).end, Chip.drums.length('crash') * .5);
+  assert.deepEqual(Chip.drums.names, ['kick', 'snare', 'hat', 'ohat', 'tom', 'crash', 'clap', 'rim']);
+  ascending(ac);
+});
+
+test('MML drum tones @4..@10 parse and play through Chip.play (tone 11 does not exist)', () => {
+  const ev = parse('@4 V110 O3 C4 R4 C4 R4 @5 C @6 C @7 C @8 O4 C @9 C @10 C').events;
+  assert.deepEqual(ev.map(e => e.tone), [4, 4, 5, 6, 7, 8, 9, 10]);
+  const ac = fakeContext();
+  const r = Chip.play(ac, 0, ac.destination, ['T120 @4 V110 O3 C4 R4 C4 R4', 'T120 @5 C4 @6 C8 C8']);
+  assert.ok(Math.abs(r.end - 1.4) < 1e-9); assert.ok(ac.counts.Oscillator >= 3); ascending(ac);
+  assert.throws(() => parse('@11 C'), /unknown tone @11/);
+});
+
+test('Chip API surface: score functions and drums', () => {
+  for (const k of ['playScore', 'scoreEvents', 'scoreDucks', 'validateScore']) assert.equal(typeof Chip[k], 'function', k);
+  for (const k of ['kick', 'snare', 'hat', 'ohat', 'tom', 'crash', 'clap', 'rim']) assert.equal(typeof Chip.drums[k], 'function', k);
 });
