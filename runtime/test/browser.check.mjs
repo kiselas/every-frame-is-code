@@ -1,4 +1,4 @@
-// Checks the parts of the runtime that need a browser: the WebGL post pass, flip, the dithered transitions and the offline chiptune render.
+// Checks the parts of the runtime that need a browser: the WebGL post pass, flip, the dithered transitions, the offline chiptune render and Score rendering (drums, echo, duck).
 // Usage: node runtime/test/browser.check.mjs        (needs Chrome and `npm install` in render/; CHROME_PATH if Chrome is not in the default place)
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -9,7 +9,7 @@ const browser = await chromium.launch({ ...launch, args: ['--force-color-profile
 const page = await browser.newPage();
 const errors = []; page.on('pageerror', e => errors.push(e.message));
 await page.setContent('<canvas id=c width=640 height=360></canvas>');
-for (const f of ['film.js', 'pixel.js', 'pixel-fx.js', 'chip.js']) await page.addScriptTag({ path: path.join(root, 'runtime', f) });
+for (const f of ['film.js', 'pixel.js', 'pixel-fx.js', 'chip.js', 'compose.js', 'music-lint.js']) await page.addScriptTag({ path: path.join(root, 'runtime', f) });
 
 const res = await page.evaluate(async () => {
   const out = {}, hex = c => '#' + [...c].map(v => v.toString(16).padStart(2, '0')).join('');
@@ -58,6 +58,72 @@ const res = await page.evaluate(async () => {
   const r1 = await render(), r2 = await render(); let peak = 0, nan = 0, ident = true;
   r1.forEach((v, i) => { peak = Math.max(peak, Math.abs(v)); if (!Number.isFinite(v)) nan++; if (v !== r2[i]) ident = false; });
   out.chip = { peak: +peak.toFixed(3), nan, identical: ident };
+
+  // 5. generated music end to end: plan -> Compose.generate -> MusicLint -> Chip.playScore offline, finite, audible, identical twice
+  const plan = { seed: 5, bpm: 140, key: 'A minor', style: 'drive', sections: [{ name: 'a', bars: 2, energy: .3 }, { name: 'b', bars: 2, energy: .95 }] };
+  const sc = Compose.generate(plan), lint = MusicLint.lint(sc);
+  const renderGenerated = async () => {
+    const ac = new OfflineAudioContext(1, Math.ceil(48000 * (sc.length * 60 / sc.bpm + 2)), 48000), o = ac.createGain(); o.connect(ac.destination);
+    Chip.playScore(ac, .1, o, sc); return (await ac.startRendering()).getChannelData(0);
+  };
+  const g1 = await renderGenerated(), g2 = await renderGenerated(); let gp = 0, gnan = 0, gid = true, grms = 0;
+  g1.forEach((v, i) => { gp = Math.max(gp, Math.abs(v)); grms += v * v; if (!Number.isFinite(v)) gnan++; if (v !== g2[i]) gid = false; });
+  out.music = { events: sc.tracks.reduce((n, t) => n + t.events.length, 0), lint: lint.score, errors: lint.findings.filter(f => f.severity === 'error').length, peak: +gp.toFixed(3), rms: +Math.sqrt(grms / g1.length).toFixed(3), nan: gnan, identical: gid };
+
+  // 4b. MML drum tones @4..@10: real drums from hand-written MML, still deterministic
+  const mmlRender = async () => {
+    const ac = new OfflineAudioContext(1, 48000 * 3, 48000), o = ac.createGain(); o.connect(ac.destination);
+    Chip.play(ac, .1, o, [{ mml: 'T120 @4 V110 O3 [C4 R8 C8 R4 C4]2', gain: .5 }, { mml: 'T120 @5 V100 O4 [R4 C4]4 @10 C4', gain: .4 }, { mml: 'T120 @6 V80 O4 L16 [C C C C]8 @7 C4 @8 O3 C8 D8 @9 O4 C4', gain: .3 }]);
+    return (await ac.startRendering()).getChannelData(0);
+  };
+  const m1 = await mmlRender(), m2 = await mmlRender(); let mp = 0, mi = true;
+  m1.forEach((v, i) => { mp = Math.max(mp, Math.abs(v)); if (v !== m2[i]) mi = false; });
+  out.mmlDrums = { peak: +mp.toFixed(3), identical: mi };
+
+  // 5. Score: drums + echo + duck in one score: finite, audible, under 1, bit-identical over three renders
+  const score = () => {
+    const bass = [], lead = [], arp = [], drums = [], duck = [];
+    for (let i = 0; i < 16; i++) bass.push({ b: i / 2, d: .45, n: [33, 33, 45, 33][i % 4], v: i % 2 ? .6 : .9 });
+    for (let i = 0; i < 32; i++) arp.push({ b: i / 4, d: .2, n: 69 + [0, 3, 7, 12][i % 4], v: i % 4 ? .5 : .8 });
+    lead.push({ b: 0, d: 1.5, n: 76, g: 72 }, { b: 2, d: 1, n: 79 }, { b: 4, d: 3, n: 74, v: 1 });
+    for (let b = 0; b < 8; b += 2) { drums.push({ b, voice: 'kick' }, { b: b + 1, voice: 'snare', v: .9 }); duck.push({ b, depth: .6, rel: .2 }); }
+    for (let i = 0; i < 16; i++) drums.push({ b: i / 2, voice: i === 15 ? 'ohat' : 'hat', v: i % 2 ? .35 : .6 });
+    drums.push({ b: 0, voice: 'crash' }, { b: 7, voice: 'tom', n: 55 }, { b: 7.5, voice: 'tom', n: 50 }, { b: 3.5, voice: 'clap' }, { b: 5.5, voice: 'rim' });
+    return { bpm: 120, length: 8, duck, tracks: [
+      { name: 'bass', role: 'bass', voice: 'triangle', duck: true, events: bass },
+      { name: 'arp', role: 'arp', voice: 'pulse', duty: [.125, .4], pan: -.3, duck: true, events: arp },
+      { name: 'lead', role: 'lead', voice: 'square', vib: { delay: .2, rate: 5, depth: 15 }, echo: { time: .75, fb: .4, mix: .35 }, events: lead },
+      { name: 'drums', role: 'drums', events: drums },
+    ] };
+  };
+  const renderScore = async (sc, o = {}, secs = 5) => {
+    const ac = new OfflineAudioContext(2, Math.ceil(48000 * secs), 48000), g = ac.createGain(); g.connect(ac.destination);
+    Chip.playScore(ac, .1, g, sc, o);
+    const buf = await ac.startRendering(); return [buf.getChannelData(0), buf.getChannelData(1)];
+  };
+  const rms = (c, a, b) => { let s = 0; const i0 = Math.floor(a * 48000), i1 = Math.floor(b * 48000); for (let i = i0; i < i1; i++) s += c[i] * c[i]; return Math.sqrt(s / (i1 - i0)); };
+  const goertzel = (c, a, b, f) => { const i0 = Math.floor(a * 48000), i1 = Math.floor(b * 48000), w = 2 * Math.PI * f / 48000, k = 2 * Math.cos(w); let s1 = 0, s2 = 0; for (let i = i0; i < i1; i++) { const s = c[i] + k * s1 - s2; s2 = s1; s1 = s; } return Math.sqrt(s1 * s1 + s2 * s2 - k * s1 * s2) / (i1 - i0); };
+  const runs = [await renderScore(score()), await renderScore(score()), await renderScore(score())];
+  let sp = 0, sn = 0, sIdent = true;
+  runs[0].forEach((ch, k) => ch.forEach((v, i) => { sp = Math.max(sp, Math.abs(v)); if (!Number.isFinite(v)) sn++; if (v !== runs[1][k][i] || v !== runs[2][k][i]) sIdent = false; }));
+  out.score = { peak: +sp.toFixed(3), nan: sn, identical: sIdent, rms: +rms(runs[0][0], .1, 4.1).toFixed(3) };
+  // a seek: `from` in the middle plays only what is still ahead
+  const early = await renderScore(score(), { from: 2.1 });
+  out.score.seekSilentBefore = rms(early[0], .1, 1.9) === 0; out.score.seekAudibleAfter = rms(early[0], 2.2, 3.2) > .01;
+  // duck: a held tone dips by (1 - depth) at the event and recovers; without `duck: true` it does not
+  const tone = duck => ({ bpm: 120, duck: [{ b: 2, depth: .8, rel: .5 }], tracks: [{ voice: 'sine', duck, env: { a: .01, d: 0, s: 1, r: .05 }, events: [{ b: 0, d: 8, n: 57, v: 1 }] }] });
+  const [dk, nd] = [await renderScore(tone(true), {}, 4), await renderScore(tone(false), {}, 4)];   // the event is at 1.1 s
+  out.duck = { dip: +(rms(dk[0], 1.13, 1.16) / rms(nd[0], 1.13, 1.16)).toFixed(3), recovered: +(rms(dk[0], 2, 2.2) / rms(nd[0], 2, 2.2)).toFixed(3), untouched: +(rms(nd[0], 1.13, 1.16) / rms(nd[0], .5, .8)).toFixed(3) };
+  // echo: after a short note the repeats ring at time + k * fb; without echo it is silent
+  const ping = echo => ({ bpm: 120, tracks: [{ voice: 'triangle', echo, events: [{ b: 0, d: .25, n: 69 }] }] });
+  const [ec, ne] = [await renderScore(ping({ time: 1, fb: .5, mix: .6 }), {}, 4), await renderScore(ping(null), {}, 4)];   // note .1-.225 s; repeats at .6+.. s
+  out.echo = { repeat1: +rms(ec[0], .7, .9).toFixed(4), repeat2: +rms(ec[0], 1.2, 1.4).toFixed(4), dry: +rms(ne[0], .7, .9).toFixed(5), rest: +rms(ec[0], .3, .5).toFixed(5) };
+  // drums are not noise notes: a kick has its energy low, a hat high, a snare in between with a tone near 200 Hz
+  const hit = async name => (await renderScore({ bpm: 120, tracks: [{ role: 'drums', events: [{ b: 0, voice: name }] }] }, {}, 1))[0];
+  const [kk, sn2, ht] = [await hit('kick'), await hit('snare'), await hit('hat')];
+  const band = (c, a, b) => ({ low: goertzel(c, .1, .3, 60) + goertzel(c, .1, .3, 90), tone: goertzel(c, .1, .2, 200), mid: goertzel(c, .1, .3, 2500) + goertzel(c, .1, .3, 3500), high: goertzel(c, .1, .2, 9000) + goertzel(c, .1, .2, 11000) });
+  const bk = band(kk), bs = band(sn2), bh = band(ht);
+  out.drums = { kickLowOverHigh: +(bk.low / bk.high).toFixed(1), hatHighOverLow: +(bh.high / bh.low).toFixed(1), snareMidOverKickMid: +(bs.mid / bk.mid).toFixed(1), snareHasBody: +(bs.tone / bs.high).toFixed(2) };
   return out;
 });
 await browser.close();
@@ -68,7 +134,16 @@ need(res.postOnlyPalette, 'post: every output pixel is a palette color'); need(r
 need(res.midGrayDitherRatio > .4 && res.midGrayDitherRatio < .6, `post: 50% gray dithers to about half white (got ${res.midGrayDitherRatio})`);
 need(res.flipScale === 12, `flip: 4x3 screen onto 48x36 scales 12x (got ${res.flipScale})`); need(res.flipRed, 'flip: pixel color comes from the palette'); need(res.keyAlpha === 0, 'flip: key index is transparent');
 for (const [n, t] of Object.entries(res.transitions)) { need(t.startsAsA, `${n}: p=0 shows the old frame`); need(t.endsAsB, `${n}: p=1 shows the new frame`); need(t.middleMixed, `${n}: p=.5 is a mix`); }
+need(res.music.events > 100 && res.music.errors === 0 && res.music.lint > 60, `music: the generated score is well formed and lints clean (${JSON.stringify(res.music)})`);
+need(res.music.peak > .05 && res.music.peak < 1 && res.music.rms > .01 && res.music.nan === 0 && res.music.identical, `music: the generated score plays audibly, finitely and identically twice (${JSON.stringify(res.music)})`);
 need(res.chip.peak > .05 && res.chip.peak < 1 && res.chip.nan === 0 && res.chip.identical, `chip: audible, finite, deterministic (${JSON.stringify(res.chip)})`);
+need(res.mmlDrums.peak > .1 && res.mmlDrums.peak < 1 && res.mmlDrums.identical, `chip: MML drum tones are audible and deterministic (${JSON.stringify(res.mmlDrums)})`);
+need(res.score.peak > .1 && res.score.peak < 1 && res.score.nan === 0, `score: audible, finite, under 1 (${JSON.stringify(res.score)})`);
+need(res.score.identical, 'score: three renders with drums + echo + duck are bit-identical');
+need(res.score.seekSilentBefore && res.score.seekAudibleAfter, `score: from skips the events before it (${JSON.stringify(res.score)})`);
+need(res.duck.dip > .12 && res.duck.dip < .3 && res.duck.recovered > .95 && res.duck.untouched > .95, `duck: dips to 1 - depth and recovers (${JSON.stringify(res.duck)})`);
+need(res.echo.repeat1 > .01 && res.echo.repeat2 > .003 && res.echo.repeat2 < res.echo.repeat1 && res.echo.dry < 1e-4 && res.echo.rest < 1e-4, `echo: repeats ring and decay, silence without it (${JSON.stringify(res.echo)})`);
+need(res.drums.kickLowOverHigh > 20 && res.drums.hatHighOverLow > 20 && res.drums.snareMidOverKickMid > 3 && res.drums.snareHasBody > .3, `drums: kick low, hat high, snare noise + body (${JSON.stringify(res.drums)})`);
 need(errors.length === 0, 'no page errors: ' + errors.join('; '));
 console.log(JSON.stringify(res, null, 1));
 if (fails.length) { console.error('\nFAILED:\n - ' + fails.join('\n - ')); process.exit(1); }

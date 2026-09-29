@@ -11,7 +11,7 @@ A 64-second film about limits, built on [runtime/film.js](../../runtime/film.js)
 | Tempo | 120 BPM throughout (32 bars of 2 s): a pixel film wants a steady clock |
 | Palettes | mono → gameboy → cga → sweetie16 (day, then night) for the picture; the final act squeezes a full-color scene into pico8 / sweetie16 / gameboy |
 | Type | the built-in 3×5 pixel font, nothing else |
-| Sound | 4-channel MML (triangle bass, square lead, pulse arpeggio, noise drums) + sfx presets, all on the film's tempo map |
+| Sound | a generated Score (`Compose.generate`: pad, bass, arpeggio, lead, real drums with fills, crashes and a riser, ducking) + sfx presets, all on the film's tempo map. The plan is at the top of the score section in `film.html`: one section per shot or chapter, the energy follows the story; try other seeds in [music-lab.html](music-lab.html) and read the report with `node render/music-report.mjs examples/pixel/film.html` |
 
 ## Meaning
 

@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Music Lab</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--bg:#0f1020;--panel:#181a33;--ink:#eef0ff;--muted:#8d92c0;--line:#2a2d55;--acc:#ffcd75;--good:#a7f070;--warn:#ef7d57;--bad:#ff4d6d}
+@media (prefers-color-scheme: light){:root{--bg:#f4f2ea;--panel:#fff;--ink:#17181f;--muted:#6a6d80;--line:#dcd8c8;--acc:#b8560a;--good:#2e7d32;--warn:#c25a1a;--bad:#c62828}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+main{max-width:1080px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:15px;margin:22px 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+p.lead{color:var(--muted);margin:0 0 14px;max-width:70ch}
+.bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:8px}
+label{display:flex;flex-direction:column;gap:3px;color:var(--muted);font-size:12px}
+input,select,textarea,button{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+button{cursor:pointer;background:var(--panel)}button:hover{border-color:var(--acc)}button.primary{background:var(--acc);color:#111;border-color:var(--acc);font-weight:700}
+table{border-collapse:collapse;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+td,th{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-weight:400;font-size:12px}
+td input[type=number]{width:64px}td input[type=range]{width:160px;padding:0}td input[type=text]{width:120px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.card.playing{border-color:var(--acc)}
+.card h3{margin:0;font-size:14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+canvas{width:100%;height:120px;background:#12142b;border-radius:6px;display:block}
+.meta{display:flex;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+.pill{border:1px solid var(--line);border-radius:99px;padding:1px 8px}.pill.good{color:var(--good)}.pill.warn{color:var(--warn)}.pill.bad{color:var(--bad)}
+.stars{display:flex;gap:2px}.stars button{border:0;background:none;font-size:20px;padding:0 2px;color:var(--muted)}.stars button.on{color:var(--acc)}
+textarea{width:100%;height:46px;resize:vertical}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+details{color:var(--muted);font-size:12px}details ul{margin:4px 0 0;padding-left:18px}
+#out{width:100%;height:120px}
+.hint{color:var(--muted);font-size:12px}
+</style></head><body><main>
+<h1>Music Lab</h1>
+<p class="lead">Audition generated scores by ear. Each card is one seed of the same plan (key, style, sections with an energy); the generator writes the notes, the linter grades them, you judge how they sound. Rate, leave a note, and copy the result back.</p>
+
+<h2>Plan</h2>
+<div class="bar">
+  <label>Style<select id="style"></select></label>
+  <label>Key<input id="key" type="text" value="C major" size="10"></label>
+  <label>BPM<input id="bpm" type="number" value="120" min="60" max="200"></label>
+  <label>First seed<input id="seed0" type="number" value="1" min="1"></label>
+  <label>Variants<input id="count" type="number" value="6" min="1" max="12"></label>
+  <label>Energy curve<select id="curve"><option value="film">Sixteen Colors (film)</option><option value="arc">Arc: build, peak, resolve</option><option value="steady">Steady groove</option><option value="ramp">Slow ramp</option></select></label>
+  <button class="primary" id="regen">Generate</button>
+</div>
+<table id="sections" style="margin-top:10px"></table>
+<p class="hint">Sections change key when their key field is filled (e.g. A minor). Energy 0 is empty, 1 is everything at once: it switches the drum groove, bass pattern, arpeggio rate and melody register.</p>
+
+<h2>Versions</h2>
+<div class="cards" id="cards"></div>
+
+<h2>Your verdict</h2>
+<p class="hint">Copy this and send it back: it lists the ratings, the notes and the exact plan and seeds, so the next round can start from what you liked.</p>
+<textarea id="out" readonly></textarea>
+<div class="row" style="margin-top:8px"><button id="copy">Copy verdict</button><span class="hint" id="copied"></span></div>
+</main>
+<script src="../../runtime/compose.js"></script>
+<script src="../../runtime/chip.js"></script>
+<script src="../../runtime/music-lint.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const FILM_SECTIONS = [
+  { name: 'one', bars: 4, energy: .12 }, { name: 'palette', bars: 3, energy: .3 }, { name: 'sixteen', bars: 3, energy: .45 },
+  { name: 'plasma', bars: 2, energy: .6, key: 'A minor' }, { name: 'tunnel', bars: 2, energy: .7, key: 'A minor' }, { name: 'roto', bars: 2, energy: .75, key: 'A minor' }, { name: 'copper', bars: 2, energy: .8, key: 'A minor', },
+  { name: 'world', bars: 8, energy: .92, key: 'D major', breakBefore: true }, { name: 'anything', bars: 2, energy: .8 }, { name: 'squeeze', bars: 2, energy: 1, breakBefore: true }, { name: 'end', bars: 2, energy: .12 },
+];
+const CURVES = {
+  film: FILM_SECTIONS,
+  arc: [{ name: 'intro', bars: 4, energy: .15 }, { name: 'verse', bars: 8, energy: .4 }, { name: 'build', bars: 4, energy: .65 }, { name: 'peak', bars: 8, energy: .95, breakBefore: true }, { name: 'resolve', bars: 4, energy: .3 }],
+  steady: [{ name: 'groove', bars: 16, energy: .7 }],
+  ramp: [{ name: 'a', bars: 4, energy: .1 }, { name: 'b', bars: 4, energy: .3 }, { name: 'c', bars: 4, energy: .5 }, { name: 'd', bars: 4, energy: .7 }, { name: 'e', bars: 4, energy: .9 }],
+};
+// version 1: the hand-written MML loops from the first pixel film, for comparison
+const B8 = (root, n = 1) => `[${root} ${root} >${root}< ${root} ${root} >${root}< ${root} ${root}]${n}`;
+const V1 = ['T120 @0 V95 O2 L8 [' + B8('A') + ' ' + B8('A') + ' ' + B8('F') + ' ' + B8('G') + ']4',
+  'T120 @1 V52 O5 L8 [A8 C8 E8 C8 A8 C8 E4  E8 D8 C8 D8 E4 R4  F8 A8 F8 A8 >C4< A4  G8 B8 >D8< B8 G4 R4]4',
+  'T120 @2 V42 O4 L16 [[[A >C E<]5 A]2 [[F A >C<]5 F]1 [[G B >D<]5 G]1]4', 'T120 @3 V85 O2 L4 [C R C R]16'];
+
+let sections = JSON.parse(JSON.stringify(FILM_SECTIONS)), ratings = {}, notes = {}, current = null, cards = [];
+for (const s of Object.keys(Compose.styles)) $('style').add(new Option(s, s));
+
+function renderSections() {
+  $('sections').innerHTML = '<tr><th>Section</th><th>Bars</th><th>Energy</th><th></th><th>Key</th><th>Break before</th></tr>' + sections.map((s, i) =>
+    `<tr><td><input type="text" value="${s.name}" data-i="${i}" data-f="name"></td><td><input type="number" min="1" max="32" value="${s.bars}" data-i="${i}" data-f="bars"></td>` +
+    `<td><input type="range" min="0" max="1" step=".05" value="${s.energy}" data-i="${i}" data-f="energy"></td><td>${s.energy.toFixed(2)}</td>` +
+    `<td><input type="text" value="${s.key || ''}" placeholder="same" data-i="${i}" data-f="key" size="9"></td><td><input type="checkbox" ${s.breakBefore ? 'checked' : ''} data-i="${i}" data-f="breakBefore"></td></tr>`).join('');
+}
+$('sections').addEventListener('input', e => {
+  const t = e.target, i = +t.dataset.i, f = t.dataset.f; if (f === undefined) return;
+  sections[i][f] = t.type === 'checkbox' ? t.checked : t.type === 'number' || t.type === 'range' ? +t.value : t.value || undefined;
+  if (f === 'energy') t.parentElement.nextElementSibling.textContent = (+t.value).toFixed(2);
+});
+$('curve').addEventListener('change', () => { sections = JSON.parse(JSON.stringify(CURVES[$('curve').value])); renderSections(); });
+
+const ROLE = { pad: '#8d92c0', bass: '#41a6f6', arp: '#a7f070', lead: '#ffcd75', drums: '#ef7d57', fx: '#b13e53' };
+function roll(canvas, score, playhead) {
+  const dpr = devicePixelRatio || 1, W = canvas.clientWidth * dpr, H = canvas.clientHeight * dpr;
+  if (canvas.width !== W) { canvas.width = W; canvas.height = H; }
+  const g = canvas.getContext('2d'), css = { getPropertyValue: k => ({ '--muted': '#8d92c0', '--line': '#2a2d55', '--ink': '#eef0ff' })[k] };      // the roll is always dark, whatever the page theme
+  g.clearRect(0, 0, W, H);
+  const len = score.length, x = b => b / len * W, pitched = score.tracks.filter(t => t.role !== 'drums' && t.role !== 'fx');
+  const lo = 28, hi = 92, y = n => (H - 16 * dpr) * (1 - (n - lo) / (hi - lo)) + 2;
+  for (const s of score.sections || []) {                                       // section bands, brighter with energy
+    g.fillStyle = `rgba(255,205,117,${.03 + s.energy * .16})`; g.fillRect(x(s.b), 0, x(s.bars * score.beatsPerBar), H - 14 * dpr);
+    g.fillStyle = css.getPropertyValue('--muted'); g.font = `${9 * dpr}px monospace`; g.fillText(s.name, x(s.b) + 2, H - 4 * dpr);
+    g.fillStyle = css.getPropertyValue('--line'); g.fillRect(x(s.b), 0, 1, H);
+  }
+  for (const t of pitched) { g.fillStyle = ROLE[t.role] || '#fff'; for (const e of t.events) { g.globalAlpha = .35 + e.v * .65; g.fillRect(x(e.b), y(e.n), Math.max(1, x(e.d)), Math.max(1.5, 2.2 * dpr)); } }
+  const dy = { kick: 0, snare: 1, clap: 1, tom: 2, hat: 3, ohat: 3, crash: 4, rim: 3 };
+  for (const t of score.tracks.filter(t => t.role === 'drums' || t.role === 'fx')) for (const e of t.events) {
+    g.fillStyle = ROLE[t.role]; g.globalAlpha = .3 + e.v * .6; const row = t.role === 'fx' ? 5 : dy[e.voice] ?? 3; g.fillRect(x(e.b), 4 * dpr + row * 3.5 * dpr, Math.max(1, x(e.d) * .8), 2.2 * dpr);
+  }
+  g.globalAlpha = 1;
+  if (playhead != null) { g.fillStyle = css.getPropertyValue('--ink'); g.fillRect(x(playhead), 0, 1.5 * dpr, H); }
+}
+
+function stop() { if (current) { current.ac.close().catch(() => {}); cancelAnimationFrame(current.raf); current.card.classList.remove('playing'); current.btn.textContent = 'Play'; roll(current.canvas, current.score); current = null; } }
+async function play(card) {
+  const same = current && current.card === card.el; stop(); if (same) return;
+  const ac = new (window.AudioContext || webkitAudioContext)(); await ac.resume();
+  const t0 = ac.currentTime + .12;
+  if (card.score) Chip.playScore(ac, t0, ac.destination, card.score, { gain: .9 }); else Chip.play(ac, t0, ac.destination, V1, { maxSeconds: 60 });
+  const cur = current = { ac, card: card.el, btn: card.btn, canvas: card.canvas, score: card.score || card.fake, t0 };
+  card.el.classList.add('playing'); card.btn.textContent = 'Stop';
+  const tick = () => { if (current !== cur) return; const beat = (ac.currentTime - t0) * (cur.score.bpm / 60); roll(cur.canvas, cur.score, Math.max(0, beat)); if (beat > cur.score.length + 2) stop(); else cur.raf = requestAnimationFrame(tick); };
+  tick();
+}
+
+function stars(id) { return `<div class="stars" data-id="${id}">${[1, 2, 3, 4, 5].map(n => `<button data-n="${n}" class="${(ratings[id] || 0) >= n ? 'on' : ''}">★</button>`).join('')}</div>`; }
+function pills(res) {
+  const errs = res.findings.filter(f => f.severity === 'error').length, warns = res.findings.filter(f => f.severity === 'warn').length;
+  return `<span class="pill ${res.score >= 85 ? 'good' : res.score >= 65 ? 'warn' : 'bad'}">lint ${Math.round(res.score)}</span><span class="pill">${errs} errors</span><span class="pill">${warns} warnings</span>`;
+}
+function card(id, title, score, extra = '') {
+  const el = document.createElement('div'); el.className = 'card';
+  const res = score ? MusicLint.lint(score) : null;
+  el.innerHTML = `<h3><span>${title}</span><span class="row"><button class="play">Play</button></span></h3>${score ? '<canvas></canvas>' : '<canvas style="height:34px"></canvas>'}
+    <div class="meta">${score ? `<span class="pill">${score.style}</span><span class="pill">${score.bpm} bpm</span><span class="pill">${Math.round(score.length / score.beatsPerBar)} bars</span>${pills(res)}` : '<span class="pill">MML loops from PR #2</span><span class="pill">4 tracks</span>'}${extra}</div>
+    ${res && res.findings.length ? `<details><summary>${res.findings.length} lint findings</summary><ul>${res.findings.slice(0, 14).map(f => `<li>[${f.severity}] ${f.message}</li>`).join('')}</ul></details>` : ''}
+    <div class="row">${stars(id)}<span class="hint">how does it sound?</span></div><textarea placeholder="what works, what does not (drums too weak, melody boring at bar 12...)">${notes[id] || ''}</textarea>`;
+  const c = { el, btn: el.querySelector('.play'), canvas: el.querySelector('canvas'), score };
+  if (!score) c.fake = { bpm: 120, length: 64, beatsPerBar: 4, sections: [], tracks: [] };       // 16 bars of loops: only the playhead time matters
+  c.btn.onclick = () => play(c);
+  const bindStars = () => { el.querySelector('.stars').onclick = e => { const n = +e.target.dataset.n; if (!n) return; ratings[id] = ratings[id] === n ? 0 : n; el.querySelector('.stars').outerHTML = stars(id); bindStars(); summary(); }; };
+  bindStars();
+  el.querySelector('textarea').oninput = e => { notes[id] = e.target.value; summary(); };
+  requestAnimationFrame(() => score ? roll(c.canvas, score) : null);
+  return c;
+}
+function generate() {
+  stop(); $('cards').innerHTML = ''; cards = [];
+  const plan = { bpm: +$('bpm').value, key: $('key').value, style: $('style').value, sections };
+  const first = +$('seed0').value, n = +$('count').value;
+  const v1 = card('v1', 'Version 1: hand-written loops', null); $('cards').append(v1.el); cards.push(v1);
+  for (let i = 0; i < n; i++) {
+    try { const sc = Compose.generate({ ...plan, seed: first + i, sections: sections.map(s => ({ ...s })) }); const c = card('seed' + (first + i), `Seed ${first + i}`, sc); $('cards').append(c.el); cards.push(c); }
+    catch (e) { const d = document.createElement('div'); d.className = 'card'; d.textContent = `Seed ${first + i}: ${e.message}`; $('cards').append(d); }
+  }
+  window.__plan = plan; summary();
+}
+function summary() {
+  const plan = { bpm: +$('bpm').value, key: $('key').value, style: $('style').value, sections, firstSeed: +$('seed0').value };
+  const lines = Object.keys({ ...ratings, ...notes }).filter(k => ratings[k] || (notes[k] || '').trim()).map(k => `${k}: ${ratings[k] ? '★'.repeat(ratings[k]) : '(no stars)'}${(notes[k] || '').trim() ? ' - ' + notes[k].trim().replace(/\n/g, ' ') : ''}`);
+  $('out').value = (lines.join('\n') || '(no ratings yet)') + '\n\nplan: ' + JSON.stringify(plan);
+}
+$('regen').onclick = generate; $('copy').onclick = () => { $('out').select(); navigator.clipboard?.writeText($('out').value).then(() => { $('copied').textContent = 'copied'; }, () => { document.execCommand('copy'); $('copied').textContent = 'copied'; }); };
+['style', 'key', 'bpm'].forEach(id => $(id).addEventListener('change', summary));
+renderSections(); generate();
+</script></body></html>

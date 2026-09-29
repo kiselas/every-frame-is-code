@@ -1,5 +1,5 @@
 # Publishes the films to GitHub Pages: each page draws every frame live in the browser.
-# / is examples/demo/demo.html, /gps/ and /pixel/ are examples/gps/film.html and examples/pixel/film.html folded
+# / is examples/demo/demo.html, /music-lab/ is the audition page for generated music, /gps/ and /pixel/ are examples/gps/film.html and examples/pixel/film.html folded
 # into one file by runtime/inline.mjs; social preview tags are added at build time.
 name: pages
 on:
@@ -70,6 +70,10 @@ jobs:
           rm _site/pixel/film.html _site/pixel/meta.html
           grep -q 'og:image' _site/pixel/index.html
           grep -q 'inlined: ../../runtime/pixel.js' _site/pixel/index.html
+          # the music lab: an audition page for generated scores
+          mkdir -p _site/music-lab
+          node runtime/inline.mjs examples/pixel/music-lab.html _site/music-lab/index.html
+          grep -q 'inlined: ../../runtime/compose.js' _site/music-lab/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
       - id: deployment
