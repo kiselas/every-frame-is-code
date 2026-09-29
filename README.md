@@ -55,6 +55,8 @@ Watch it live at [kiselas.github.io/every-frame-is-code](https://kiselas.github.
 
 Long films need more than good frames: a question, a through-line, chapters, callbacks, and a way to make 20-70 shots feel like one film. [14-long-form.md](14-long-form.md) is the method; [runtime/film.js](runtime/) is the machinery every long film needs (a tempo map, shots measured in bars, transitions, a HUD that carries state, statement text, counters, themes, line art and a globe, a score on the same clock, a live preview). The worked example, [examples/gps/](examples/gps/), is a 90-second explainer on how GPS finds you, in five chapters, with the error of your position as the through-line.
 
+**[▶ Watch Four Clocks live in your browser](https://kiselas.github.io/every-frame-is-code/gps/)** · source: [examples/gps/film.html](examples/gps/film.html) · script and sources: [examples/gps/SCRIPT.md](examples/gps/SCRIPT.md)
+
 To learn from someone else's film: `node render/analyze.mjs reference.mp4 out/` writes a report on its shots, pace, tempo and cuts, with contact sheets.
 
 ## Quick start

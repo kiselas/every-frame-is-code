@@ -747,7 +747,17 @@ function create(cfg) {
       else if (e.code === 'KeyL') loop = loop >= 0 ? -1 : cur;
       else if (e.code === 'KeyS') { offset = t; startAudio(); }
     });
-    addEventListener('click', () => { if (!ac) { offset = now(); startAudio(); } });
+    addEventListener('click', () => { if (!ac) { offset = now(); startAudio(); } hide(); });
+    // a hint for the first seconds; it never exists in render mode
+    let hint = null;
+    if (!params.has('nohint')) {
+      hint = document.createElement('div');
+      hint.textContent = cfg.score ? 'click for sound · space pauses · ← → shots' : 'space pauses · ← → shots';
+      hint.style.cssText = 'position:fixed;left:50%;top:14px;transform:translateX(-50%);font:500 13px/1 "IBM Plex Mono",monospace;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:rgba(0,0,0,.55);padding:9px 14px;border-radius:4px;pointer-events:none;transition:opacity .6s;z-index:9';
+      document.body.appendChild(hint);
+      setTimeout(hide, 7000);
+    }
+    function hide() { if (hint) { hint.style.opacity = '0'; hint = null; } }
     function tick() {
       let t = now();
       if (loop >= 0 && t >= shots[loop].end) { seek(shots[loop].start); t = offset; }

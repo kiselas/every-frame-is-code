@@ -1,10 +1,11 @@
-# Publishes the demo film to GitHub Pages: the page draws every frame live in the browser.
-# index.html is examples/demo/demo.html with social preview tags added at build time.
+# Publishes the films to GitHub Pages: each page draws every frame live in the browser.
+# / is examples/demo/demo.html, /gps/ is examples/gps/film.html folded into one file by
+# runtime/inline.mjs; social preview tags are added at build time.
 name: pages
 on:
   push:
     branches: [main]
-    paths: ['examples/demo/**', '.github/workflows/pages.yml']
+    paths: ['examples/demo/**', 'examples/gps/**', 'runtime/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -31,6 +32,25 @@ jobs:
           meta="<meta name=\"description\" content=\"$desc\">\n<meta property=\"og:title\" content=\"motion-kit · every frame is code\">\n<meta property=\"og:description\" content=\"$desc\">\n<meta property=\"og:image\" content=\"${SITE_URL}preview.jpg\">\n<meta property=\"og:url\" content=\"$SITE_URL\">\n<meta name=\"twitter:card\" content=\"summary_large_image\">"
           sed "s|</title>|</title>\n$meta|" examples/demo/demo.html > _site/index.html
           grep -q 'og:image' _site/index.html
+          # the GPS film: one self-contained page
+          mkdir -p _site/gps
+          cp examples/gps/preview.jpg _site/gps/preview.jpg
+          gps_url="${SITE_URL}gps/"
+          gps_desc="Four Clocks: a 90-second explainer on how GPS finds you, drawn entirely by code in your browser. Made with motion-kit."
+          cat > _site/gps/meta.html <<'META'
+          <meta name="description" content="@DESC@">
+          <meta property="og:title" content="Four Clocks · how GPS finds you">
+          <meta property="og:description" content="@DESC@">
+          <meta property="og:image" content="@URL@preview.jpg">
+          <meta property="og:url" content="@URL@">
+          <meta name="twitter:card" content="summary_large_image">
+          META
+          sed -i "s|@DESC@|$gps_desc|; s|@URL@|$gps_url|" _site/gps/meta.html
+          node runtime/inline.mjs examples/gps/film.html _site/gps/film.html
+          sed '/<\/title>/r _site/gps/meta.html' _site/gps/film.html > _site/gps/index.html
+          rm _site/gps/film.html _site/gps/meta.html
+          grep -q 'og:image' _site/gps/index.html
+          grep -q 'inlined: ../../runtime/film.js' _site/gps/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
       - id: deployment
