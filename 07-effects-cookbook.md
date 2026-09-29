@@ -197,6 +197,6 @@ If you use `time` in the shader, add a uniform to the runner and pass `t`, not s
 - **CRT:** scanlines (horizontal stripes with alpha 0.1–0.2), barrel distortion, glow, slight flicker.
 - **Heat haze:** UV offset by fbm, animated upward.
 - **Lens flare:** a chain of circles along the line between the light source and the frame center, varying size and color, additive.
-- **Pixelation:** draw into a small buffer, scale it up with `imageSmoothingEnabled = false`.
-- **Dithering:** ordered dithering (Bayer matrix) in a shader for a retro look with a limited palette.
+- **Pixelation and dithering:** `Pixel.post` in `runtime/pixel.js` shrinks any canvas to a low resolution, adds a Bayer threshold and snaps it to a palette in one WebGL pass; `Pixel.screen` draws indexed pixel art directly ([15-pixel-retro.md](15-pixel-retro.md)). By hand: draw into a small buffer and scale it up with `imageSmoothingEnabled = false`.
+- **Per-pixel demoscene effects:** plasma, tunnel, rotozoom, metaballs, copper bars, a stateless fire and more, as functions of `(x, y, t)` through a palette ramp: [17-demoscene.md](17-demoscene.md).
 - **Particles into text:** render text into a hidden canvas, sample opaque pixels into points, particles fly to these points with stagger.

@@ -17,6 +17,16 @@ Spell particles are snapped to the pixel grid and shift color along the palette 
 Screen shake on cast, in whole-pixel steps.
 ```
 
+With the kit's pixel runtime the same brief is shorter and stricter, because the limits are built in (`15-pixel-retro.md`):
+
+```
+Pixel film, runtime/pixel.js: 160x90, the sweetie16 palette, 4-6 colors per scene, 30 fps.
+Sprites are text grids. Fades are dither and palette maps, never alpha. Whole-pixel motion only.
+Music as 4-channel MML (runtime/chip.js). Backdrops: a demoscene effect from runtime/pixel-fx.js.
+```
+
+Saying the limits out loud is the strongest anti-default move there is: with 16 colors and 14,400 pixels there is no room for a navy gradient with glowing particles.
+
 ## What's always worth specifying
 
 - **The question or story.** What the viewer will understand or feel by the end.

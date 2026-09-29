@@ -24,3 +24,12 @@ The ideas and observations in this kit come from open community material publish
 - Squirrel Eiserloh, GDC, "Math for Game Programmers: Juicing Your Cameras With Math".
 - gl-transitions: an open collection of GLSL transitions with a common interface.
 - The Book of Shaders: an introduction to fragment shaders, noise and patterns.
+
+## Pixel, retro and demoscene
+
+- [Pyxel](https://github.com/kitao/pyxel): a retro game engine for Python; its 16-color palette, `pal`, `dither(alpha)`, `blt3d`, [MML commands](https://github.com/kitao/pyxel/blob/main/docs/mml-commands.md) and text-based [resource format](https://github.com/kitao/pyxel/blob/main/docs/pyxres-format.md) are the source of `runtime/pixel.js` and `runtime/chip.js`.
+- [PICO-8 dither tutorial](https://www.lexaloffle.com/bbs/?pid=69408), [palette ramps](https://nerdyteachers.com/PICO-8/Guide/PALETTES) and [tweetcart studies](https://demobasics.pixienop.net/tweetcarts/): the `pal`/`fillp` techniques and the per-pixel effect formulas of `runtime/pixel-fx.js`.
+- [SizeCoding: PICO-8](http://www.sizecoding.org/wiki/PICO-8): demoscene effects in a few characters.
+- [Ditherpunk](https://surma.dev/things/ditherpunk/) by Surma and [Ordered dithering](https://en.wikipedia.org/wiki/Ordered_dithering): why a Bayer matrix is stateless and suits real-time; the look of *Return of the Obra Dinn*.
+- [Lospec palette list](https://lospec.com/palette-list): a large catalog of ready palettes.
+- [Fantasy console overview](https://www.davideaversa.it/blog/how-choose-fantasy-console/): PICO-8, TIC-80 and their constraints as a creative tool.

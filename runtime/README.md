@@ -121,6 +121,30 @@ Digits sit in fixed cells, so a running number doesn't jitter. `format`: `'int'`
 
 Instruments in `Film.audio`, each `(ac, t, out, ...)`: `kick, hat, clap, tick, ping, pluck, bass, pad, riser, impact, sub, whoosh`; notes as `'A2'` or Hz (`Film.audio.hz`). For an existing track instead: `render/beatmap.mjs` gives the tempo map, `render.mjs --music track.wav` mixes it in.
 
+## Pixel toolkit
+
+Three optional scripts for pixel and retro films. Each is a classic script with no dependencies; load them after `film.js`. A complete film that uses all of them: [examples/pixel/film.html](../examples/pixel/film.html).
+
+| Script | Global | What it is | Chapter |
+|---|---|---|---|
+| `pixel.js` | `Pixel` | an indexed-color screen (`pal`, `dither`, `clip`, `camera`, sprites written as text, a 3x5 font, a Mode 7 floor), palette maps (fade, flash, cycle), a WebGL "snap any canvas to a palette" post pass, dithered transitions, Perlin noise | [15-pixel-retro.md](../15-pixel-retro.md) |
+| `pixel-fx.js` | `Pixel.fx` | demoscene effects as functions of (x, y, t) through a palette ramp: plasma, tunnel, rotozoom, copper bars, metaballs, starfield, a stateless fire, moire, wobble, a sine scroller | [17-demoscene.md](../17-demoscene.md) |
+| `chip.js` | `Chip` | a score as MML text on four channels (`Chip.play`, `Chip.instrument`), plus 8-bit sound effect presets (`Chip.sfx.coin`, `hit`, `jump`...) | [16-chiptune.md](../16-chiptune.md) |
+
+They plug into the runtime in four places:
+
+```js
+const scr = Pixel.screen({ w: 160, h: 90, palette: 'sweetie16' });
+Film.create({
+  transitions: Pixel.transitions,                       // bayer, bayerwipe, pixelate, squares: use them as `in: { type: 'bayerwipe' }`
+  post: (ctx, T, f) => quantize.apply(ctx.canvas, ctx), // optional: Pixel.post over the whole film
+  score(ac, bus, f, at) { Chip.play(ac, at(f.time(0)), bus.out, ['T120 @0 O2 L8 [C C G G]8']); Chip.sfx.coin(ac, at(f.time(8)), bus.out); },
+  shots: [{ id: 'a', bg: false, draw: Pixel.shot(scr, (scr, s) => { scr.cls(1); Pixel.fx.plasma(scr, s.t); scr.text(80, 40, 'HI', 7, { align: 'center', scale: 3 }); }) }],
+});
+```
+
+Notes: use `bg: false` on pixel shots so the runtime doesn't paint the theme background first; indexes of a frame in a shot must survive negative `s.t` (`((Math.floor(x) % n) + n) % n`), because the incoming shot of a transition is drawn before its start. In the live preview `at()` returns `-1` for moments before the playback start, so a score that must survive seeking derives the clock once: `const zero = at(f.DURATION) - f.DURATION;` and schedules at `zero + f.time(beat)` (`Chip.play` skips notes already in the past). Tests: `node --test "runtime/test/*.test.mjs"`.
+
 ## Preview
 
 Open the page in Chrome. Click or `S` for sound, `Space` pause, `←` `→` previous / next shot, `Shift` + arrows ±1 s, `Home` restart, `L` loop the current shot, `D` debug overlay (shot, chapter, bar.beat, BPM, safe zone). URL: `?shot=id`, `?t=12.5`, `&loop`, `&debug`.
