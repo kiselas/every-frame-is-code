@@ -32,4 +32,6 @@ The ideas and observations in this kit come from open community material publish
 - [SizeCoding: PICO-8](http://www.sizecoding.org/wiki/PICO-8): demoscene effects in a few characters.
 - [Ditherpunk](https://surma.dev/things/ditherpunk/) by Surma and [Ordered dithering](https://en.wikipedia.org/wiki/Ordered_dithering): why a Bayer matrix is stateless and suits real-time; the look of *Return of the Obra Dinn*.
 - [Lospec palette list](https://lospec.com/palette-list): a large catalog of ready palettes.
+- [ChatMusician](https://arxiv.org/pdf/2402.16153) and [ComposerX](https://arxiv.org/html/2404.18081v1): why one-shot note writing by an LLM fails on structure, and why staged composition works better (behind `runtime/compose.js`).
+- [Euclidean rhythm](https://en.wikipedia.org/wiki/Euclidean_rhythm), [Tonal](https://github.com/tonaljs/tonal), [Strudel](https://strudel.cc/) (patterns as text; not used, license to be checked) and [chiptune arrangement guides](https://ozzed.net/how-to-make-8-bit-music.shtml): the music-generation background.
 - [Fantasy console overview](https://www.davideaversa.it/blog/how-choose-fantasy-console/): PICO-8, TIC-80 and their constraints as a creative tool.

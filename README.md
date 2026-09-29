@@ -161,7 +161,8 @@ node render.mjs ../examples/demo/demo.html ../examples/demo/demo.mp4
 | [15-pixel-retro.md](15-pixel-retro.md) | Pixel art and retro looks: fixed palettes, dithering, sprites as text, Mode 7, the palette post pass, dithered transitions |
 | [16-chiptune.md](16-chiptune.md) | A score as text: MML on four channels, 8-bit sound effects, synced to the film's tempo map |
 | [17-demoscene.md](17-demoscene.md) | Per-pixel effects as functions of (x, y, t): plasma, tunnel, rotozoom, copper bars, fire and more |
-| [runtime/](runtime/) | `film.js`: the runtime for long films, `pixel.js`, `pixel-fx.js` and `chip.js` for pixel and retro films, and `inline.mjs` to fold a film into one file |
+| [18-music-generation.md](18-music-generation.md) | A score from a plan: key, style and an energy per section become chords, bass, hook, groove and fills; a linter and an audio report for music you cannot hear |
+| [runtime/](runtime/) | `film.js`: the runtime for long films, `pixel.js`, `pixel-fx.js`, `chip.js`, `compose.js` and `music-lint.js` for pixel, retro and generated music, and `inline.mjs` to fold a film into one file |
 | [render/](render/) | Render, contact sheets, stills, reference breakdown, beat maps (Node + Playwright + ffmpeg) |
 | [examples/demo/](examples/demo/) | Demo film: script and source |
 | [examples/gps/](examples/gps/) | Four Clocks: a 90 s explainer built on the runtime, with its script and sources |

@@ -44,7 +44,7 @@ Short rules. Details in the neighboring files.
 27. Say the limits in the plan (resolution, palette, sound channels) and keep to them: 160x90, one fixed palette, 4-6 colors per scene. Draw with `runtime/pixel.js` in palette indexes, never CSS colors, so palette maps and swaps work.
 28. Pixel motion is whole-pixel: round positions, camera and shake; scale and rotate by nearest neighbor only; never let `imageSmoothingEnabled` stay on.
 29. Fades, shadows and transparency are dither (`scr.dither`, `Pixel.transitions`) and palette maps (`Pixel.fadeMap`), not alpha.
-30. Retro sound is text: MML on four channels with `runtime/chip.js`, placed on the film's tempo map. Retro backdrops are per-pixel formulas of (x, y, t) from `runtime/pixel-fx.js`: stateless, so they seek and render in parallel.
+30. Music is data, not hand-typed loops: write a plan (key, style, one energy per shot or chapter, matching the film's bars), let `runtime/compose.js` generate the Score and `runtime/chip.js` play it on the film's tempo map. You cannot hear: run `MusicLint` and `render/music-report.mjs`, fix the plan, and give the human the audition page (`18-music-generation.md`). MML is for short hand-written parts. Retro backdrops are per-pixel formulas of (x, y, t) from `runtime/pixel-fx.js`: stateless, so they seek and render in parallel.
 
 ## Review
 23. Iterate on fragments with `render.mjs --draft`; run `--profile` when a render is slow, it names the slowest timecodes.

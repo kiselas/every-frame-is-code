@@ -16,7 +16,8 @@ description: Code-drawn motion graphics, animated videos, explainers of 1-3 minu
    - games: `10-games-juice.md`;
    - 3D: `11-threejs.md`;
    - pixel art, retro or fixed-palette looks, Mode 7 floors, dithered transitions, turning any scene into pixel art: `15-pixel-retro.md` and `runtime/pixel.js`, see `examples/pixel/`;
-   - chiptune music and 8-bit sound effects as text (MML): `16-chiptune.md` and `runtime/chip.js`;
+   - chiptune music and 8-bit sound effects as text (MML) and as data (Scores, real drums, echo, ducking): `16-chiptune.md` and `runtime/chip.js`;
+   - a whole score from a short plan (key, style, an energy per section), with a linter and an audio report so you can fix music you cannot hear: `18-music-generation.md`, `runtime/compose.js`, `runtime/music-lint.js`, `render/music-report.mjs`;
    - demoscene effects (plasma, tunnel, rotozoom, copper bars, metaballs, starfield) as functions of x, y, t: `17-demoscene.md` and `runtime/pixel-fx.js`;
    - a film longer than ~45 s, an explainer, a story on any topic: `14-long-form.md` and `runtime/README.md`, build on `runtime/film.js`, see `examples/gps/`;
    - a reference video to learn from: `node render/analyze.mjs ref.mp4 out/`, then read its report and sheets.

@@ -129,7 +129,9 @@ Three optional scripts for pixel and retro films. Each is a classic script with 
 |---|---|---|---|
 | `pixel.js` | `Pixel` | an indexed-color screen (`pal`, `dither`, `clip`, `camera`, sprites written as text, a 3x5 font, a Mode 7 floor), palette maps (fade, flash, cycle), a WebGL "snap any canvas to a palette" post pass, dithered transitions, Perlin noise | [15-pixel-retro.md](../15-pixel-retro.md) |
 | `pixel-fx.js` | `Pixel.fx` | demoscene effects as functions of (x, y, t) through a palette ramp: plasma, tunnel, rotozoom, copper bars, metaballs, starfield, a stateless fire, moire, wobble, a sine scroller | [17-demoscene.md](../17-demoscene.md) |
-| `chip.js` | `Chip` | a score as MML text on four channels (`Chip.play`, `Chip.instrument`), plus 8-bit sound effect presets (`Chip.sfx.coin`, `hit`, `jump`...) | [16-chiptune.md](../16-chiptune.md) |
+| `chip.js` | `Chip` | a score as MML text on four channels (`Chip.play`, `Chip.instrument`), or as data (`Chip.playScore`: real drums, envelopes, vibrato, echo, ducking), plus 8-bit sound effect presets (`Chip.sfx.coin`, `hit`, `jump`...) | [16-chiptune.md](../16-chiptune.md) |
+| `compose.js` | `Compose` | a short plan (key, style, an energy per section) becomes a full Score: chords with voice leading, bass, arpeggio, a hook that develops, groove, fills, risers, ducking. Seeded, deterministic | [18-music-generation.md](../18-music-generation.md) |
+| `music-lint.js` | `MusicLint` | a symbolic linter for a Score (harmony, leaps, parallel fifths, loops, groove, seams): eyes for an agent that cannot listen; `render/music-report.mjs` adds a piano roll, spectrogram and loudness per section | [18-music-generation.md](../18-music-generation.md) |
 
 They plug into the runtime in four places:
 

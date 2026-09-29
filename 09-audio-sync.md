@@ -121,7 +121,7 @@ With `runtime/film.js` all of this is built in: write `score(ac, bus, f, at)`, s
 
 ## Chiptune from text
 
-For a pixel or retro film, write the score as MML strings on four channels with `runtime/chip.js`: a whole loop is a few lines an agent can write and revise, and it plays on the same clock as the picture. Sound effects (`coin`, `hit`, `jump`, `explode`...) are one-line presets. See [16-chiptune.md](16-chiptune.md).
+For a pixel or retro film, write the score as MML strings on four channels with `runtime/chip.js`: a whole loop is a few lines an agent can write and revise, and it plays on the same clock as the picture. Sound effects (`coin`, `hit`, `jump`, `explode`...) are one-line presets. See [16-chiptune.md](16-chiptune.md). For a whole score from a short plan (key, style, an energy per section), with a linter and an audio report so you can fix music you cannot hear, see [18-music-generation.md](18-music-generation.md).
 
 ## Cutting to an existing track
 
