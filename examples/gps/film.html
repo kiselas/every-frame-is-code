@@ -1,0 +1,421 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<title>Four Clocks: how GPS finds you</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,500;112,800&family=IBM+Plex+Mono:wght@500;600&display=block" rel="stylesheet">
+</head><body><canvas></canvas>
+<script src="../../runtime/film.js"></script>
+<script>
+// Four Clocks: a 90-second explainer on how GPS finds you, built on runtime/film.js.
+// Script, beat grid and reasoning: SCRIPT.md next to this file.
+const { ink, fx, audio: A, util: { clamp, lerp, ease, mulberry32, TAU, alpha, spring } } = Film;
+const W = 1920, H = 1080;
+
+// ---------------------------------------------------------------- drawing helpers (colors only from s.T)
+const mono = (size, wt = 500) => Film.font(size, '"IBM Plex Mono", monospace', wt);
+function monoText(ctx, str, x, y, size, color, align = 'left', a = 1, wt = 500) {
+  // fixed character cells, so running digits don't jitter
+  const fnt = mono(size, wt), cell = Film.textSprite('0', fnt, color).w, total = cell * str.length;
+  let cx = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
+  for (const ch of str) { if (ch !== ' ') { const sp = Film.textSprite(ch, fnt, color); Film.drawSprite(ctx, sp, cx + (cell - sp.w) / 2, y, 1, a); } cx += cell; }
+  return total;
+}
+function label(ctx, T, str, x, y, size = 15, align = 'left', a = 1, color = null) {
+  ctx.save(); ctx.font = mono(size); ctx.letterSpacing = `${size * .2}px`; ctx.fillStyle = color || T.muted; ctx.globalAlpha *= a; ctx.textAlign = align; ctx.textBaseline = 'middle'; ctx.fillText(str, x, y); ctx.restore();
+}
+function dot(ctx, T, x, y, s, { r = 13, pulse = true, a = 1 } = {}) {
+  if (a <= 0) return;
+  ctx.save(); ctx.globalAlpha = a;
+  if (pulse) for (let k = 0; k < 2; k++) { const q = ((s.beat + k * .5) % 1 + 1) % 1; fx.ring(ctx, x, y, r, r * 7, q, { color: T.accent, width: 3 }); }
+  if (T.glow) fx.glow(ctx, x, y, r * 4, T.accent, .5 * a);
+  ctx.fillStyle = T.accent; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  ctx.strokeStyle = T.bg; ctx.lineWidth = 4; ctx.stroke();
+  ctx.restore();
+}
+// a GPS satellite in line art: hatched body, two ribbed solar panels, an antenna; k = scale
+function satellite(ctx, T, x, y, k = 1, rot = 0, a = 1) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(k, k); ctx.globalAlpha *= a;
+  ctx.strokeStyle = T.ink; ctx.lineWidth = 2 / k; ctx.lineJoin = 'round';
+  ctx.fillStyle = T.bg;
+  for (const sx of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(sx * 38, 0); ctx.lineTo(sx * 60, 0); ctx.stroke();
+    ctx.fillRect(sx > 0 ? 60 : -190, -34, 130, 68); ctx.strokeRect(sx > 0 ? 60 : -190, -34, 130, 68);
+    ctx.beginPath(); for (let i = 1; i < 5; i++) { const px = (sx > 0 ? 60 : -190) + i * 26; ctx.moveTo(px, -34); ctx.lineTo(px, 34); } ctx.moveTo(sx > 0 ? 60 : -190, 0); ctx.lineTo(sx > 0 ? 190 : -60, 0); ctx.globalAlpha *= .6; ctx.stroke(); ctx.globalAlpha /= .6;
+  }
+  ctx.fillRect(-38, -44, 76, 88); ctx.strokeRect(-38, -44, 76, 88);
+  ctx.globalAlpha *= .5; ink.hatch(ctx, c => c.rect(-38, -44, 76, 88), { gap: 9, box: [-38, -44, 38, 44] }); ctx.globalAlpha /= .5;
+  ctx.beginPath(); ctx.moveTo(-18, 44); ctx.lineTo(-24, 66); ctx.lineTo(24, 66); ctx.lineTo(18, 44); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 66); ctx.lineTo(0, 80); ctx.stroke();
+  ctx.restore();
+}
+function phone(ctx, T, x, y, h, s) {
+  const w = h * .5;
+  ctx.save(); ctx.strokeStyle = T.ink; ctx.lineWidth = 3; ctx.fillStyle = T.bg;
+  ctx.beginPath(); ctx.roundRect(x - w / 2, y - h / 2, w, h, w * .16); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 1.5; ctx.globalAlpha = .5; ctx.beginPath();
+  for (let i = 1; i < 5; i++) { ctx.moveTo(x - w * .38, y - h * .38 + i * h * .15); ctx.lineTo(x + w * .38, y - h * .44 + i * h * .15); }
+  ctx.moveTo(x - w * .1, y - h * .42); ctx.lineTo(x + w * .05, y + h * .42); ctx.stroke(); ctx.restore();
+  dot(ctx, T, x + w * .02, y + h * .02, s, { r: h * .045, pulse: false });
+}
+
+// ---------------------------------------------------------------- the city map (opening, drift, finale)
+const CITY = (() => {
+  const r = mulberry32(42), streets = [], blocks = [];
+  const rot = -.22, c = Math.cos(rot), sn = Math.sin(rot), P = (x, y) => [x * c - y * sn, x * sn + y * c];
+  for (let i = -20; i <= 20; i++) {                                   // a slightly rotated grid, some streets broken
+    const main = i % 5 === 0, off = (r() - .5) * 10;
+    for (const dir of [0, 1]) {
+      let a = -1300; while (a < 1300) {
+        const len = 180 + r() * 900, b = Math.min(1300, a + len);
+        if (main || r() > .18) { const [x0, y0] = dir ? P(i * 64 + off, a) : P(a, i * 64 + off), [x1, y1] = dir ? P(i * 64 + off, b) : P(b, i * 64 + off); streets.push({ x0, y0, x1, y1, main, d: Math.hypot((x0 + x1) / 2, (y0 + y1) / 2) }); }
+        a = b + (r() < .3 ? 64 : 0);
+      }
+    }
+  }
+  for (let k = 0; k < 26; k++) { const bx = Math.floor(r() * 30 - 15) * 64, by = Math.floor(r() * 30 - 15) * 64, bw = 64 * (1 + Math.floor(r() * 2)), bh = 64 * (1 + Math.floor(r() * 2)); blocks.push([P(bx + 9, by + 9), P(bx + bw - 9, by + 9), P(bx + bw - 9, by + bh - 9), P(bx + 9, by + bh - 9)]); }
+  const river = []; for (let i = 0; i <= 60; i++) { const u = -1400 + i * 47; river.push(u, 330 + Math.sin(u / 380) * 140 + Math.sin(u / 150) * 30); }
+  streets.sort((a, b) => a.d - b.d);
+  return { streets, blocks, river };
+})();
+function city(ctx, s, { x = 1180, y = 560, zoom = 1, reveal = 1, dim = 1 } = {}) {
+  const T = s.T, st = CITY.streets, n = Math.floor(st.length * clamp(reveal));
+  ctx.save(); ctx.translate(x, y); ctx.scale(zoom, zoom); ctx.globalAlpha *= dim;
+  ctx.strokeStyle = T.ink; ctx.lineCap = 'round';
+  ctx.globalAlpha *= .35; ctx.lineWidth = 1.2 / zoom;
+  for (const b of CITY.blocks) ink.hatch(ctx, c => { c.moveTo(...b[0]); for (const q of b.slice(1)) c.lineTo(...q); c.closePath(); }, { gap: 7 / zoom, box: [-1400, -1400, 1400, 1400].map(v => v) });
+  ctx.globalAlpha /= .35;
+  ctx.globalAlpha *= .8; ctx.lineWidth = 16 / Math.sqrt(zoom); ctx.strokeStyle = alpha(T.ink, .12); ink.poly(ctx, CITY.river, clamp(reveal * 1.5)); ctx.globalAlpha /= .8;
+  ctx.strokeStyle = T.ink;
+  for (const main of [false, true]) {
+    ctx.lineWidth = (main ? 3.4 : 1.5) / Math.sqrt(zoom); ctx.globalAlpha = dim * (main ? .9 : .55);
+    ctx.beginPath(); for (let i = 0; i < n; i++) { const q = st[i]; if (q.main === main) { ctx.moveTo(q.x0, q.y0); ctx.lineTo(q.x1, q.y1); } } ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- trilateration geometry (a side view, not to scale)
+const GEO = (() => {
+  const D = [1300, 800], A = [720, 470], B = [1700, 381], C = [1250, 422], F = [1560, 170];   // D: you. A, B, C on one line = the satellites' plane seen edge-on
+  const dist = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+  const ux = B[0] - A[0], uy = B[1] - A[1], L = Math.hypot(ux, uy), nx = -uy / L, ny = ux / L;
+  const dd = (D[0] - A[0]) * nx + (D[1] - A[1]) * ny, D2 = [D[0] - 2 * dd * nx, D[1] - 2 * dd * ny];   // mirror of D across the plane
+  return { D, D2, sats: [A, B, C, F], r: [A, B, C, F].map(p => dist(p, D)), axis: Math.atan2(D2[1] - D[1], D2[0] - D[0]), earth: { x: 1300, y: 800 + 1500, r: 1500 } };
+})();
+function trilat(ctx, s, o) {
+  const T = s.T, g = GEO, { n = 1, draw = [0, 2], band = 0, twoPts = 0, oneLeft = 0, fourthIn = 0 } = o;
+  // Earth
+  ctx.save(); ctx.strokeStyle = T.ink; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(g.earth.x, g.earth.y, g.earth.r, 0, TAU); ctx.stroke();
+  ctx.globalAlpha = .28; ctx.lineWidth = 1.2; ink.hatch(ctx, c => c.arc(g.earth.x, g.earth.y, g.earth.r, 0, TAU), { gap: 11, angle: -Math.PI / 5, box: [0, 780, W, H] }); ctx.restore();
+  label(ctx, T, 'EARTH', 1640, 905, 14, 'left', .8);
+  // spheres around each satellite that is heard
+  for (let k = 0; k < Math.min(n, 4); k++) {
+    const [x, y] = g.sats[k], r = g.r[k], isNew = k === n - 1;
+    const p = isNew ? ease.inOutCubic(s.seg(draw[0], draw[1])) : 1, a = k === 3 ? ease.outCubic(fourthIn) : 1;
+    if (a <= 0) continue;
+    const a0 = Math.atan2(g.D[1] - y, g.D[0] - x);
+    ctx.save(); ctx.globalAlpha = a;
+    if (band > 0) { ctx.strokeStyle = alpha(T.accent, .16); ctx.lineWidth = band; ink.poly(ctx, ink.circle(x, y, r, a0), p); }
+    ctx.strokeStyle = T.ink; ctx.lineWidth = 2; ink.poly(ctx, ink.circle(x, y, r, a0), p);
+    ctx.globalAlpha = a * .35 * p; ctx.setLineDash([6, 8]); ink.poly(ctx, ink.ellipse(x, y, r, r * .16), 1); ctx.setLineDash([]);
+    ctx.restore();
+    satellite(ctx, T, x, y, .32, -.1, a);
+    label(ctx, T, String(k + 1), x + 70, y - 40, 18, 'left', a, T.ink);
+  }
+  // two spheres meet in a circle, seen at an angle as an ellipse through D and its mirror
+  if (n >= 2) {
+    const p = n === 2 ? s.seg(draw[1] - .5, draw[1] + 1) : 1, mx = (g.D[0] + g.D2[0]) / 2, my = (g.D[1] + g.D2[1]) / 2, R = Math.hypot(g.D2[0] - g.D[0], g.D2[1] - g.D[1]) / 2;
+    ctx.save(); ctx.strokeStyle = T.accent; ctx.lineWidth = 4; ctx.globalAlpha = 1 - clamp(twoPts) * .65;
+    ink.poly(ctx, ink.ellipse(mx, my, R, R * .13, g.axis, 0), ease.inOutCubic(p)); ctx.restore();
+  }
+  // three spheres leave two points: you, and one in deep space
+  if (twoPts > 0) {
+    const q = ease.outBack(clamp(twoPts));
+    dot(ctx, T, g.D[0], g.D[1], s, { r: 13 * q, pulse: oneLeft > 0 || n < 4 });
+    const fade = 1 - clamp(oneLeft);
+    if (fade > 0) {
+      ctx.save(); ctx.globalAlpha = fade; ctx.strokeStyle = T.accent; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(g.D2[0], g.D2[1], 13 * q, 0, TAU); ctx.stroke();
+      ctx.restore();
+      label(ctx, T, 'DEEP SPACE', g.D2[0] + 30, g.D2[1], 14, 'left', fade);
+    }
+    if (oneLeft > 0) { ctx.save(); ctx.strokeStyle = T.accent; ctx.lineWidth = 3; const c = ease.outCubic(clamp(oneLeft * 2)); ink.poly(ctx, [g.D2[0] - 22, g.D2[1] - 22, g.D2[0] + 22, g.D2[1] + 22], c); ink.poly(ctx, [g.D2[0] + 22, g.D2[1] - 22, g.D2[0] - 22, g.D2[1] + 22], c); ctx.restore(); }
+  }
+  label(ctx, T, 'SIDE VIEW · NOT TO SCALE', 125, 900, 12, 'left', .6);
+}
+
+// ---------------------------------------------------------------- shots
+function drawHere(ctx, s) {
+  city(ctx, s, { zoom: 1.35, reveal: ease.outCubic(s.seg(0, 3)) });
+  dot(ctx, s.T, 1180, 560, s, { r: 14 * ease.outBack(s.seg(1.5, 2.1)), pulse: s.beat > 2 });
+}
+function drawHow(ctx, s) {
+  const z = lerp(1.35, .9, ease.inOutCubic(s.seg(0, 4)));
+  city(ctx, s, { zoom: z });
+  dot(ctx, s.T, 1180, 560, s, { r: 14 });
+}
+function drawConstellation(ctx, s) {
+  const T = s.T, G = Film.globe({ x: 1250, y: 560, r: 112, lon: 10 + s.t * 4, lat: 24 });
+  ctx.save(); ctx.fillStyle = T.bg; G.disc(ctx);
+  ctx.strokeStyle = T.ink; ctx.globalAlpha = .15; ctx.lineWidth = 1; G.grid(ctx, { step: 30 });
+  ctx.globalAlpha = .9; ctx.lineWidth = 1.3; G.land(ctx); ctx.globalAlpha = 1; ctx.lineWidth = 2; G.outline(ctx);
+  const R = 4.17, reveal = ease.outCubic(s.seg(0, 3)), per = [6, 5, 5, 5, 5, 5];
+  let shown = 0;
+  per.forEach((m, k) => {
+    const pts = []; for (let i = 0; i <= 160; i++) pts.push(...Film.orbitPoint(R, 55, k * 60, TAU * i / 160));
+    ctx.strokeStyle = T.ink; ctx.lineWidth = 1.2; ctx.globalAlpha = .45; G.path3(ctx, pts, { p: clamp(reveal * 1.3 - k * .05), hiddenAlpha: .35 });
+    for (let j = 0; j < m; j++) {
+      if (shown++ / 31 > reveal) continue;
+      const q = Film.orbitPoint(R, 55, k * 60, j / m * TAU + k * .5 + s.t * .12), P = G.p3(...q);
+      ctx.globalAlpha = P.vis ? 1 : .3; ctx.fillStyle = T.accent;
+      ctx.beginPath(); ctx.arc(P.x, P.y, 5, 0, TAU); ctx.fill();
+      if (P.vis && T.glow) fx.glow(ctx, P.x, P.y, 18, T.accent, .6);
+    }
+  });
+  ctx.restore();
+  monoText(ctx, String(Math.min(31, Math.round(31 * reveal))).padStart(2, '0'), 1250, 900, 30, T.ink, 'center', 1, 600);
+  label(ctx, T, 'SATELLITES IN VIEW OF THE PLANET', 1250, 945, 12, 'center');
+}
+function gpsClock(t) {                                            // hh:mm:ss.nnnnnnnnn, advancing with film time
+  const v = 43447 + t, sec = Math.floor(v), ns = Math.floor((v - sec) * 1e9) + Math.floor(Film.util.hash1(Math.round(t * 1000), 3) * 999999);
+  const hh = String(Math.floor(sec / 3600) % 24).padStart(2, '0'), mm = String(Math.floor(sec / 60) % 60).padStart(2, '0'), ss = String(sec % 60).padStart(2, '0');
+  const n = String(ns % 1e9).padStart(9, '0');
+  return `${hh}:${mm}:${ss}.${n.slice(0, 3)} ${n.slice(3, 6)} ${n.slice(6)}`;
+}
+function drawTime(ctx, s) {
+  const T = s.T, x = 1320, y = 400;
+  for (let k = 0; k < 3; k++) { const q = s.beat - k * .33; if (q > 0) fx.ring(ctx, x, y + 70, 60, 900, q % 1.5 / 1.5, { color: T.ink, width: 2 }); }
+  satellite(ctx, T, x, y, 1.25, -.08 + Math.sin(s.t * .8) * .03);
+  monoText(ctx, gpsClock(s.g), x, 780, 44, T.ink, 'center', ease.outCubic(s.seg(1, 1.6)), 600);
+  label(ctx, T, 'GPS TIME · BROADCAST EVERY MILLISECOND', x, 840, 13, 'center', ease.outCubic(s.seg(1.5, 2)));
+}
+function drawLate(ctx, s) {
+  const T = s.T, sx = 1480, sy = 210, px = 1480, py = 880;
+  ctx.save(); ctx.strokeStyle = alpha(T.ink, .5); ctx.lineWidth = 2; ctx.setLineDash([4, 10]); ctx.beginPath(); ctx.moveTo(sx, sy + 90); ctx.lineTo(px, py - 110); ctx.stroke(); ctx.restore();
+  satellite(ctx, T, sx, sy, .8, 0);
+  phone(ctx, T, px, py, 180, s);
+  const q = ease.inOutSine(s.seg(1, 5)), yy = lerp(sy + 90, py - 110, q);
+  if (q > 0 && q < 1) { fx.glow(ctx, sx, yy, 60, T.accent, .7); ctx.fillStyle = T.accent; ctx.beginPath(); ctx.arc(sx, yy, 8, 0, TAU); ctx.fill(); }
+  label(ctx, T, '20,200 KM', sx + 40, (sy + py) / 2, 14, 'left');
+  Film.count(ctx, s, { from: 0, to: .0674, b: [1, 5], ease: 'linear', x: 1160, y: 640, size: 120, align: 'right', format: v => v.toFixed(4), unit: 'SECONDS ON THE WAY', font: '"IBM Plex Mono", monospace', weight: 600 });
+}
+function drawDistance(ctx, s) {
+  const T = s.T, x0 = 820, x1 = 1760, y = 640, p = ease.inOutCubic(s.seg(0, 3));
+  phone(ctx, T, x0 - 60, y, 120, s);
+  satellite(ctx, T, x1 + 110, y - 10, .42, 0, ease.outCubic(s.seg(2.5, 3.2)));
+  ctx.save(); ctx.strokeStyle = T.ink; ctx.lineWidth = 3; ink.poly(ctx, [x0, y, x1, y], p);
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i <= 40; i++) { const x = lerp(x0, x1, i / 40); if (x > lerp(x0, x1, p)) break; const h = i % 10 ? (i % 5 ? 10 : 18) : 30; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - h); ctx.stroke(); }
+  ctx.restore();
+  Film.count(ctx, s, { from: 0, to: 20200, b: [0, 3], x: (x0 + x1) / 2, y: y - 70, size: 92, align: 'center', unit: 'KILOMETERS TO THE SATELLITE', format: 'int' });
+}
+function drawOne(ctx, s) { trilat(ctx, s, { n: 1, draw: [0, 2.5] }); }
+function drawTwo(ctx, s) { trilat(ctx, s, { n: 2, draw: [0, 2] }); }
+function drawThree(ctx, s) { trilat(ctx, s, { n: 3, draw: [0, 2], twoPts: s.seg(2.5, 3.3) }); }
+function drawCheap(ctx, s) {
+  const T = s.T;
+  [[980, 'SATELLITE · ATOMIC', 0], [1520, 'YOUR PHONE · QUARTZ', 1]].forEach(([x, name, bad], i) => {
+    const y = 600, r = 170, a = ease.outCubic(s.seg(i * .5, i * .5 + 1));
+    ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = T.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
+    for (let k = 0; k < 60; k++) { const an = k / 60 * TAU, l = k % 5 ? 10 : 22; ctx.lineWidth = k % 5 ? 1.5 : 3; ctx.beginPath(); ctx.moveTo(x + Math.cos(an) * (r - 8), y + Math.sin(an) * (r - 8)); ctx.lineTo(x + Math.cos(an) * (r - 8 - l), y + Math.sin(an) * (r - 8 - l)); ctx.stroke(); }
+    const wob = bad ? Film.util.noise1(s.t * 3, 5) * .5 + s.t * .35 : 0, an = -Math.PI / 2 + (s.g * TAU / 3) + wob;
+    ctx.strokeStyle = bad ? T.accent : T.ink; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(an) * (r - 40), y + Math.sin(an) * (r - 40)); ctx.stroke();
+    ctx.fillStyle = T.ink; ctx.beginPath(); ctx.arc(x, y, 7, 0, TAU); ctx.fill(); ctx.restore();
+    label(ctx, T, name, x, y + r + 40, 14, 'center', a);
+    const off = bad ? (0.0009 + s.t * .00031) : 0;
+    monoText(ctx, bad ? `+${(off * 1000).toFixed(3)} MS` : '±0.000 000 001 S', x, y + r + 90, 26, bad ? T.accent : T.ink, 'center', a, 600);
+  });
+}
+function drawMs(ctx, s) { trilat(ctx, s, { n: 3, twoPts: 1, band: 70 * ease.inOutCubic(s.seg(1, 4)) }); }
+function drawFourth(ctx, s) {
+  const band = 70 * (1 - ease.inOutCubic(s.seg(5, 9)));
+  trilat(ctx, s, { n: 4, draw: [1, 3.5], fourthIn: s.seg(0, 1), band, twoPts: 1, oneLeft: s.seg(4, 6) });
+}
+function drawFast(ctx, s) {
+  const T = s.T, day = Math.max(0, s.t - .5) * 1.6;
+  satellite(ctx, T, 1400, 330, 1.05, -.12 + Math.sin(s.t) * .03);
+  const rows = [['ON THE GROUND', 0], ['IN ORBIT', 38]];
+  rows.forEach(([name, us], i) => {
+    const y = 700 + i * 120, a = ease.outCubic(s.seg(.5 + i * .5, 1.5 + i * .5));
+    label(ctx, T, name, 900, y - 42, 14, 'left', a);
+    monoText(ctx, `DAY ${String(Math.floor(day) + 1).padStart(3, '0')}  +${(us * day).toFixed(1).padStart(6, ' ')} µs`, 900, y, 44, i ? T.accent : T.ink, 'left', a, 600);
+  });
+}
+function drawSpeed(ctx, s) {
+  const T = s.T, G = Film.globe({ x: 1300, y: 1560, r: 760, lon: 30 + s.t * 2, lat: 10 });
+  ctx.save(); ctx.fillStyle = T.bg; G.disc(ctx); ctx.strokeStyle = T.ink; ctx.globalAlpha = .12; ctx.lineWidth = 1; G.grid(ctx, { step: 15 });
+  ctx.globalAlpha = .7; ctx.lineWidth = 1.4; G.land(ctx); ctx.globalAlpha = 1; ctx.lineWidth = 2; G.outline(ctx); ctx.restore();
+  const R = 1180, th = lerp(-.62, .5, ease.inOutSine(s.p)), x = 1300 + R * Math.sin(th), y = 1560 - R * Math.cos(th);
+  ctx.save(); ctx.strokeStyle = alpha(T.ink, .35); ctx.lineWidth = 1.5; ctx.setLineDash([3, 9]); ink.poly(ctx, ink.arc(1300, 1560, R, -Math.PI / 2 - .9, -Math.PI / 2 + .9)); ctx.setLineDash([]);
+  for (let k = 0; k < 12; k++) {                                   // streaks along the orbit, behind the satellite
+    const rr = R - 55 + k * 10, len = .09 + (k * 37 % 11) / 60;
+    ctx.globalAlpha = .12 + (k % 3) * .1; ctx.lineWidth = 2; ink.poly(ctx, ink.arc(1300, 1560, rr, -Math.PI / 2 + th - .05 - len, -Math.PI / 2 + th - .05));
+  }
+  ctx.restore();
+  satellite(ctx, T, x, y, .62, th);
+  label(ctx, T, '3.9 KM/S', x, y - 110, 16, 'center', 1, T.ink);
+}
+function drawGravity(ctx, s) {
+  // space pinched toward the Earth: grid points pulled in, most strongly near it; flat far away
+  const T = s.T, ex = 1250, ey = 700, p = ease.outCubic(s.seg(0, 2.5));
+  const warp = (x, y) => { const dx = x - ex, dy = y - ey, k = .42 * p * Math.exp(-(dx * dx + dy * dy) / (2 * 230 ** 2)); return [x - dx * k, y - dy * k]; };
+  ctx.save(); ctx.strokeStyle = T.ink; ctx.lineWidth = 1.2;
+  for (let j = 0; j <= 14; j++) { const y = 280 + j * 50, pts = []; for (let i = 0; i <= 90; i++) pts.push(...warp(lerp(640, 1860, i / 90), y)); ctx.globalAlpha = .3; ink.poly(ctx, pts); }
+  for (let i = 0; i <= 24; i++) { const x = lerp(640, 1860, i / 24), pts = []; for (let j = 0; j <= 70; j++) pts.push(...warp(x, lerp(280, 980, j / 70))); ctx.globalAlpha = .3; ink.poly(ctx, pts); }
+  ctx.globalAlpha = 1; ctx.fillStyle = T.bg; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(ex, ey, 70, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore();
+  label(ctx, T, 'EARTH', ex, ey + 105, 13, 'center');
+  label(ctx, T, 'STRONG GRAVITY · CLOCKS TICK SLOWER', ex, ey + 135, 12, 'center', .7);
+  satellite(ctx, T, 1680, 330, .5, -.1);
+  label(ctx, T, 'WEAKER UP HERE', 1680, 420, 13, 'center');
+}
+function drawDrift(ctx, s) {
+  const T = s.T; city(ctx, s, { zoom: .9, dim: .9 });
+  const q = ease.inOutSine(s.seg(1, 7)), x = lerp(1180, 1690, q), y = lerp(560, 330, q);
+  ctx.save(); ctx.strokeStyle = T.muted; ctx.lineWidth = 2.5; ctx.setLineDash([2, 7]); ctx.beginPath(); ctx.arc(1180, 560, 20, 0, TAU); ctx.stroke(); ctx.restore();
+  label(ctx, T, 'WHERE YOU ARE', 1180, 610, 13, 'center');
+  ctx.save(); ctx.strokeStyle = T.accent; ctx.lineWidth = 3; ink.poly(ctx, [1180, 560, x, y], 1); ctx.restore();
+  dot(ctx, T, x, y, s, { r: 13 });
+  label(ctx, T, 'WHERE THE MAP THINKS YOU ARE', x, y - 50, 13, 'center', clamp(q * 3), T.accent);
+}
+function drawSlow(ctx, s) {
+  const T = s.T, x = 1330, p = s.seg(1, 3.5);
+  satellite(ctx, T, x, 330, .9, -.05);
+  const target = '10.22999999543', from = '10.23000000000';
+  const n = Math.floor(target.length * p), shown = target.slice(0, n) + from.slice(n);
+  let cx = x - 300;
+  const fnt = mono(76, 600), cell = Film.textSprite('0', fnt, T.ink).w;
+  cx = x - (cell * (shown.length + 4)) / 2;
+  [...shown].forEach((ch, i) => { const col = i >= 3 && i < n ? T.accent : T.ink, sp = Film.textSprite(ch, fnt, col); Film.drawSprite(ctx, sp, cx + (cell - sp.w) / 2, 720, 1); cx += cell; });
+  monoText(ctx, ' MHZ', cx, 720, 76, T.ink, 'left', 1, 600);
+  label(ctx, T, 'CLOCK FREQUENCY, SET BEFORE LAUNCH', x, 790, 14, 'center');
+}
+function drawFinal(ctx, s) {
+  city(ctx, s, { zoom: lerp(.95, 1.35, ease.inOutCubic(s.seg(0, 8))) });
+  dot(ctx, s.T, 1180, 560, s, { r: 14 });
+  const T = s.T, a = ease.outCubic(s.seg(3, 4));
+  ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = T.accent; ctx.lineWidth = 2; ctx.setLineDash([3, 6]); ctx.beginPath(); ctx.arc(1180, 560, 44, 0, TAU); ctx.stroke(); ctx.restore();
+  label(ctx, T, '± 5 M', 1240, 520, 18, 'left', a, T.accent);
+}
+function drawEinstein(ctx, s) {
+  city(ctx, s, { y: 900, zoom: 1.35 + s.t * .02, dim: .22 });   // the dot moves below the centered text
+  dot(ctx, s.T, 1180, 900, s, { r: 14, a: .35 });
+}
+function drawEnd(ctx, s) {
+  const T = s.T, a = ease.outCubic(s.seg(0, 1.5));
+  const spr = Film.textSprite('FOUR CLOCKS', Film.font(110, '"Archivo", sans-serif', 800), T.ink, T.glow, T.glow ? 30 : 0, 6);
+  Film.drawSprite(ctx, spr, W / 2 - spr.w / 2, 560, lerp(1.06, 1, a), a);
+  label(ctx, T, 'MADE WITH MOTION-KIT · EVERY FRAME IS CODE', W / 2, 640, 15, 'center', ease.outCubic(s.seg(1, 2)));
+  ctx.fillStyle = '#000'; ctx.globalAlpha = ease.inCubic(s.out(1.5)); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+}
+
+// ---------------------------------------------------------------- the film as data
+const shots = [
+  // cold open: an everyday image and the question
+  { id: 'here', bars: 2, theme: 'paper', hud: false, draw: drawHere, say: { text: 'YOU ARE *HERE.*', start: 1, per: .5 } },
+  { id: 'how', bars: 1, hud: false, draw: drawHow, say: { text: 'HOW DOES IT *KNOW?*', per: .4 } },
+  // I · the signal
+  { id: 'constellation', chapter: 'I · THE SIGNAL', bars: 2, theme: 'night', in: { type: 'zoom', at: [1180, 560], color: '#0c0d0e', beats: 1.5 }, draw: drawConstellation,
+    say: { text: '31 SATELLITES,|*20,200 KM UP.*', start: .5, caption: 'GPS · 6 ORBITAL PLANES · ONE LAP EVERY 12 HOURS' } },
+  { id: 'time', bars: 2, draw: drawTime, say: { text: 'EACH ONE SAYS|ONLY ONE THING:|*THE TIME.*', per: .4, caption: 'FROM ATOMIC CLOCKS ON BOARD' } },
+  { id: 'late', bars: 2, draw: drawLate, say: { text: 'IT ARRIVES|*A LITTLE LATE.*', per: .5, caption: 'RADIO TRAVELS AT THE SPEED OF LIGHT' } },
+  // II · the spheres
+  { id: 'distance', chapter: 'II · THE SPHERES', bars: 2, theme: 'paper', in: { type: 'flash', beats: 1 }, draw: drawDistance,
+    say: { text: 'DELAY × SPEED OF LIGHT|= *DISTANCE.*', per: .5, caption: '0.0674 S × 299,792 KM/S ≈ 20,200 KM' } },
+  { id: 'one', bars: 2, draw: drawOne, set: { n: 1, err: { to: 6e6, b: [1, 3] } }, say: { text: 'ONE CLOCK:|YOU ARE SOMEWHERE|*ON A SPHERE.*', per: .4 } },
+  { id: 'two', bars: 2, draw: drawTwo, set: { n: 2, err: { to: 1e6, b: [1, 3], log: true } }, say: { text: 'TWO CLOCKS:|*ON A CIRCLE.*', per: .4 } },
+  { id: 'three', bars: 2, draw: drawThree, set: { n: 3, err: { to: 10, b: [2.5, 4], log: true } }, say: { text: 'THREE:|*TWO POINTS.*', per: .5, caption: 'ONE OF THEM IS IN DEEP SPACE' } },
+  // III · the clocks: the first twist, then the fix
+  { id: 'cheap', chapter: 'III · THE CLOCKS', bars: 2, in: { type: 'punch', beats: .5 }, draw: drawCheap, say: { text: "BUT YOUR PHONE'S CLOCK|IS *CHEAP.*", per: .4, caption: 'QUARTZ · DRIFTS BY MILLISECONDS' } },
+  { id: 'ms', bars: 2, draw: drawMs, set: { err: { to: 3e5, b: [1, 4], log: true } }, say: { text: '1 MILLISECOND OFF|= *300 KM* OFF.', per: .45 } },
+  { id: 'fourth', bars: 3, draw: drawFourth, set: { n: 4, err: { to: 5, b: [5, 9], log: true } },
+    say: { text: 'SO IT LISTENS|TO *A FOURTH.*', per: .5, caption: 'FOUR CLOCKS SOLVE FOUR UNKNOWNS: X · Y · Z · TIME', captionAt: 5 } },
+  // IV · Einstein: the second twist
+  { id: 'fast', chapter: 'IV · EINSTEIN', bars: 2, theme: 'night', in: { type: 'dip', color: '#000', beats: 1 }, draw: drawFast, say: { text: 'AND UP THERE,|CLOCKS *RUN FAST.*', per: .5 } },
+  { id: 'speed', bars: 2, draw: drawSpeed, say: { text: 'SPEED SLOWS TIME:|*−7 µs* A DAY.', per: .45, caption: 'SPECIAL RELATIVITY' } },
+  { id: 'gravity', bars: 2, draw: drawGravity, say: { text: 'WEAKER GRAVITY|SPEEDS IT UP: *+45 µs.*', per: .45, caption: 'GENERAL RELATIVITY' } },
+  { id: 'drift', bars: 2, in: { type: 'punch', beats: .5 }, draw: drawDrift, set: { err: { to: 11400, b: [1, 7], log: true } },
+    say: { text: 'LEFT ALONE, THE MAP|DRIFTS *11 KM A DAY.*', per: .4, caption: '38 µs × 299,792 KM/S ≈ 11.4 KM' } },
+  // V · the fix and the callback
+  { id: 'slow', chapter: 'V · THE FIX', bars: 2, theme: 'paper', in: { type: 'flash', beats: 1 }, draw: drawSlow, set: { err: { to: 5, b: [2, 5], log: true } },
+    say: { text: 'SO EVERY SATELLITE CLOCK|IS BUILT *TO RUN SLOW.*', per: .4 } },
+  { id: 'recap', bars: 1, theme: 'night', in: { type: 'punch', beats: .5 },
+    draw: Film.recap(['constellation', 'time', 'late', 'one', 'two', 'three', 'fourth', 'gravity'], { per: .5, label: sh => ({ constellation: '31', time: 'THE TIME', late: 'THE DELAY', one: '1 CLOCK', two: '2 CLOCKS', three: '3 CLOCKS', fourth: '4 CLOCKS', gravity: '+38 µs' })[sh.id] }) },
+  { id: 'final', bars: 2, theme: 'paper', in: { type: 'flash', beats: 1 }, draw: drawFinal, say: { text: 'YOU ARE *HERE.*', per: .5 } },
+  { id: 'einstein', bars: 2, draw: drawEinstein, say: { text: 'EVERY TIME YOU OPEN A MAP,|YOU ASK *FOUR CLOCKS*|AND *EINSTEIN.*', at: 'c', per: .4 } },
+  { id: 'end', bars: 1, hud: false, theme: 'night', in: { type: 'dip', color: '#000', beats: 1 }, draw: drawEnd },
+];
+
+// ---------------------------------------------------------------- the score, on the same tempo map
+function score(ac, bus, f, at) {
+  const { out, verb } = bus, sh = id => f.shot(id), barT = n => f.bar(n), beatT = b => f.time(b);
+  const play = (tg, fn) => { const t = at(tg); if (t >= 0) fn(t); };
+  const each = (b0, b1, step, fn) => { for (let b = b0; b < b1 - 1e-9; b += step) play(beatT(b), t => fn(t, b)); };
+  const chord = { Am: ['A2', 'E3', 'A3', 'C4'], F: ['F2', 'C3', 'A3', 'C4'], C: ['C3', 'G3', 'C4', 'E4'], G: ['G2', 'D3', 'B3', 'D4'], Dm: ['D3', 'A3', 'D4', 'F4'], E: ['E2', 'B2', 'G#3', 'E4'], A: ['A2', 'E3', 'A3', 'C#4'] };
+  const prog = ['Am', 'F', 'C', 'G'], bassOf = { Am: 'A1', F: 'F1', C: 'C2', G: 'G1', Dm: 'D2', E: 'E1', A: 'A1' };
+  const bpb = f.bpb, B = id => sh(id).b0;                     // chapter boundaries in beats
+  const cI = B('constellation'), cII = B('distance'), cIII = B('cheap'), cIV = B('fast'), cV = B('slow'), cRe = B('recap'), cFin = B('final'), cEnd = B('end');
+  // pads: one chord every two bars, darker in chapter IV, A major at the end
+  for (let b = 0; b < cEnd; b += bpb * 2) {
+    const name = b >= cFin ? 'A' : b >= cIV && b < cV ? (Math.floor(b / 8) % 2 ? 'E' : 'Dm') : prog[Math.floor(b / 8) % 4];
+    const dur = beatT(Math.min(cEnd + bpb, b + bpb * 2)) - beatT(b) + .3;
+    play(beatT(b), t => { A.pad(ac, t, dur, out, { notes: chord[name], g: b < cI ? .045 : .06 }); A.pad(ac, t, dur, verb, { notes: chord[name], g: .03 }); });
+  }
+  // the clock: a tick on every beat from the first frame, twice as fast when "clocks run fast"
+  each(0, cEnd, 1, (t, b) => A.tick(ac, t, out, b % bpb ? .12 : .2));
+  each(cIV, B('speed'), .5, (t, b) => { if (b % 1) A.tick(ac, t, out, .1, 4200); });
+  // drums enter with chapter I, get denser with every chapter
+  each(cI, cIV - 1, 2, t => A.kick(ac, t, out, .75));
+  each(cII, cIV - 1, 1, (t, b) => { if (b % 2) A.kick(ac, t, out, .6); });
+  each(cII + bpb * 2 + 1, cIV - 1, 2, t => A.clap(ac, t, verb, .2));            // on 2 and 4
+  each(cI + bpb * 2, cIV - 1, .5, (t, b) => A.hat(ac, t, out, b % 1 ? .09 : .05));
+  each(cIV + bpb, cEnd - bpb, 1, t => A.kick(ac, t, out, .8));
+  each(cIV + bpb, cFin, .25, (t, b) => A.hat(ac, t, out, (b * 4) % 2 ? .05 : .08));
+  each(cIV + bpb * 2 + 1, cFin, 2, t => A.clap(ac, t, verb, .25));
+  // bass: quarter notes on the chord root, from chapter II
+  for (let b = cII; b < cEnd; b += 1) {
+    if (b >= cIV - 1 && b < cIV + 1) continue;                  // the gap before Einstein
+    const name = b >= cFin ? 'A' : b >= cIV && b < cV ? (Math.floor(b / 8) % 2 ? 'E' : 'Dm') : prog[Math.floor(b / 8) % 4];
+    play(beatT(b), t => A.bass(ac, t, out, { note: bassOf[name], g: b % 2 ? .18 : .26, d: .32 }));
+  }
+  // chapter III: plucked arpeggio on eighths, a sense of counting
+  const arp = ['A4', 'C5', 'E5', 'C5'];
+  each(cIII, cIV - 1, .5, (t, b) => A.pluck(ac, t, verb, { note: arp[Math.round(b * 2) % 4], g: .07, d: .35 }));
+  // pings: the satellite signal, on every ring in "time", on the arrival in "late", on each dot
+  each(B('time'), B('late'), 1, t => A.ping(ac, t, verb, { freq: 1318.5, g: .09 }));
+  play(beatT(B('late') + 5), t => A.ping(ac, t, verb, { freq: 1760, g: .12 }));
+  play(beatT(B('here') + 1.5), t => A.ping(ac, t, verb, { freq: 1760, g: .12 }));
+  play(beatT(cFin), t => A.ping(ac, t, verb, { freq: 1760, g: .14, d: 2 }));
+  // accents: every payoff word gets a soft hit, placed from the text itself (f.hits)
+  for (const h of f.hits) play(h.t, t => { A.kick(ac, t, out, .35); A.hat(ac, t, verb, .08, .2); });
+  // transitions: a riser into every punch, an impact on it, a whoosh on the flashes, silence before the dip
+  for (const id of ['cheap', 'drift', 'recap']) { const b = B(id); play(beatT(b - 2), t => A.riser(ac, t, beatT(b) - beatT(b - 2), out, .16)); play(beatT(b), t => A.impact(ac, t, out, .55)); }
+  for (const id of ['distance', 'slow', 'final']) play(beatT(B(id)) - .25, t => A.whoosh(ac, t, verb, { g: .2, d: .6 }));
+  play(beatT(cIV), t => A.sub(ac, t, out, { note: 'D1', g: .5, d: 2.2 }));
+  // recap: a tick on every recalled shot
+  each(cRe, cFin, .5, t => A.tick(ac, t, out, .25, 5200));
+}
+
+// ---------------------------------------------------------------- create
+const fmtDist = v => v >= 1000 ? `${Math.round(v / 1000).toLocaleString('en-US')} KM` : `${Math.max(1, Math.round(v))} M`;
+Film.create({
+  W, H, FPS: 30,
+  tempo: [{ bar: 0, bpm: 100 }, { bar: 17, bpm: 108 }, { bar: 24, bpm: 116 }, { bar: 32, bpm: 120 }],
+  themes: {
+    paper: { bg: '#ebe6da', ink: '#17191b', muted: '#6c685f', accent: '#d9381e', hud: '#5a5750', texture: 'grid', grain: .05, vignette: .22 },
+    night: { bg: '#0c0d0e', ink: '#ebe6da', muted: '#8a867d', accent: '#ff5537', hud: '#8a867d', texture: 'stars', glow: '#a39c8e', grain: .07, vignette: .5 },
+  },
+  type: { display: '"Archivo", sans-serif', mono: '"IBM Plex Mono", monospace' },
+  fonts: ['800 64px "Archivo"', '500 64px "Archivo"', '500 20px "IBM Plex Mono"', '600 20px "IBM Plex Mono"'],
+  assets: [Film.geo.load()],
+  initial: { n: 0, err: 2e7 },
+  shots,
+  hud: Film.hudFrame({
+    title: 'Four clocks',
+    sub: h => `T ${h.t.toFixed(3).padStart(7, '0')}`,
+    left: { label: 'Clocks heard', value: h => `${Math.round(h.val('n'))} / 4` },
+    right: { label: 'You are within', value: h => fmtDist(h.val('err')), meter: h => 1 - Math.log10(h.val('err')) / Math.log10(2e7) },
+  }),
+  score,
+  tail: .5,
+});
+</script></body></html>

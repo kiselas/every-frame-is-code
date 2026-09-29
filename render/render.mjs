@@ -18,6 +18,8 @@ import path from 'node:path';
 
 const HELP = `usage: node render.mjs <input.html> [out.mp4] [options]
   --from S, --to S        render a fragment (seconds)
+  --shot ID[..ID2]        render one shot, a chapter, or a range of them (pages built with runtime/film.js)
+  --shots                 print the shot list with timecodes and exit
   --workers N|auto        parallel browsers (default: auto = a quarter of the CPU cores, 1 to 6)
   --draft                 fast preview: --scale 0.5 --fps 30 --format jpeg --preset veryfast
   --scale K               capture scale, e.g. 0.5 for a 960x540 draft of a 1080p page
@@ -26,6 +28,7 @@ const HELP = `usage: node render.mjs <input.html> [out.mp4] [options]
   --quality Q             jpeg quality (default 92)
   --crf N, --preset P     x264 settings (default 18, slow)
   --voice FILE.wav        mix a voice-over into the page audio
+  --music FILE            mix a music track (any format ffmpeg reads); can be combined with --voice
   --loudnorm              normalize the final audio to -14 LUFS
   --no-audio              skip window.__renderAudio
   --profile               time every frame, print the slowest ones and where the time goes`;
@@ -39,9 +42,12 @@ const draft = flag('--draft');
 const profile = flag('--profile');
 const loudnorm = flag('--loudnorm');
 const noAudio = flag('--no-audio');
-const from = parseFloat(opt('--from', '0'));
+let from = parseFloat(opt('--from', '0'));
 const toArg = opt('--to', null);
+const shotArg = opt('--shot', null);
+const listShots = flag('--shots');
 const voice = opt('--voice', null);
+const music = opt('--music', null);
 const scale = parseFloat(opt('--scale', draft ? '0.5' : '1'));
 const fpsArg = opt('--fps', draft ? '30' : null);
 const format = opt('--format', draft ? 'jpeg' : 'png');
@@ -85,7 +91,22 @@ async function openPage() {
 const first = await openPage();
 const { W, H, DURATION } = first.meta;
 const FPS = fpsArg ? parseFloat(fpsArg) : first.meta.FPS;
-const to = toArg ? parseFloat(toArg) : DURATION;
+let to = toArg ? parseFloat(toArg) : DURATION;
+if (shotArg || listShots) {
+  // window.__shots = [{id, chapter, start, end}] is published by runtime/film.js
+  const shots = await first.page.evaluate(() => window.__shots || null);
+  if (!shots) { console.error('the page has no window.__shots (build it with runtime/film.js)'); process.exit(1); }
+  const fmt = s => `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, '0')}`;
+  if (listShots) {
+    for (const s of shots) console.log(`${fmt(s.start)}-${fmt(s.end)}  ${s.id.padEnd(18)} ${s.chapter || ''}`);
+    await first.browser.close(); process.exit(0);
+  }
+  const pick = id => shots.filter(s => s.id === id || s.chapter === id);
+  const [a, b = a] = shotArg.split('..'), A = pick(a), B = pick(b);
+  if (!A.length || !B.length) { console.error(`no shot or chapter "${!A.length ? a : b}". Shots: ${shots.map(s => s.id).join(', ')}`); process.exit(1); }
+  from = A[0].start; to = B[B.length - 1].end;
+  console.log(`--shot ${shotArg}: ${fmt(from)}-${fmt(to)}`);
+}
 const f0 = Math.round(from * FPS), f1 = Math.round(to * FPS), total = f1 - f0;
 const cores = os.cpus().length;
 // All browsers share one GPU: on a laptop iGPU throughput stops growing at 4-6 workers and drops after that.
@@ -104,6 +125,7 @@ if (hasAudio) {
   fs.writeFileSync(wav, Buffer.from(await first.page.evaluate(() => window.__renderAudio()), 'base64'));
   audioInputs.push(wav); console.log('ok');
 }
+if (music) audioInputs.push(path.resolve(music));
 if (voice) audioInputs.push(path.resolve(voice));
 
 const outW = Math.round(W * scale), outH = Math.round(H * scale);
@@ -160,7 +182,7 @@ const ffArgs = ['-y', '-v', 'error', '-f', 'concat', '-safe', '0', '-i', list];
 for (const a of audioInputs) ffArgs.push('-ss', String(from), '-t', String(to - from), '-i', a);
 ffArgs.push('-map', '0:v');
 const af = [];
-if (audioInputs.length === 2) af.push('[1:a][2:a]amix=inputs=2:normalize=0');
+if (audioInputs.length > 1) af.push(audioInputs.map((_, i) => `[${i + 1}:a]`).join('') + `amix=inputs=${audioInputs.length}:normalize=0`);
 else if (audioInputs.length === 1) af.push('[1:a]anull');
 if (af.length) { ffArgs.push('-filter_complex', af[0] + (loudnorm ? ',loudnorm=I=-14:TP=-1.5:LRA=11' : '') + '[a]', '-map', '[a]', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000'); }
 ffArgs.push('-c:v', 'copy', '-movflags', '+faststart', path.resolve(out));

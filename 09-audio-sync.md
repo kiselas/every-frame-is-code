@@ -117,6 +117,16 @@ function encodeWavBase64(ab){
 
 The render script in `render/` calls `__renderAudio` itself, if the function exists, and mixes the sound into the MP4.
 
+With `runtime/film.js` all of this is built in: write `score(ac, bus, f, at)`, schedule notes at `at(f.time(beat))`, and the same function drives the offline render and the live preview. The instruments above and a few more (`tick`, `ping`, `pluck`, `bass`, `sub`, `whoosh`) are in `Film.audio`; `f.hits` lists the moments payoff words land, for accents. See `runtime/README.md`.
+
+## Cutting to an existing track
+
+```bash
+node render/beatmap.mjs track.mp3 track.beats.json --trim track.wav
+```
+
+Prints a tempo map for `Film.create({ tempo })` (constant-tempo segments by bar), the beats and downbeats, quiet stretches and strong hits, and how far the map drifts from the tracked beats. `--trim` writes the track cut so the first downbeat is at 0:00; mix it in at render time with `render.mjs --music track.wav`. Beat tracking finds the pulse reliably but can put "one" on the wrong beat: check the first bars by ear in the live preview.
+
 ## Voice-over
 
 1. Write the text broken into phrases.

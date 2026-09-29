@@ -51,6 +51,12 @@ The one-minute film was made strictly by this kit. Each scene shows one capabili
 
 Watch it live at [kiselas.github.io/every-frame-is-code](https://kiselas.github.io/every-frame-is-code/): the page draws every frame in your browser as you watch. Or open [`examples/demo/demo.html`](examples/demo/demo.html) locally in Chrome. Click to turn on sound, space pauses, arrow keys seek.
 
+## Films of 1-3 minutes
+
+Long films need more than good frames: a question, a through-line, chapters, callbacks, and a way to make 20-70 shots feel like one film. [14-long-form.md](14-long-form.md) is the method; [runtime/film.js](runtime/) is the machinery every long film needs (a tempo map, shots measured in bars, transitions, a HUD that carries state, statement text, counters, themes, line art and a globe, a score on the same clock, a live preview). The worked example, [examples/gps/](examples/gps/), is a 90-second explainer on how GPS finds you, in five chapters, with the error of your position as the through-line.
+
+To learn from someone else's film: `node render/analyze.mjs reference.mp4 out/` writes a report on its shots, pace, tempo and cuts, with contact sheets.
+
 ## Quick start
 
 motion-kit is packaged as a skill in the open [Agent Skills](https://agentskills.io) format: a folder with a `SKILL.md`. The same skill works in Claude and in ChatGPT; only the install location differs.
@@ -118,8 +124,11 @@ node render.mjs ../examples/demo/demo.html ../examples/demo/demo.mp4
 | [11-threejs.md](11-threejs.md) | 3D: lighting, post-processing, shader particles |
 | [12-render-qa.md](12-render-qa.md) | Rendering, contact sheets, review checklist |
 | [13-performance.md](13-performance.md) | Fast pages and fast renders: measured costs of canvas operations, render pipeline, profiling |
-| [render/](render/) | Render scripts (Node + Playwright + ffmpeg) |
+| [14-long-form.md](14-long-form.md) | Films of 1-3 minutes: thesis, spine, through-line, statements, chapters, callbacks, script as data |
+| [runtime/](runtime/) | `film.js`: the runtime for long films, and `inline.mjs` to fold a film into one file |
+| [render/](render/) | Render, contact sheets, stills, reference breakdown, beat maps (Node + Playwright + ffmpeg) |
 | [examples/demo/](examples/demo/) | Demo film: script and source |
+| [examples/gps/](examples/gps/) | Four Clocks: a 90 s explainer built on the runtime, with its script and sources |
 | [scripts/pack-skill.sh](scripts/pack-skill.sh) | Builds `motion-kit.zip` for ChatGPT and Claude.ai. Releases build it automatically: just push a `vX.Y.Z` tag |
 | [sources.md](sources.md) | Sources and further reading |
 

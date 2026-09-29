@@ -18,6 +18,7 @@ In descending order of importance: emotion, story, rhythm, eye-trace, screen pla
 ## Rhythm
 
 - **Beat grid.** Choose a BPM (80-100 for calm, 110-130 for energetic). Cuts and accents land on strong beats. Scene changes land on phrase boundaries of 4 or 8 bars.
+- **Tempo map for long films.** One BPM for two minutes goes flat. Step the tempo up per chapter as tension grows (100 → 108 → 116 → 120; a 2-minute reference goes 110 → 128 → 140 → 150). `runtime/film.js` takes `tempo: [{ bar, bpm, ramp? }]` and measures shots in bars, so cuts stay on the beat across tempo changes.
 - **Acceleration toward the peak.** Shot length shrinks toward the climax: 4 bars, 2, 1, half.
 - **Pause before the peak.** A short silence or freeze (0.5-1.5 s) before the main moment makes it many times stronger.
 - **Exhale after the peak.** A long calm shot after the climax.
@@ -30,7 +31,7 @@ In descending order of importance: emotion, story, rhythm, eye-trace, screen pla
 | 10-20 s | hook (0-2 s), one idea, payoff with a title card |
 | 30 s | hook, 3 beats of development, peak, ending |
 | 60 s | intro, setup, 2 acts of development, pause, peak, exit |
-| 2-3 min | chapters of 20-30 s, each with its own mini-peak; a shared visual motif that evolves |
+| 2-3 min | chapters of 12-25 s, each with its own mini-peak; a shared visual motif that evolves; a through-line in the HUD. Details in 14-long-form.md |
 
 For vertical platforms, the first 1-2 seconds decide everything: motion and contrast from the first frame, no slow fade-in from black.
 

@@ -3,11 +3,17 @@
 Short rules. Details in the neighboring files.
 
 ## Architecture
-1. A single self-contained HTML file. No external images or audio — everything is drawn and synthesized in code. Libraries only from a CDN.
+1. One HTML page. No external images or audio — everything is drawn and synthesized in code. Libraries only from a CDN. Films longer than ~45 s build on the kit's `runtime/film.js` (tempo map, shots, transitions, HUD, text, score) and are folded into one self-contained file with `runtime/inline.mjs` for publishing.
 2. A frame is a pure function of time: `draw(ctx, t)`. No accumulated state between frames. This gives you seeking, frame-by-frame rendering, and reproducibility.
 3. Randomness is seeded only (mulberry32 or similar). `Math.random()` is forbidden in drawing code.
 4. Start with the plan as data: beat grid, shot list, event list. Then the drawing code. Image and sound read from the same timing structure.
 5. The page supports two modes: live preview (requestAnimationFrame) and render (`window.__draw(t)` called externally). Details in 01-pipeline.md.
+
+## Meaning (films over ~45 s, details in 14-long-form.md)
+- A one-sentence thesis, and a hook that asks its question in the first 2-4 s.
+- A through-line that carries state across the film (a metric in the HUD, a motif, a count) and reverses at least once.
+- One idea per statement, with a picture that proves it; every number has its arithmetic or source in a caption.
+- The ending calls back to the opening image; the last line reframes the thesis.
 
 ## Visuals
 6. One world, not slides. The camera moves through continuous space; scenes flow into one another.

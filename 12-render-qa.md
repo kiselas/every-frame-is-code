@@ -21,6 +21,17 @@ One frame every half second, on a single image. The main review tool: it shows p
 
 For the agent: after every render, open the contact sheet and describe what you see before making changes.
 
+A sheet shrinks frames to 320 px, which hides detail and exaggerates how small text is. Check single frames at full size without rendering video:
+
+```bash
+node render/still.mjs film.html stills/ 12.5 34 61.2     # timecodes
+node render/still.mjs film.html stills/ two fast@0.3       # shots of a runtime/film.js page, at 70% or at a given fraction
+```
+
+## Reference breakdown
+
+`node render/analyze.mjs reference.mp4 out/` writes `report.md` (shot count and lengths, cuts per 10 s, tempo over time, how firmly cuts follow the beat, loudness dips), contact sheets and the middle frame of every shot. Cuts between shots on one shared background often don't register: lower `--scene` (default 0.15) and count them from the sheets.
+
 ## Checklist
 
 **Composition and text**
@@ -50,6 +61,7 @@ For the agent: after every render, open the contact sheet and describe what you 
 **Technical**
 - [ ] Fonts are loaded before the first frame
 - [ ] Two renders produce identical results
+- [ ] Labels in the picture don't sit in the HUD's corners or on its rail
 - [ ] Live preview and render match in timing
 
 ## Common problems in a first draft

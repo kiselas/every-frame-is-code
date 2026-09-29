@@ -38,7 +38,7 @@ function glyph(font, ch, color, blur){            // the key is the look, never 
     const mt = m.measureText(ch), asc = Math.ceil(mt.fontBoundingBoxAscent), pad = Math.ceil(blur * 2.5) + 2;
     const c = new OffscreenCanvas(Math.ceil(mt.width) + pad * 2, asc + Math.ceil(mt.fontBoundingBoxDescent) + pad * 2), x = c.getContext('2d');
     x.font = font; x.fillStyle = color; if (blur) x.filter = `blur(${blur}px)`; x.fillText(ch, pad, pad + asc);
-    glyphs.set(key, { img: c, dx: pad, dy: pad + asc });
+    glyphs.set(key, { img: c.transferToImageBitmap(), dx: pad, dy: pad + asc });   // frozen: see below
   }
   return glyphs.get(key);
 }
@@ -54,6 +54,8 @@ function revealText(ctx, text, font, color, cx, baseline, t, t0, per = .04, dur 
   ctx.globalAlpha = 1;
 }
 ```
+
+Freeze text sprites with `transferToImageBitmap()`. Drawing a freshly written OffscreenCanvas that holds text into the frame canvas sometimes picks up a half-rasterized glyph: in the GPS example, zeros lost their left side or a horizontal band, differently on every run, although `getImageData` on the sprite showed it intact. The bitmap is a finished, immutable snapshot, and the artifact is gone.
 
 **Mask reveal.** Text slides out from under an invisible line: `clip` to the line's rectangle, text shifts from bottom to top by its own height. Very clean, suits serious topics.
 

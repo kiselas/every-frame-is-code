@@ -1,6 +1,6 @@
 # render
 
-Frame-by-frame rendering of HTML animations to MP4, and contact sheets for review.
+Frame-by-frame rendering of HTML animations to MP4, contact sheets and full-size stills for review, and tools to break down a reference video and to cut a film to an existing track.
 
 ## Installation
 
@@ -20,6 +20,9 @@ node render.mjs ../film.html ../part.mp4 --from 20 --to 35      # a fragment
 node render.mjs ../film.html ../draft.mp4 --draft               # fast preview: half size, 30 fps, JPEG frames
 node render.mjs ../film.html ../film.mp4 --profile              # also print the slowest frames by timecode
 node render.mjs ../film.html ../film.mp4 --voice ../voice.wav     # mix voice-over into the music
+node render.mjs ../film.html ../film.mp4 --music ../track.wav     # mix an existing music track
+node render.mjs ../film.html --shots                            # shot list of a runtime/film.js page
+node render.mjs ../film.html ../part.mp4 --shot two --draft      # one shot, a chapter, or a range a..b
 ```
 
 | Option | Default | What it does |
@@ -32,7 +35,10 @@ node render.mjs ../film.html ../film.mp4 --voice ../voice.wav     # mix voice-ov
 | `--format png\|jpeg` | png | Frame capture format. JPEG is lossy but about 3x faster in a single process |
 | `--quality Q` | 92 | JPEG quality |
 | `--crf N`, `--preset P` | 18, slow | x264 settings |
+| `--shot ID[..ID2]` | none | Render one shot, a chapter, or a range (pages built on `runtime/film.js`) |
+| `--shots` | off | Print the shot list with timecodes and exit |
 | `--voice FILE` | none | Mix a voice-over into the page audio |
+| `--music FILE` | none | Mix a music track; combines with `--voice` and the page audio |
 | `--loudnorm` | off | Normalize the final audio to −14 LUFS |
 | `--no-audio` | off | Skip `window.__renderAudio` |
 | `--profile` | off | Report per-frame draw and capture times, the 10 slowest frames and the mean per second |
@@ -58,6 +64,30 @@ The page is opened with `?render`: in this mode it must not run its own requestA
 ```
 
 Requires an ffmpeg build with drawtext (freetype). Builds without fontconfig (common on Windows) need a font file: the script uses Consolas on Windows, or set `FONTFILE=/path/to/font.ttf`. If drawtext isn't available at all, remove it from the filter in the script.
+
+## Stills
+
+```bash
+node still.mjs ../film.html ../stills/ 12.5 34 61.2          # frames at these timecodes, full size
+node still.mjs ../film.html ../stills/ two fast@0.3          # runtime/film.js shots, at 70% or a given fraction
+```
+
+## Reference breakdown
+
+```bash
+node analyze.mjs ../reference.mp4 ../ref/          # report.md, analysis.json, sheet-NN.png, shots-NN.png
+node analyze.mjs ../reference.mp4 ../ref/ --scene 0.1   # more sensitive cut detection
+```
+
+The report gives the shot count and lengths, cuts per 10 s, tempo over time (8 s windows), how firmly cuts follow the tracked beat grid, and loudness dips; the sheets hold a frame every 0.5 s and the middle frame of every shot. What to do with it: [14-long-form.md](../14-long-form.md).
+
+## Beat map of a track
+
+```bash
+node beatmap.mjs ../track.mp3 ../track.beats.json --trim ../track.wav
+```
+
+Tempo map for `Film.create({ tempo })`, beats, downbeats, quiet stretches, strong hits; `--trim` cuts the track so the first downbeat is at 0:00. `audio-analysis.mjs` holds the shared code: decoding through ffmpeg, spectral flux, local tempo, a dynamic-programming beat tracker.
 
 ## Speed
 
