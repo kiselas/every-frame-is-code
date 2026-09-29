@@ -39,7 +39,7 @@ node render.mjs ../film.html ../part.mp4 --shot two --draft      # one shot, a c
 | `--shots` | off | Print the shot list with timecodes and exit |
 | `--voice FILE` | none | Mix a voice-over into the page audio |
 | `--music FILE` | none | Mix a music track; combines with `--voice` and the page audio |
-| `--loudnorm` | off | Normalize the final audio to −14 LUFS |
+| `--loudnorm` | off | Normalize the final audio to −14 LUFS, then a limiter at −3 dB (single-pass loudnorm alone can overshoot, and AAC adds a little more) |
 | `--no-audio` | off | Skip `window.__renderAudio` |
 | `--profile` | off | Report per-frame draw and capture times, the 10 slowest frames and the mean per second |
 
@@ -92,3 +92,23 @@ Tempo map for `Film.create({ tempo })`, beats, downbeats, quiet stretches, stron
 ## Speed
 
 Rendering is still slower than real time. Iterate on fragments with `--draft`, render the whole film only for the final cut, and run `--profile` when a render feels slow: it names the timecodes to look at. Rules for writing pages that render fast are in [13-performance.md](../13-performance.md).
+
+## Music report
+
+```bash
+node music-report.mjs ../runtime/test/fixtures/score-basic.json ../music-report/ --wav ../track.wav
+node music-report.mjs ../film.html ../music-report/       # window.__score and window.__renderAudio() of the page
+```
+
+Eyes and lint for music, for an agent that cannot listen. The input is a Score (the format is in the header of [runtime/music-lint.js](../runtime/music-lint.js)): bpm, tracks with events, and optionally key, chords and sections. With a film page the script opens it with `?render`, reads `window.__score` and renders the audio through `window.__renderAudio()` (saved as `audio.wav`); `--wav` uses an existing file instead. A score JSON without `--wav` gets the piano roll and the lint only.
+
+| File | What it shows |
+|---|---|
+| `report.md` | Lint findings by severity with bar and beat and what to do, the text summary of the score, per-track and per-section tables, loudness (integrated LUFS, max short-term, true peak) per section and overall |
+| `piano-roll.png` | 1920 px wide: pitch of the bass, lead, arp and pad tracks (colour by role, opacity = velocity), one lane per drum voice, chord symbols, bars, sections with energy, lint markers, energy bars with notes per beat |
+| `spectrogram.png` | ffmpeg `showspectrumpic`, log frequency 20 Hz to Nyquist, bar grid, section boundaries and integrated loudness in every section |
+| `lint.json` | `{ findings, stats, score }` as returned by `MusicLint.lint` |
+
+Exit code 1 when the lint has `error` findings (a note outside both the chord and the key on a strong beat), 2 when the tool failed, otherwise 0. Chrome is found like in the other tools (`CHROME_PATH` or the installed Chrome); ffmpeg and ffprobe on PATH. The linter itself is a pure function and also runs without a browser: `const { findings, score } = require('../runtime/music-lint.js').lint(score)`; `MusicLint.describe(score)` gives a compact text summary a model can read. Rules and thresholds are documented in the header of `runtime/music-lint.js` and can be overridden or disabled through `opts` (`{ disable: ['loop'], leapWarn: 14 }`).
+
+What to look at first: errors, then `strong-beat-chord`, `clash` and `parallel-perfects` (harmony), `loop` and `flat-dynamics` (the music feels mechanical), `density-vs-energy` and `drum-groove` (the structure does not lift), and in the loudness table whether the chorus is at least 2 to 3 LU louder than the verse.
