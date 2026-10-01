@@ -456,6 +456,12 @@ function create(cfg) {
   const safe = cfg.safe || (portrait ? [.07, .1, .22] : [.065, .1]);
   const margin = { x: Math.round(W * safe[0]), y: Math.round(H * safe[1]), yb: Math.round(H * (safe[2] ?? safe[1])) };
   const baseSize = Math.round(portrait ? W * .095 : H * .058), bigSize = Math.round(portrait ? W * .2 : H * .12);   // default statement and counter sizes
+  // voice-over (optional): { words: [{ word, start, end, punct? }], phrases?: [{ start, end, groups: [{ words: [i0, i1) }] }], offset, src?, ... }, see the Voice section
+  const vc = cfg.voice && { at: 'bc', size: Math.round(portrait ? W * .056 : H * .05), group: 3, highlight: true, box: true, offset: 0, duck: true, duckDb: 12, ...cfg.voice };
+  // the picture band: where a shot's picture lives (portrait: under the statement, above the subtitles and the platform UI)
+  const band = cfg.band || (portrait
+    ? (() => { const y = Math.round(H * .385), bottom = H - margin.yb - (vc ? Math.round(H * .08) : 0); return { x: margin.x, y, w: W - margin.x * 2, h: bottom - y }; })()
+    : { x: margin.x, y: margin.y, w: W - margin.x * 2, h: H - margin.y - margin.yb });
 
   // --- compile shots: beats -> seconds, inherited chapter / theme / HUD values
   let cursor = 0, chapter = '', theme = cfg.theme || Object.keys(themes)[0];
@@ -516,8 +522,10 @@ function create(cfg) {
   }
 
   const f = {
-    W, H, FPS, DURATION, bpb, shots, chapters, themes, type, margin, hits, byId, portrait, u,
+    W, H, FPS, DURATION, bpb, shots, chapters, themes, type, margin, hits, byId, portrait, u, band,
     t: 0, frame: 0, debug: params.has('debug'),
+    // what was drawn this frame, for review tools (render/qa.mjs): { kind: 'say'|'caption'|'subtitle'|'hud'|'label'|..., x0, y0, x1, y1, text }
+    boxes: [], box(kind, x0, y0, x1, y1, text = '') { f.boxes.push({ kind, x0: Math.round(x0), y0: Math.round(y0), x1: Math.round(x1), y1: Math.round(y1), text }); },
     time: b => tm.time(b), beat: t => tm.beat(t), bpm: b => tm.bpm(b),
     bar: n => tm.time(n * bpb),
     shot: id => { const s = byId.get(id); if (!s) throw new Error(`no shot ${id}`); return s; },
@@ -632,7 +640,7 @@ function create(cfg) {
     const oy = zV === 'top' ? zy : zV === 'bottom' ? zy - L.height - (spec.caption ? size * .9 : 0) : zy - L.height / 2;
     const plain = spec.color || T.ink, acc = spec.accentColor || T.accent, glowR = T.glow ? size * .35 : 0;
     const outT = spec.out !== undefined ? s.at(spec.out) : Infinity;
-    let x0 = Infinity, x1 = -Infinity, last = 0;
+    let x0 = Infinity, x1 = -Infinity, last = 0, shown = false;
     for (const r of L.rows) {
       const rx = align === 'center' ? zx - r.width / 2 : align === 'right' ? zx - r.width : zx;
       x0 = Math.min(x0, rx); x1 = Math.max(x1, rx + r.width);
@@ -640,6 +648,7 @@ function create(cfg) {
         const wb = wordBeat(spec, w); last = Math.max(last, wb);
         const tw = s.at(wb), dt = s.t - tw;
         if (dt < 0) continue;
+        shown = true;
         const p = ease.outExpo(clamp(dt / .45)), q = clamp((s.t - outT - w.i * .03) / .3);
         const col = w.acc ? acc : plain, spr = textSprite(w.w, r.fnt, col, T.glow ? (w.acc ? acc : T.glow) : null, glowR, tracking);
         const scale = w.acc && spec.pop !== false ? lerp(1.35, 1, spring(dt, .5, 15)) : 1;
@@ -649,11 +658,13 @@ function create(cfg) {
     if (spec.caption) {
       const cb = spec.captionAt ?? last + (spec.per ?? .5) * 2, ct = s.at(cb), p = clamp((s.t - ct) / .6), q = clamp((s.t - outT) / .3);
       if (p > 0) {
-        const cs = L.cs, txt = String(spec.caption), shown = txt.slice(0, Math.ceil(txt.length * p));
+        const cs = L.cs, txt = String(spec.caption), shown_ = txt.slice(0, Math.ceil(txt.length * p));
         c.save(); c.font = font(cs, type.mono, 500); c.letterSpacing = `${cs * .2}px`; c.fillStyle = spec.captionColor || T.muted; c.globalAlpha = 1 - q;
-        c.textAlign = align; c.textBaseline = 'top'; c.fillText(shown, align === 'center' ? zx : align === 'right' ? zx : x0, oy + L.height + size * .35); c.restore();
+        c.textAlign = align; c.textBaseline = 'top'; c.fillText(shown_, align === 'center' ? zx : align === 'right' ? zx : x0, oy + L.height + size * .35); c.restore();
+        f.box('caption', x0, oy + L.height + size * .35, Math.min(x1 === -Infinity ? x0 : Math.max(x1, x0 + c.measureText(txt).width), W), oy + L.height + size * .35 + cs, txt);
       }
     }
+    if (shown && x0 !== Infinity) f.box('say', x0, oy, x1, oy + L.height, spec.text);
     return { x0, y0: oy, x1, y1: oy + L.height };
   }
 
@@ -686,7 +697,7 @@ function create(cfg) {
     c.restore();
   }
   function frame(t) {
-    f.t = t; f.frame = Math.round(t * FPS);
+    f.t = t; f.frame = Math.round(t * FPS); f.boxes.length = 0;
     const k = indexAt(t);
     let tr = null, kB = k;
     for (const kk of [k, k + 1]) { const sh = shots[kk]; if (sh && sh.tr && t >= sh.tr.t0 && t < sh.tr.t1) { tr = sh.tr; kB = kk; break; } }
@@ -706,6 +717,7 @@ function create(cfg) {
       cfg.hud(ctx, { T, alpha: hudA, t, shot: cur, s: f.state(cur, t, T), val: key => f.value(key, t), chapter: cur.chapter, progress: t / DURATION }, f);
       ctx.restore();
     }
+    if (vc) drawVoice(ctx, t, T);
     ctx.save(); (cfg.post || post)(ctx, T, f); ctx.restore();
     if (f.debug) debugOverlay(t, k);
   }
@@ -716,17 +728,82 @@ function create(cfg) {
     ctx.fillText(`${sh.id}  ·  ${sh.chapter}  ·  bar ${bar}.${bt}  ·  ${t.toFixed(2)} s  ·  ${Math.round(tm.bpm(b))} bpm  ·  shot ${k + 1}/${shots.length}  ·  frame ${f.frame}`, 14, H - 11); ctx.restore();
   }
 
+  // --- voice-over: subtitles from word timings (a group of words at a time, the spoken word highlighted), lookups, ducking
+  const norm = w => String(w).toLowerCase().replace(/ё/g, 'е').replace(/[^\p{L}\p{N}]+/gu, '');
+  const vWords = vc ? (vc.words || []).map(w => ({ ...w, start: w.start + vc.offset, end: w.end + vc.offset, n: norm(w.word) })) : [];
+  let vGroups = [];
+  if (vc && vWords.length) {
+    const spans = [];
+    if (vc.phrases) for (const ph of vc.phrases) for (const g of (ph.groups || [{ words: ph.words }])) spans.push([g.words[0], g.words[1]]);
+    else { const n = typeof vc.group === 'number' ? vc.group : 3; for (let i = 0; i < vWords.length; i += n) spans.push([i, Math.min(vWords.length, i + n)]); }
+    vGroups = spans.map(([a, b]) => ({ a, b, start: vWords[a].start, end: vWords[b - 1].end }));
+  }
+  // stretches of speech (a gap over 0.7 s ends one): the music ducks under them
+  const vSpeech = []; vWords.forEach(w => { const l = vSpeech[vSpeech.length - 1]; if (l && w.start - l[1] < .7) l[1] = w.end; else vSpeech.push([w.start, w.end]); });
+  if (vc) f.voice = {
+    words: vWords, groups: vGroups, speech: vSpeech,
+    // film time of the n-th (1-based) occurrence of a spoken word, matched ignoring case, punctuation and e/yo; `from` limits the search to words after that time
+    time(word, n = 1, from = -1) {
+      const k = norm(word); let c = 0;
+      for (const w of vWords) if (w.n === k && w.start >= from && ++c === n) return w.start;
+      throw new Error(`voice: the word "${word}" (occurrence ${n}) is not in the voice-over`);
+    },
+    has: word => vWords.some(w => w.n === norm(word)),
+  };
+  function drawVoice(c, t, T) {
+    let lo = 0, hi = vGroups.length - 1, gi = -1;
+    while (lo <= hi) { const m = (lo + hi) >> 1; if (vGroups[m].start - .06 <= t) { gi = m; lo = m + 1; } else hi = m - 1; }
+    const g = vGroups[gi]; if (!g || t > g.end + .45) return;
+    const words = vWords.slice(g.a, g.b), full = words.map(w => w.word + (w.punct || ''));
+    const a = clamp((t - (g.start - .06)) / .14) * (1 - clamp((t - g.end - .2) / .25)), rise = (1 - ease.outCubic(clamp((t - (g.start - .06)) / .18))) * 14;
+    const avail = W - margin.x * 2 - vc.size * .9;
+    let size = vc.size; c.save();
+    const setFont = sz => { c.font = font(sz, vc.font || type.display, vc.weight ?? 700); c.letterSpacing = `${sz * .01}px`; };
+    setFont(size); const spW = c.measureText(' ').width;
+    let widths = full.map(x => c.measureText(x).width), total = widths.reduce((x, y) => x + y, 0) + spW * (full.length - 1);
+    if (total > avail) { size = Math.floor(size * avail / total * .99); setFont(size); widths = full.map(x => c.measureText(x).width); total = widths.reduce((x, y) => x + y, 0) + c.measureText(' ').width * (full.length - 1); }
+    const sp = c.measureText(' ').width, padX = size * .55, padY = size * .34, h = size * 1.2 + padY * 2;
+    const zone = f.zone(vc.at), cx = Array.isArray(vc.at) ? vc.at[0] : zone[0], bottom = (Array.isArray(vc.at) ? vc.at[1] : zone[1]) + rise;
+    const x0 = cx - total / 2, top = bottom - h;
+    c.globalAlpha = a;
+    if (vc.box) { c.fillStyle = alpha(T.bg, .88); c.beginPath(); c.roundRect(x0 - padX, top, total + padX * 2, h, size * .3); c.fill(); c.strokeStyle = alpha(T.ink, .16); c.lineWidth = 2; c.stroke(); }
+    c.textBaseline = 'alphabetic'; c.textAlign = 'left';
+    let x = x0;
+    words.forEach((w, i) => {
+      const spoken = t >= w.start && t < w.end + .02, past = t >= w.end;
+      c.fillStyle = vc.highlight && spoken ? T.accent : T.ink; c.globalAlpha = a * (past || spoken || !vc.highlight ? 1 : .55);
+      c.fillText(full[i], x, top + padY + size * .95); x += widths[i] + sp;
+    });
+    c.restore();
+    f.box('subtitle', x0 - padX, top, x0 + total + padX, top + h, full.join(' '));
+  }
+  // lower the music under speech by vc.duckDb (default 12 dB); `at` maps film time to the audio clock (-1: before the playback start)
+  function duckBus(bus, ac, at, from = 0) {
+    if (!vc || !vc.duck || !vSpeech.length) return;
+    const base = cfg.gain ?? .9, low = base * 10 ** (-vc.duckDb / 20), g = bus.out.gain, now = ac.currentTime || 0;
+    g.setValueAtTime(vSpeech.some(([a, b]) => a - .1 <= from && from < b + .15) ? low : base, now);
+    for (const [a, b] of vSpeech) {
+      const ta = at(Math.max(0, a - .12)), tb = at(b + .15);
+      if (ta >= 0 && ta >= now) g.setTargetAtTime(low, ta, .05);
+      if (tb >= 0 && tb >= now) g.setTargetAtTime(base, tb, .25);
+    }
+  }
+
   // --- audio: the score reads the same tempo map; at(t) maps film time to the audio context clock
+  // bus.out: the music (ducked under the voice); bus.sfx: effects that must not duck (a stamp landing); bus.verb: reverb send
   function buildBus(ac) {
     const master = ac.createGain(), comp = ac.createDynamicsCompressor(), verb = audio.reverb(ac), wet = ac.createGain();
     master.gain.value = cfg.gain ?? .9; comp.threshold.value = -16; comp.ratio.value = 4; comp.attack.value = .005; comp.release.value = .2;
     wet.gain.value = .35; verb.connect(wet).connect(master); master.connect(comp).connect(ac.destination);
-    return { out: master, verb, dry: master };
+    const sfx = ac.createGain(); sfx.gain.value = cfg.gain ?? .9; sfx.connect(comp);
+    return { out: master, sfx, verb, dry: master };
   }
   if (cfg.score) {
     window.__renderAudio = async () => {
       const sr = 48000, oac = new OfflineAudioContext(2, Math.ceil(sr * DURATION), sr);
-      cfg.score(oac, buildBus(oac), f, tg => tg);
+      const bus = buildBus(oac), at = tg => tg;
+      duckBus(bus, oac, at, 0);
+      cfg.score(oac, bus, f, at);
       return encodeWavBase64(await oac.startRendering());
     };
   }
@@ -758,12 +835,26 @@ function create(cfg) {
     const clock = () => ac ? ac.currentTime : performance.now() / 1000;
     let c0 = clock();
     const now = () => playing ? Math.max(0, offset + clock() - c0) : offset;
+    // the voice-over in the live preview (the render mixes the file with ffmpeg: `render.mjs --voice`); vc.src is a URL or a data: URI
+    let voiceBuf = null;
+    async function playVoice(ac0, from, acStart) {
+      if (!vc || !vc.src) return;
+      try {
+        voiceBuf ||= await fetch(vc.src).then(r => r.arrayBuffer()).then(b => ac0.decodeAudioData(b));
+        if (ac !== ac0) return;                                         // superseded by a seek while decoding
+        const src = ac0.createBufferSource(); src.buffer = voiceBuf; src.connect(ac0.destination);
+        const lateBy = Math.max(0, ac0.currentTime - acStart), skip = Math.max(0, from - vc.offset) + lateBy;
+        src.start(Math.max(ac0.currentTime, acStart + Math.max(0, vc.offset - from)), skip);
+      } catch (e) { console.warn('voice-over not played:', e.message); }
+    }
     function startAudio() {
-      if (!cfg.score) return;
+      if (!cfg.score && !(vc && vc.src)) return;
       if (ac) ac.close();
       ac = new AudioContext();
-      const from = offset, acStart = ac.currentTime + .08;
-      cfg.score(ac, buildBus(ac), f, tg => tg < from - .01 ? -1 : acStart + (tg - from));
+      const from = offset, acStart = ac.currentTime + .08, bus = buildBus(ac), at = tg => tg < from - .01 ? -1 : acStart + (tg - from);
+      duckBus(bus, ac, at, from);
+      if (cfg.score) cfg.score(ac, bus, f, at);
+      playVoice(ac, from, acStart);
       c0 = acStart;
       if (!playing) ac.suspend();
     }
@@ -787,7 +878,7 @@ function create(cfg) {
     let hint = null;
     if (!params.has('nohint')) {
       hint = document.createElement('div');
-      hint.textContent = cfg.score ? 'click for sound · space pauses · ← → shots' : 'space pauses · ← → shots';
+      hint.textContent = cfg.score || (vc && vc.src) ? 'click for sound · space pauses · ← → shots' : 'space pauses · ← → shots';
       hint.style.cssText = 'position:fixed;left:50%;top:14px;transform:translateX(-50%);font:500 13px/1 "IBM Plex Mono",monospace;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:rgba(0,0,0,.55);padding:9px 14px;border-radius:4px;pointer-events:none;transition:opacity .6s;z-index:9';
       document.body.appendChild(hint);
       setTimeout(hide, 7000);

@@ -44,6 +44,27 @@ The runtime sets up the canvas, the render contract for `render/render.mjs` (`__
 | `fontText` | '' | Characters drawn inside `draw()` functions, so each font in `fonts` is loaded with the right unicode-range file (statements and captions are added automatically). Needed for Cyrillic, Greek, accents |
 | `tail` | 0 | Seconds after the last shot |
 
+## Voice-over
+
+`node render/voice.mjs script.txt out/voice` turns a text (one paragraph = one phrase) into `voice.wav`, `voice.words.json` and `voice.phrases.json` (word times, calibrated to the audio, and subtitle groups). The film reads them:
+
+```js
+Film.create({
+  voice: { words: WORDS, phrases: PHRASES, offset: 0, src: 'voice.mp3' },   // src: only for the live preview; the render mixes the wav (render.mjs --voice)
+  ...
+});
+```
+
+| Option | Default | |
+|---|---|---|
+| `words`, `phrases` | | the two JSON files; without `phrases` the words are grouped by `group` |
+| `offset` | 0 | film time at which the voice file starts |
+| `group` | 3 | words per subtitle when there are no `phrases` (with them the groups come from the punctuation) |
+| `at`, `size`, `font`, `weight` | `'bc'`, 5.6% of W, display, 700 | the subtitle: a plate over the picture, the spoken word in the accent color; `box: false` for no plate, `highlight: false` for one color |
+| `duck`, `duckDb` | true, 12 | the music (`bus.out`) drops by 12 dB under speech, from the word times, in the live preview and in `__renderAudio`. Effects on `bus.sfx` stay at full level |
+
+`f.voice.time('word', n = 1, from = -1)` gives the film time of the n-th spoken occurrence of a word (case, punctuation and e/yo ignored; it throws for a word that is not there), so an effect lands on the word: `f.voice.time('лжеучёным')`. `f.voice.words`, `.groups`, `.speech` (the stretches of speech) are there for custom use. `f.band` is the rectangle for a shot's picture (portrait: under the statement and above the subtitles); `f.box(kind, x0, y0, x1, y1, text)` records a drawn text box that review tools read from `f.boxes` after `__draw(t)`.
+
 ## Vertical films
 
 `W: 1080, H: 1920` switches the runtime to portrait: `f.portrait`, `f.u` (the unit, `min(W, H) / 1080`), a taller bottom margin `f.margin.yb`, statements sized from the width, the HUD scaled by the short side. A statement or caption wider than its room shrinks to fit and logs a `console.warn`; `fit: false` turns that off and `maxWidth` sets the room. Chapter and checklist: [19-vertical.md](../19-vertical.md); example: [examples/lyapunov/](../examples/lyapunov/). `node render/textcheck.mjs film.html` sweeps a film for those warnings.
@@ -122,7 +143,7 @@ Digits sit in fixed cells, so a running number doesn't jitter. `format`: `'int'`
 
 ## Audio
 
-`score(ac, bus, f, at)` is called once, with an `OfflineAudioContext` for the render or a live `AudioContext` in the preview. `bus.out` is the dry mix, `bus.verb` a reverb send. `at(filmTime)` returns the context time, or −1 when that moment is before the preview's start: schedule only when it is ≥ 0. Time on the tempo map: `f.bar(n)`, `f.time(beat)`, `f.shot(id).b0` (the shot's first beat), `f.hits` (payoff words).
+`score(ac, bus, f, at)` is called once, with an `OfflineAudioContext` for the render or a live `AudioContext` in the preview. `bus.out` is the dry mix (ducked under a voice-over), `bus.sfx` effects that must not duck, `bus.verb` a reverb send. `at(filmTime)` returns the context time, or −1 when that moment is before the preview's start: schedule only when it is ≥ 0. Time on the tempo map: `f.bar(n)`, `f.time(beat)`, `f.shot(id).b0` (the shot's first beat), `f.hits` (payoff words).
 
 Instruments in `Film.audio`, each `(ac, t, out, ...)`: `kick, hat, clap, tick, ping, pluck, bass, pad, riser, impact, sub, whoosh`; notes as `'A2'` or Hz (`Film.audio.hz`). For an existing track instead: `render/beatmap.mjs` gives the tempo map, `render.mjs --music track.wav` mixes it in.
 

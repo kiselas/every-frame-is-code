@@ -143,6 +143,27 @@ const res = await page.evaluate(async () => {
     const [, , left, right] = vt(name, { dir: 1 });
     out.vertical[name] = { yOldAbove: redder(top, bottom), xOldLeft: redder(left, right) };
   }
+
+  // 7. voice-over: subtitles only while speaking, word lookup, the music ducks under speech and effects on bus.sfx do not
+  const vwords = [{ word: 'раз', start: 1, end: 1.4 }, { word: 'Два', start: 1.5, end: 1.9, punct: ',' }, { word: 'три', start: 2, end: 2.4, punct: '.' }, { word: 'четыре', start: 5, end: 5.5 }];
+  const vf = Film.create({
+    W: 1080, H: 1920, canvas: document.createElement('canvas'), tempo: 120, voice: { words: vwords, group: 3 },
+    score(ac, bus) { for (const out of [bus.out, bus.sfx]) { const o = ac.createOscillator(), g = ac.createGain(); g.gain.value = .2; o.frequency.value = out === bus.out ? 220 : 440; o.connect(g).connect(out); o.start(0); o.stop(8); } },
+    shots: [{ id: 'a', bars: 4, say: { text: 'HELLO' } }],
+  });
+  const subs = t => { window.__draw(t); return vf.boxes.filter(b => b.kind === 'subtitle'); };
+  const wavRms = (b64, a, b, hz) => {                                  // level of one tone in a window of the rendered 16-bit stereo wav (Goertzel)
+    const bin = atob(b64), n = Math.floor((b - a) * 48000), i0 = Math.floor(a * 48000), w = 2 * Math.PI * hz / 48000, k = 2 * Math.cos(w); let s1 = 0, s2 = 0;
+    for (let i = 0; i < n; i++) { const o = 44 + (i0 + i) * 4, v = (bin.charCodeAt(o + 1) << 8 | bin.charCodeAt(o)) << 16 >> 16, s = v / 32768 + k * s1 - s2; s2 = s1; s1 = s; }
+    return Math.sqrt(s1 * s1 + s2 * s2 - k * s1 * s2) / n;
+  };
+  const rendered = await window.__renderAudio();
+  out.voice = {
+    subtitleWhileSpeaking: subs(1.7).length, subtitleInTheGap: subs(3.5).length, subtitleText: (subs(1.7)[0] || {}).text || '',
+    time: vf.voice.time('два!'), second: (() => { try { vf.voice.time('раз', 2); return 'found'; } catch (e) { return 'throws'; } })(), has: vf.voice.has('Четыре'),
+    musicSpeech: wavRms(rendered, 1.6, 1.9, 220), musicGap: wavRms(rendered, 3.2, 3.8, 220), sfxSpeech: wavRms(rendered, 1.6, 1.9, 440), sfxGap: wavRms(rendered, 3.2, 3.8, 440),
+  };
+  out.voice.duck = +(out.voice.musicSpeech / out.voice.musicGap).toFixed(2); out.voice.sfxRatio = +(out.voice.sfxSpeech / out.voice.sfxGap).toFixed(2);
   return out;
 });
 await browser.close();
@@ -158,6 +179,10 @@ need(vv.landscape.portrait === false && vv.landscape.u === 1 && vv.landscape.sam
 need(vv.portrait.portrait === true && vv.portrait.u === 1 && vv.portrait.margin.yb === 422 && vv.portrait.margin.y === 192 && vv.portrait.bottomZone === 1920 - 422, `vertical: a portrait film defaults to 7% / 10% / 22% safe margins (${JSON.stringify(vv.portrait)})`);
 need(vv.fitWarnings >= 2 && /widest line/.test(vv.fitMessage) && vv.captionWarned, `vertical: a too-wide statement and a too-long caption each shrink and warn (got ${vv.fitWarnings}: ${vv.fitMessage})`);
 for (const n of ['push', 'whip']) need(vv[n].yOldAbove && vv[n].xOldLeft, `${n}: axis y slides vertically, the default slides sideways (${JSON.stringify(vv[n])})`);
+const vo = res.voice;
+need(vo.subtitleWhileSpeaking === 1 && vo.subtitleInTheGap === 0 && /раз Два, три\./.test(vo.subtitleText), `voice: subtitles show while speaking and vanish in the gap (${JSON.stringify([vo.subtitleWhileSpeaking, vo.subtitleInTheGap, vo.subtitleText])})`);
+need(vo.time === 1.5 && vo.second === 'throws' && vo.has, `voice: f.voice.time finds a word ignoring case and punctuation, and throws for a missing one (${JSON.stringify([vo.time, vo.second, vo.has])})`);
+need(vo.duck > .2 && vo.duck < .4 && vo.sfxRatio > .85, `voice: the music ducks about 12 dB under speech (${vo.duck}), the effects bus does not (${vo.sfxRatio})`);
 need(res.music.events > 100 && res.music.errors === 0 && res.music.lint > 60, `music: the generated score is well formed and lints clean (${JSON.stringify(res.music)})`);
 need(res.music.peak > .05 && res.music.peak < 1 && res.music.rms > .01 && res.music.nan === 0 && res.music.identical, `music: the generated score plays audibly, finitely and identically twice (${JSON.stringify(res.music)})`);
 need(res.chip.peak > .05 && res.chip.peak < 1 && res.chip.nan === 0 && res.chip.identical, `chip: audible, finite, deterministic (${JSON.stringify(res.chip)})`);
