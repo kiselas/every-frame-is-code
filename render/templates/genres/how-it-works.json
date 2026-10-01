@@ -1,0 +1,215 @@
+{
+  "id": "new-video",
+  "title": "TODO: working title",
+  "lang": "ru",
+  "genre": "how-it-works",
+  "note": [
+    "Every shot: one claim in <= 8 words (the statement), one picture that proves it, a caption with the source.",
+    "The hook question is on screen by 2 s; no title card.",
+    "Replace every TODO, then: node render/lint-spec.mjs spec.json.",
+    "Transitions, one meaning each: cut = the next step of one thought; push-up = the next item of a list; dip = a new chapter; flash = the reveal; punch = the turn.",
+    "HOW IT WORKS (30-60 s, 100-150 words): the hook is the everyday image with a question on it; the mechanism is shown by RUNNING it (a token moves through the steps); each step is a statement with its own picture, never a labeled box; the complication is a visible failure; the fix changes one visible thing; the last shot is the hook image, now understood."
+  ],
+  "thesis": "TODO: one concrete sentence",
+  "hook": "TODO: the question the first 2 seconds ask",
+  "format": { "W": 1080, "H": 1920, "FPS": 30 },
+  "tempo": 120,
+  "voice": { "engine": "edge", "voice": "ru-RU-DmitryNeural", "rate": "-5%", "file": "voice.txt", "offset": 0 },
+  "style": { "themes": ["paper", "blueprint"], "display": "Oswald", "mono": "IBM Plex Mono", "statementSize": 94 },
+  "music": { "seed": 1, "key": "A minor", "style": "tense", "gain": 0.55 },
+  "hud": { "kind": "counter", "key": "step" },
+  "shots": [
+    {
+      "id": "hook",
+      "phrases": [0],
+      "claim": "location",
+      "energy": 0.3,
+      "set": { "step": 0 },
+      "say": { "text": "TODO: question|*PAYOFF*", "start": { "$word": "TODO" }, "payoff": { "$word": "TODO" } },
+      "picture": {
+        "block": "map",
+        "from": { "label": "TODO: A", "at": [0.2, 0.7] },
+        "to": { "label": "TODO: B", "at": [0.8, 0.3] },
+        "km": 100,
+        "ref": { "label": "TODO: yardstick", "km": 30 },
+        "curve": 0.3
+      },
+      "note": "The everyday image with a question on it (a map and a dot: how does it know?). Frame 0 moves."
+    },
+    {
+      "id": "step-1",
+      "phrases": [1],
+      "chapter": "TODO: the mechanism",
+      "claim": "mechanism",
+      "energy": 0.4,
+      "in": "cut",
+      "set": { "step": 1 },
+      "facts": ["f1"],
+      "say": {
+        "text": "TODO: step 1|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "flow",
+        "nodes": [
+          { "id": "a", "kind": "box", "label": "TODO: step", "letter": "A" },
+          { "id": "b", "kind": "diamond", "label": "TODO: test" },
+          { "id": "c", "kind": "pill", "label": "TODO: result" }
+        ],
+        "edges": [["a", "b"], ["b", "c", { "label": "TODO" }], ["b", "a", { "label": "TODO" }]],
+        "token": { "route": ["a", "b", "a", "b", "c"], "at": { "$word": "TODO" }, "dur": 4 }
+      },
+      "note": "Step 1 of the mechanism, run by a token. State the step and its why."
+    },
+    {
+      "id": "step-2",
+      "phrases": [2],
+      "claim": "mechanism",
+      "energy": 0.5,
+      "in": "cut",
+      "set": { "step": 2 },
+      "say": { "text": "TODO: step 2|*PAYOFF*", "start": { "$word": "TODO" }, "payoff": { "$word": "TODO" } },
+      "picture": {
+        "block": "flow",
+        "nodes": [
+          { "id": "a", "kind": "box", "label": "TODO: step", "letter": "A" },
+          { "id": "b", "kind": "diamond", "label": "TODO: test" },
+          { "id": "c", "kind": "pill", "label": "TODO: result" }
+        ],
+        "edges": [["a", "b"], ["b", "c", { "label": "TODO" }], ["b", "a", { "label": "TODO" }]],
+        "token": { "route": ["a", "b", "a", "b", "c"], "at": { "$word": "TODO" }, "dur": 4 }
+      },
+      "note": "Step 2: the same grammar as step 1."
+    },
+    {
+      "id": "step-3",
+      "phrases": [3],
+      "claim": "mechanism",
+      "energy": 0.6,
+      "in": "cut",
+      "set": { "step": 3 },
+      "facts": ["f2"],
+      "say": {
+        "text": "TODO: step 3|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "flow",
+        "nodes": [
+          { "id": "a", "kind": "box", "label": "TODO: step", "letter": "A" },
+          { "id": "b", "kind": "diamond", "label": "TODO: test" },
+          { "id": "c", "kind": "pill", "label": "TODO: result" }
+        ],
+        "edges": [["a", "b"], ["b", "c", { "label": "TODO" }], ["b", "a", { "label": "TODO" }]],
+        "token": { "route": ["a", "b", "a", "b", "c"], "at": { "$word": "TODO" }, "dur": 4 }
+      },
+      "note": "Step 3: the last step before the complication."
+    },
+    {
+      "id": "complication",
+      "phrases": [4],
+      "claim": "mechanism",
+      "energy": 0.1,
+      "in": "punch",
+      "say": {
+        "text": "TODO: it fails|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "flow",
+        "nodes": [
+          { "id": "a", "kind": "box", "label": "TODO: step", "letter": "A" },
+          { "id": "b", "kind": "diamond", "label": "TODO: test" },
+          { "id": "c", "kind": "pill", "label": "TODO: result" }
+        ],
+        "edges": [["a", "b"], ["b", "c", { "label": "TODO" }], ["b", "a", { "label": "TODO" }]],
+        "token": { "route": ["a", "b", "a", "b", "c"], "at": { "$word": "TODO" }, "dur": 4 },
+        "counters": [{ "label": "TODO: the error", "from": 0, "to": 10, "at": { "$word": "TODO" }, "dur": 3 }]
+      },
+      "sfx": [{ "at": { "$word": "TODO" }, "kind": "impact" }],
+      "note": "A visible failure of the mechanism (the dot drifts, the loop never exits). The music drops out before the twist."
+    },
+    {
+      "id": "fix",
+      "phrases": [5],
+      "claim": "comparison",
+      "energy": 0.95,
+      "in": "flash",
+      "facts": ["f3"],
+      "say": {
+        "text": "TODO: the fix|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "split",
+        "divider": true,
+        "left": {
+          "label": "TODO: A",
+          "pic": {
+            "block": "flow",
+            "nodes": [
+              { "id": "a", "kind": "box", "label": "TODO: step", "letter": "A" },
+              { "id": "b", "kind": "diamond", "label": "TODO: test" },
+              { "id": "c", "kind": "pill", "label": "TODO: result" }
+            ],
+            "edges": [["a", "b"], ["b", "c", { "label": "TODO" }], ["b", "a", { "label": "TODO" }]],
+            "token": { "route": ["a", "b", "a", "b", "c"], "at": { "$word": "TODO" }, "dur": 4 }
+          }
+        },
+        "right": {
+          "label": "TODO: B",
+          "pic": {
+            "block": "flow",
+            "nodes": [
+              { "id": "a", "kind": "box", "label": "TODO: step", "letter": "A" },
+              { "id": "b", "kind": "diamond", "label": "TODO: test" },
+              { "id": "c", "kind": "pill", "label": "TODO: result" }
+            ],
+            "edges": [["a", "b"], ["b", "c", { "label": "TODO" }], ["b", "a", { "label": "TODO" }]],
+            "token": { "route": ["a", "b", "a", "b", "c"], "at": { "$word": "TODO" }, "dur": 4 }
+          }
+        },
+        "dead": "left",
+        "deadAt": { "$word": "TODO" }
+      },
+      "sfx": [{ "at": { "$word": "TODO" }, "kind": "stamp" }],
+      "note": "The fix changes ONE visible thing: before on the left (dead), after on the right (running)."
+    },
+    {
+      "id": "payoff",
+      "phrases": [6],
+      "claim": "location",
+      "energy": 0.35,
+      "in": "dip",
+      "say": { "text": "TODO: now known|*PAYOFF*", "start": { "$word": "TODO" }, "payoff": { "$word": "TODO" } },
+      "picture": {
+        "block": "map",
+        "from": { "label": "TODO: A", "at": [0.2, 0.7] },
+        "to": { "label": "TODO: B", "at": [0.8, 0.3] },
+        "km": 100,
+        "ref": { "label": "TODO: yardstick", "km": 30 },
+        "curve": 0.3
+      },
+      "note": "The hook image, now understood. Return to the first frame."
+    }
+  ],
+  "facts": [
+    { "id": "f1", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f2", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f3", "text": "TODO: the fact, with its number", "source": "TODO: https://..." }
+  ],
+  "post": {
+    "title": "TODO: post title (a promise, not a label)",
+    "description": "TODO: one or two sentences",
+    "tags": ["TODO"],
+    "cover": { "shot": "complication", "at": 1.5 }
+  }
+}

@@ -104,6 +104,8 @@ Blocks.label(ctx, f, kind, text, x, y, opts)   // draws a text label and records
 
 All times in `p` are seconds from the start of the shot (anchors are already resolved). Every block accepts `at` (seconds, when its build starts; default 0), `dur` (seconds the build takes; default per block), `area` (override), `tone` (`accent` | `ok` | `ink`, the datum's color).
 
+**Per-element timing.** Every element of a list parameter (`items`, `marks`, `spans`, `names`, `groups`, `nodes`, `edges`, `layers`, `stamps`, `facts`, `lines`) accepts its own `at` (seconds from the shot start), which overrides the block's automatic stagger: that is how a flag lands on the word "статья" and a stamp on the word "лженаукой". **Areas.** A picture's `area` is `"band"` (default), `[x, y, w, h]` in pixels, or `{ "frac": [x, y, w, h] }` as fractions of the band, so two layers can share the band (a name plate in the top half, a timeline in the bottom one).
+
 | Block | Claim | Parameters |
 |---|---|---|
 | `bars` | magnitude, comparison, ranking | `items: [{ label, value, ref?: true, accent?: true }]`, `unit`, `max?`, `log?`, `order: 'given' \| 'desc'`, `showValue: true`. Horizontal bars from zero; `ref` bars (the yardstick) build first, muted; the accented bar grows last and its value counts up. At most 7 items |
@@ -112,10 +114,10 @@ All times in `p` are seconds from the start of the shot (anchors are already res
 | `tree` | structure | `root`, `levels: [n1, n2, …]` (counts per level), `names: [{ label, level, accent? }]`, `countLabel?`, `grow: 'up' \| 'down'`. A tree that fans out and grows; leaves are dots, a running count in the corner; only the listed names are written |
 | `units` | part of a whole, magnitude | `n`, `perRow: 10`, `icon: 'dot' \| 'square' \| 'person'`, `groups: [{ n, label?, tone? }]`, `unit?`. Unit pictogram: icons arrive one at a time in rows; groups differ by ink / muted / accent only |
 | `split` | comparison (before/after) | `left: { label, pic }`, `right: { label, pic }`, `dead?: 'left' \| 'right'`, `deadAt?`, `divider: true`. Two sub-pictures side by side at the same scale; `dead` dims one at `deadAt` |
-| `flow` | mechanism | `nodes: [{ id, kind: 'pill' \| 'box' \| 'diamond', label, letter? }]` (auto-laid in a column), `edges: [[from, to, { label? }]]`, `token: { route: [ids…], at, dur }`, `counters?: [{ label, from, to, at, dur }]`. A scheme that draws itself and then *runs*: a token moves along the route and lights the nodes |
+| `flow` | mechanism | `nodes: [{ id, kind: 'pill' \| 'box' \| 'diamond', label, letter? }]` (auto-laid in a column, or in a row with `layout: 'row'`, the loop-back edge below), `edges: [[from, to, { label? }]]`, `token: { route: [ids…], at, dur }`, `counters?: [{ label, from, to, at, dur }]`. A scheme that draws itself and then *runs*: a token moves along the route and lights the nodes |
 | `columns` | identity (texture of a thing) | `cols: 5`, `rows: 11`, `base: 8 \| 10 \| 16`, `digits: 5`, `scroll: 70`, `glitch?: { at, col, row }`, `label?`. Scrolling columns of numbers/codes; a glitch turns one cell accent |
 | `map` | location | `from: { label, at: [x, y] }`, `to: { label, at: [x, y] }` (fractions of the area), `km`, `ref?: { label, km }`, `curve: 0.3`. A route with a distance counter; the reference route is drawn first |
-| `card` | identity (a prop) | `layers: [{ kind: 'dictionary' \| 'article' \| 'plain', title, heading?, meta?, lines?: 9, offset?: [x, y], rot?, scale?, dim?, alpha?, stamps?: [{ text, at, tone: 'accent' \| 'ok', rot?, size?, pos?: [x, y] }], strike?: { at }, out?: { at, dur } }]`. Documents and stamps: a stamp lands (anticipation, shake, ink) at `at`; `strike` draws a slash through the layer's earlier stamps |
+| `card` | identity (a prop) | `layers: [{ kind: 'dictionary' \| 'article' \| 'plain', title, heading?, meta?, lines?: 9, offset?: [x, y], rot?, scale?, dim?, alpha?, stamps?: [{ text, at, tone: 'accent' \| 'ok', rot?, size?, pos?: [x, y], out?: { at, dur } }], strike?: { at }, out?: { at, dur } }]`. Documents and stamps: a stamp lands (anticipation, shake, ink) at `at` (a negative `at`: already on the card from the first frame); `out` on a stamp dissolves it like a label peeling off; `strike` draws a slash through the layer's earlier stamps |
 | `plate` | identity (a name) | `title`, `sub?`, `years?`, `facts?: [{ k, v }]`. A typographic name plate; the letters rise one by one |
 | `type` | typographic | `lines: [{ text, size?, tone? }]`. The picture is the text itself, for shots with `claim: "typographic"` |
 
@@ -149,17 +151,19 @@ Draws the page frame by frame (`window.__draw(t)`, then `window.__film.boxes`) a
 | frame 0 moves | mean difference between frame 0 and frame at 0.3 s above a threshold | fail |
 | hook | a `say` or `subtitle` box is visible by 2.0 s | fail |
 | dead stretch | no frame difference above the threshold for more than 2.0 s (excluding the last 1.5 s of the film) | warn |
-| safe zones | a `say`/`caption`/`subtitle`/`label`/`number` box enters the top 10%, the bottom 22%, or the right 11% of the frame (HUD exempt in the top) | fail |
+| safe zones | a `say`/`caption`/`subtitle`/`label`/`number` box enters the top 10%, the bottom 22%, or the right 11% of the lower half (the button column; HUD exempt in the top) | fail |
 | overlap | two boxes of different kinds overlap by more than 8% of the smaller | fail |
 | fit warnings | the page logged a "had to shrink" warning (as `render/textcheck.mjs`) or an error | fail |
 | statement | more than 8 words; a line over 16 characters at the film's size; shown for under 2 s | warn |
-| word budget | statements + captions + voice words over 2.5 words per second (voice alone over 2.2) | warn |
+| word budget | silent film: statements + captions over 2.5 words per second; voiced film: statements + voice words over 2.5 (source captions are not counted), the voice alone over 2.2 | warn |
 | voice pace | a phrase faster than 2.6 words per second | warn |
 | loudness | integrated outside -14 ± 1.5 LUFS, or true peak above -1.0 dBTP | fail / warn |
 | black / frozen | a frame with mean luminance < 4 (outside a transition) or 20 identical frames in a row | warn |
 | poster test | saves frames; a human or the agent looks at them (not graded) | info |
 
 `--strict` turns warnings into failures. The report ends with the checklist of chapters 19-21 with each line ticked, failed or "needs a human" (the label test, the yardstick, the facts).
+
+A `loop` spec is one shot (`dur` = the period, no voice, no `say`); the picture must be periodic in `t` (use `t mod period`), and the seam is checked by rendering two periods and looking at the join.
 
 ## Spec lint: `render/lint-spec.mjs`
 

@@ -1,0 +1,60 @@
+{
+  "id": "new-video",
+  "title": "TODO: working title",
+  "lang": "ru",
+  "genre": "loop",
+  "note": [
+    "Silent, seamless, 5-15 s: a formula of time that returns to its start (draw(t) with a period: t mod T); no text to read; the last frame equals the first; the only review question is the seam: render two periods and watch the join.",
+    "Replace every TODO, then: node render/lint-spec.mjs spec.json. "
+  ],
+  "thesis": "TODO: one concrete sentence",
+  "hook": "TODO: the question the first 2 seconds ask",
+  "format": { "W": 1080, "H": 1920, "FPS": 30 },
+  "tempo": 120,
+  "voice": null,
+  "style": { "themes": ["paper", "blueprint"], "display": "Oswald", "mono": "IBM Plex Mono", "statementSize": 94 },
+  "music": { "seed": 1, "key": "A minor", "style": "chill", "gain": 0.55 },
+  "hud": { "kind": "none" },
+  "shots": [
+    {
+      "id": "texture",
+      "beats": 8,
+      "claim": "identity",
+      "energy": 0.3,
+      "picture": {
+        "block": "columns",
+        "cols": 5,
+        "rows": 9,
+        "base": 8,
+        "digits": 5,
+        "scroll": 70,
+        "label": "TODO: what the texture is"
+      },
+      "note": "The pattern that is beautiful in motion: scroll must be periodic over the loop."
+    },
+    {
+      "id": "turn",
+      "beats": 8,
+      "claim": "mechanism",
+      "energy": 0.5,
+      "picture": {
+        "block": "flow",
+        "nodes": [
+          { "id": "a", "kind": "box", "label": "TODO: step", "letter": "A" },
+          { "id": "b", "kind": "diamond", "label": "TODO: test" },
+          { "id": "c", "kind": "pill", "label": "TODO: result" }
+        ],
+        "edges": [["a", "b"], ["b", "c", { "label": "TODO" }], ["b", "a", { "label": "TODO" }]],
+        "token": { "route": ["a", "b", "a", "b", "c"], "at": { "$word": "TODO" }, "dur": 4 }
+      },
+      "note": "The mechanism that closes the loop: ends exactly where the first shot begins."
+    }
+  ],
+  "facts": [],
+  "post": {
+    "title": "TODO: post title (a promise, not a label)",
+    "description": "TODO: one or two sentences",
+    "tags": ["TODO"],
+    "cover": { "shot": "texture", "at": 1 }
+  }
+}

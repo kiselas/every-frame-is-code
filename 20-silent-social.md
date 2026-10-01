@@ -9,7 +9,7 @@ The viewer holds a phone at arm's length, with the thumb on the screen, in a fee
 1. **The picture is the film.** Take the audio away and nothing must be lost. Music sets the mood and marks the beats for those who hear it; it never carries a fact.
 2. **No narrator means no "as you can see".** Without a voice, text is the only sentence the film speaks. It states the claim; the picture proves it; the caption gives the source. Text that describes the picture ("a diagram of the method") and a picture that repeats the text (the word GROWTH next to an arrow going up) are each saying nothing.
 3. **Every frame is a poster.** People scrub and pause. Any frame taken at random must make sense on its own: a readable statement, a picture that belongs to it, the context (the year, the chapter) in the HUD. This is also the thumbnail test: the platform picks a frame, and it must sell the film.
-4. **Reading is the clock.** The viewer reads at up to 3 words per second (160-180 words per minute is the broadcast caption standard; faster is for people who already know the words). A statement stays at least 2 s, and the whole film holds about 2.5 words per second of running time: **a 50-second film has a budget of about 120-150 words**, statements and captions together. Cut words before cutting pictures.
+4. **Reading is the clock.** The viewer reads at up to 3 words per second (160-180 words per minute is the broadcast caption standard; faster is for people who already know the words). A statement stays at least 2 s, and the whole film holds about 2.5 words per second of running time: **a 50-second film has a budget of about 120-150 words**: in a silent film statements and captions together; in a voiced film the statements plus the voice-over (the source captions are not counted: they are for the one viewer who stops to check, and nobody has to read them). Cut words before cutting pictures.
 5. **The first 1.5 seconds are the whole audition.** Reels ads that keep their audience land the hook inside 1.5 s; TikTok's working rule is 3 s, and 70% of viewers still watching at 3 s is the line below which a video is not pushed. Frame 0 already moves, the question is asked in words by second 2, and nothing is explained before it is asked.
 6. **Completion is the metric.** Watch time and completion weigh about half of TikTok's ranking. Benchmarks: ~70% at 3 s, ~60% at 15 s, ~50% at 30 s. The practical consequences: 30-60 s, no middle sag (the complication goes in the middle), an ending that resolves in the last 2 s and visually returns to the first frame, so a replay feels like a loop.
 7. **One idea per frame, one claim per picture.** The eye has one band of attention on a phone; a frame with two pictures, or a picture and a list, is read as neither.
@@ -40,11 +40,11 @@ Grammar rules:
 Numbered, to be cited in reviews.
 
 1. Frame 0 moves; the hook question is on screen by 2 s; no title card, no logo, no fade from black.
-2. The word budget is 2.5 words per second of film; a statement is at most 8 words and stays at least 2 s; a line is at most 16 condensed capitals.
+2. The word budget is 2.5 words per second of film (silent: statements + captions; voiced: statements + voice); a statement is at most 8 words and stays at least 2 s; a line is at most 16 condensed capitals.
 3. The payoff word and the picture's decisive move land on the same beat.
 4. Every number has a yardstick on screen (a comparison, a scale, a before) and a source in the caption.
 5. One picture per frame; one claim per picture; one accent color for the datum.
-6. Nothing a viewer needs sits in the top 10% or the bottom 22%; the right 11% is free of text (the button column).
+6. Nothing a viewer needs sits in the top 10% or the bottom 22%; the right 11% of the lower half is free of text (the button column).
 7. Any random frame passes the poster test: statement + picture + context, readable at 540 px wide.
 8. Text never overlaps the picture; the picture never repeats the text; neither describes the other.
 9. The ending calls back to the first frame and resolves in the last 2 s; the last statement reframes the thesis.

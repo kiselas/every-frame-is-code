@@ -1,0 +1,278 @@
+{
+  "id": "new-video",
+  "title": "TODO: working title",
+  "lang": "ru",
+  "genre": "one-life",
+  "note": [
+    "Every shot: one claim in <= 8 words (the statement), one picture that proves it, a caption with the source.",
+    "The hook question is on screen by 2 s; no title card.",
+    "Replace every TODO, then: node render/lint-spec.mjs spec.json.",
+    "Transitions, one meaning each: cut = the next step of one thought; push-up = the next item of a list; dip = a new chapter; flash = the reveal; punch = the turn.",
+    "ONE LIFE (40-60 s, 120-160 words): open on the tension (the label, the misconception), not the birth; the person enters second, by name, with two or three facts; each deed is ONE shot with ONE proof-picture (what the idea looked like, what it replaced, how much), never a list of posts and titles; the HUD rail carries the year; the motif is one object that changes meaning (a stamp, a page); close on the opening image, transformed."
+  ],
+  "thesis": "TODO: one concrete sentence",
+  "hook": "TODO: the question the first 2 seconds ask",
+  "format": { "W": 1080, "H": 1920, "FPS": 30 },
+  "tempo": 120,
+  "voice": { "engine": "edge", "voice": "ru-RU-DmitryNeural", "rate": "-5%", "file": "voice.txt", "offset": 0 },
+  "style": { "themes": ["paper", "blueprint"], "display": "Oswald", "mono": "IBM Plex Mono", "statementSize": 94 },
+  "music": { "seed": 1, "key": "A minor", "style": "tense", "gain": 0.55 },
+  "hud": { "kind": "rail", "key": "year", "span": [1900, 2000], "marks": [1900, 1950, 2000] },
+  "shots": [
+    {
+      "id": "hook",
+      "phrases": [0],
+      "claim": "identity",
+      "energy": 0.25,
+      "set": { "year": 1950 },
+      "facts": ["f1"],
+      "say": {
+        "text": "TODO: the label|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "card",
+        "layers": [
+          {
+            "kind": "dictionary",
+            "title": "TODO: title",
+            "lines": 9,
+            "stamps": [{ "text": "TODO", "at": { "$word": "TODO" }, "tone": "accent", "rot": -0.16 }]
+          }
+        ]
+      },
+      "sfx": [{ "at": { "$word": "TODO" }, "kind": "stamp" }],
+      "note": "The label or the myth, as a prop (a stamp landing on a page). The tension, not the birth."
+    },
+    {
+      "id": "who",
+      "phrases": [1],
+      "chapter": "TODO: I",
+      "claim": "change",
+      "energy": 0.3,
+      "in": "cut",
+      "set": { "year": { "to": 1900, "dur": 1.4 } },
+      "facts": ["f2"],
+      "say": {
+        "text": "TODO: the person|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "rail",
+        "span": [1900, 2000],
+        "spans": [{ "a": 1900, "b": 1980, "label": "TODO: life", "style": "solid" }],
+        "marks": [{ "t": 1900, "label": "TODO" }, { "t": 1950, "label": "TODO", "accent": true, "at": { "$word": "TODO" } }]
+      },
+      "note": "The person enters by name: the life as a bar on the timeline, the deed's year marked. Two or three facts as marks, not as a list."
+    },
+    {
+      "id": "idea",
+      "phrases": [2],
+      "chapter": "TODO: II",
+      "claim": "comparison",
+      "energy": 0.45,
+      "in": "dip",
+      "set": { "year": 1930 },
+      "say": { "text": "TODO: the idea|*PAYOFF*", "start": { "$word": "TODO" }, "payoff": { "$word": "TODO" } },
+      "picture": {
+        "block": "split",
+        "divider": true,
+        "left": {
+          "label": "TODO: A",
+          "pic": {
+            "block": "columns",
+            "cols": 5,
+            "rows": 9,
+            "base": 8,
+            "digits": 5,
+            "scroll": 70,
+            "label": "TODO: what the texture is"
+          }
+        },
+        "right": {
+          "label": "TODO: B",
+          "pic": {
+            "block": "flow",
+            "nodes": [
+              { "id": "a", "kind": "box", "label": "TODO: step", "letter": "A" },
+              { "id": "b", "kind": "diamond", "label": "TODO: test" },
+              { "id": "c", "kind": "pill", "label": "TODO: result" }
+            ],
+            "edges": [["a", "b"], ["b", "c", { "label": "TODO" }], ["b", "a", { "label": "TODO" }]],
+            "token": { "route": ["a", "b", "a", "b", "c"], "at": { "$word": "TODO" }, "dur": 4 }
+          }
+        }
+      },
+      "note": "What the idea replaced and what it is: before on the left, after on the right."
+    },
+    {
+      "id": "deed-1",
+      "phrases": [3],
+      "claim": "magnitude",
+      "energy": 0.55,
+      "in": "push-up",
+      "set": { "year": 1940 },
+      "facts": ["f3"],
+      "say": {
+        "text": "TODO: deed 1|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "counter",
+        "value": 10,
+        "from": 0,
+        "unit": "TODO: unit",
+        "format": "int",
+        "ref": { "label": "TODO: yardstick", "value": 1 },
+        "label": "TODO: what is counted"
+      },
+      "note": "One deed, one number, a yardstick drawn first (the year before: zero)."
+    },
+    {
+      "id": "deed-2",
+      "phrases": [4],
+      "claim": "structure",
+      "energy": 0.65,
+      "in": "push-up",
+      "set": { "year": 1950 },
+      "say": { "text": "TODO: deed 2|*PAYOFF*", "start": { "$word": "TODO" }, "payoff": { "$word": "TODO" } },
+      "picture": {
+        "block": "tree",
+        "root": "TODO: root",
+        "levels": [3, 9],
+        "names": [{ "label": "TODO: one name", "level": 1, "accent": true }],
+        "countLabel": "TODO: what is counted",
+        "grow": "up"
+      },
+      "note": "Names are not a picture: show HOW MANY and what they did."
+    },
+    {
+      "id": "fight",
+      "phrases": [5],
+      "chapter": "TODO: III",
+      "claim": "identity",
+      "energy": 0.1,
+      "in": "dip",
+      "set": { "year": 1955 },
+      "facts": ["f4"],
+      "say": {
+        "text": "TODO: the fight|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "card",
+        "layers": [
+          {
+            "kind": "article",
+            "title": "TODO: title",
+            "stamps": [{ "text": "TODO", "at": { "$word": "TODO" }, "tone": "accent" }]
+          }
+        ]
+      },
+      "sfx": [{ "at": { "$word": "TODO" }, "kind": "stamp" }],
+      "note": "The obstacle, as a prop. Silence in the music before the turn."
+    },
+    {
+      "id": "turn",
+      "phrases": [6],
+      "claim": "identity",
+      "energy": 0.95,
+      "in": "flash",
+      "set": { "year": 1960 },
+      "say": {
+        "text": "TODO: the turn|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "card",
+        "layers": [
+          {
+            "kind": "dictionary",
+            "title": "TODO: title",
+            "lines": 9,
+            "stamps": [
+              { "text": "TODO: old", "at": 0, "tone": "accent" },
+              { "text": "TODO: new", "at": { "$word": "TODO" }, "tone": "ok" }
+            ],
+            "strike": { "at": { "$word": "TODO" } }
+          }
+        ]
+      },
+      "sfx": [{ "at": { "$word": "TODO" }, "kind": "stamp" }],
+      "note": "The label struck out, the new word lands. The peak: payoff word, stamp and music hit on the same beat."
+    },
+    {
+      "id": "legacy",
+      "phrases": [7],
+      "chapter": "TODO: IV",
+      "claim": "part",
+      "energy": 0.6,
+      "in": "push-up",
+      "set": { "year": 1980 },
+      "facts": ["f5"],
+      "say": {
+        "text": "TODO: legacy|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "units",
+        "n": 20,
+        "perRow": 10,
+        "icon": "person",
+        "unit": "TODO: unit",
+        "groups": [
+          { "n": 15, "label": "TODO: the rest", "tone": "muted" },
+          { "n": 5, "label": "TODO: the share", "tone": "accent" }
+        ]
+      },
+      "note": "What remained: a count of people, schools, results."
+    },
+    {
+      "id": "end",
+      "phrases": [8],
+      "tail": 1.5,
+      "claim": "identity",
+      "energy": 0.35,
+      "in": "cut",
+      "set": { "year": { "to": 2000, "dur": 1.2 } },
+      "say": { "text": "TODO: reframed|*PAYOFF*", "start": { "$word": "TODO" }, "payoff": { "$word": "TODO" } },
+      "picture": {
+        "block": "card",
+        "layers": [
+          {
+            "kind": "dictionary",
+            "title": "TODO: title",
+            "lines": 9,
+            "stamps": [{ "text": "TODO", "at": { "$word": "TODO" }, "tone": "accent", "rot": -0.16 }]
+          }
+        ]
+      },
+      "note": "The opening image, transformed. The last statement reframes the thesis; resolve in the last 2 s."
+    }
+  ],
+  "facts": [
+    { "id": "f1", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f2", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f3", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f4", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f5", "text": "TODO: the fact, with its number", "source": "TODO: https://..." }
+  ],
+  "post": {
+    "title": "TODO: post title (a promise, not a label)",
+    "description": "TODO: one or two sentences",
+    "tags": ["TODO"],
+    "cover": { "shot": "fight", "at": 2 }
+  }
+}

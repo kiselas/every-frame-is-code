@@ -1,0 +1,190 @@
+{
+  "id": "new-video",
+  "title": "TODO: working title",
+  "lang": "ru",
+  "genre": "countdown",
+  "note": [
+    "Every shot: one claim in <= 8 words (the statement), one picture that proves it, a caption with the source.",
+    "The hook question is on screen by 2 s; no title card.",
+    "Replace every TODO, then: node render/lint-spec.mjs spec.json.",
+    "Transitions, one meaning each: cut = the next step of one thought; push-up = the next item of a list; dip = a new chapter; flash = the reveal; punch = the turn.",
+    "COUNTDOWN (30-60 s, 10-14 words per item): a visible counter in the HUD (5... 4... 3...); items of EQUAL length with the same shot grammar, so the viewer learns the form by item two; number one gets double time and a different transition; say in the hook why the order is what it is."
+  ],
+  "thesis": "TODO: one concrete sentence",
+  "hook": "TODO: the question the first 2 seconds ask",
+  "format": { "W": 1080, "H": 1920, "FPS": 30 },
+  "tempo": 120,
+  "voice": { "engine": "edge", "voice": "ru-RU-DmitryNeural", "rate": "-5%", "file": "voice.txt", "offset": 0 },
+  "style": { "themes": ["paper", "blueprint"], "display": "Oswald", "mono": "IBM Plex Mono", "statementSize": 94 },
+  "music": { "seed": 1, "key": "A minor", "style": "drive", "gain": 0.55 },
+  "hud": { "kind": "counter", "key": "n" },
+  "shots": [
+    {
+      "id": "hook",
+      "phrases": [0],
+      "claim": "typographic",
+      "energy": 0.3,
+      "set": { "n": 6 },
+      "say": { "text": "TODO: the list|*PAYOFF*", "start": { "$word": "TODO" }, "payoff": { "$word": "TODO" } },
+      "picture": {
+        "block": "type",
+        "lines": [{ "text": "TODO: N things", "tone": "ink" }, { "text": "TODO: ranked by what", "tone": "accent" }]
+      },
+      "note": "What the list is and why the order is what it is."
+    },
+    {
+      "id": "item-5",
+      "phrases": [1],
+      "claim": "ranking",
+      "energy": 0.4,
+      "in": "cut",
+      "set": { "n": 5 },
+      "facts": ["f1"],
+      "say": {
+        "text": "TODO: item 5|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "bars",
+        "unit": "TODO: unit",
+        "order": "given",
+        "showValue": true,
+        "items": [
+          { "label": "TODO: yardstick", "value": 1, "ref": true },
+          { "label": "TODO: datum", "value": 10, "accent": true }
+        ]
+      },
+      "note": "Item 5: a bar against the previous reference. Same grammar for every item."
+    },
+    {
+      "id": "item-4",
+      "phrases": [2],
+      "claim": "ranking",
+      "energy": 0.5,
+      "in": "push-up",
+      "set": { "n": 4 },
+      "facts": ["f2"],
+      "say": {
+        "text": "TODO: item 4|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "bars",
+        "unit": "TODO: unit",
+        "order": "given",
+        "showValue": true,
+        "items": [
+          { "label": "TODO: yardstick", "value": 1, "ref": true },
+          { "label": "TODO: datum", "value": 10, "accent": true }
+        ]
+      },
+      "note": "Item 4."
+    },
+    {
+      "id": "item-3",
+      "phrases": [3],
+      "claim": "ranking",
+      "energy": 0.6,
+      "in": "push-up",
+      "set": { "n": 3 },
+      "facts": ["f3"],
+      "say": {
+        "text": "TODO: item 3|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "bars",
+        "unit": "TODO: unit",
+        "order": "given",
+        "showValue": true,
+        "items": [
+          { "label": "TODO: yardstick", "value": 1, "ref": true },
+          { "label": "TODO: datum", "value": 10, "accent": true }
+        ]
+      },
+      "note": "Item 3."
+    },
+    {
+      "id": "item-2",
+      "phrases": [4],
+      "claim": "ranking",
+      "energy": 0.1,
+      "in": "push-up",
+      "set": { "n": 2 },
+      "facts": ["f4"],
+      "say": {
+        "text": "TODO: item 2|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "bars",
+        "unit": "TODO: unit",
+        "order": "given",
+        "showValue": true,
+        "items": [
+          { "label": "TODO: yardstick", "value": 1, "ref": true },
+          { "label": "TODO: datum", "value": 10, "accent": true }
+        ]
+      },
+      "note": "Item 2. Silence before number one."
+    },
+    {
+      "id": "item-1",
+      "phrases": [5],
+      "claim": "ranking",
+      "energy": 0.95,
+      "in": "flash",
+      "set": { "n": 1 },
+      "facts": ["f5"],
+      "say": {
+        "text": "TODO: item 1|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "bars",
+        "unit": "TODO: unit",
+        "order": "given",
+        "showValue": true,
+        "items": [
+          { "label": "TODO: yardstick", "value": 1, "ref": true },
+          { "label": "TODO: datum", "value": 10, "accent": true }
+        ]
+      },
+      "sfx": [{ "at": { "$word": "TODO" }, "kind": "stamp" }],
+      "note": "Item 1: double the time of the others, a different transition."
+    },
+    {
+      "id": "end",
+      "phrases": [6],
+      "tail": 1.5,
+      "claim": "typographic",
+      "energy": 0.35,
+      "in": "dip",
+      "picture": { "block": "type", "lines": [{ "text": "TODO: the closing line", "tone": "accent" }] },
+      "note": "Back to the hook's claim. Resolve in the last 2 s."
+    }
+  ],
+  "facts": [
+    { "id": "f1", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f2", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f3", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f4", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f5", "text": "TODO: the fact, with its number", "source": "TODO: https://..." }
+  ],
+  "post": {
+    "title": "TODO: post title (a promise, not a label)",
+    "description": "TODO: one or two sentences",
+    "tags": ["TODO"],
+    "cover": { "shot": "item-1", "at": 2 }
+  }
+}

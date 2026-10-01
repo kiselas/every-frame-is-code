@@ -1,0 +1,13 @@
+[TODO: the hook, a question about something people use every day, <= 10 words]
+
+[TODO: step 1: what happens, and why]
+
+[TODO: step 2: what happens, and why]
+
+[TODO: step 3: what happens, and why]
+
+[TODO: the complication: where it goes wrong]
+
+[TODO: the fix: the one thing that changes]
+
+[TODO: the hook image again, now understood: one sentence]

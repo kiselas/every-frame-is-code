@@ -1,0 +1,277 @@
+{
+  "id": "new-video",
+  "title": "TODO: working title",
+  "lang": "ru",
+  "genre": "versus",
+  "note": [
+    "Every shot: one claim in <= 8 words (the statement), one picture that proves it, a caption with the source.",
+    "The hook question is on screen by 2 s; no title card.",
+    "Replace every TODO, then: node render/lint-spec.mjs spec.json.",
+    "Transitions, one meaning each: cut = the next step of one thought; push-up = the next item of a list; dip = a new chapter; flash = the reveal; punch = the turn.",
+    "VERSUS (20-40 s, 60-100 words): split the picture band in two; both halves use the SAME encoding at the SAME scale and change at the same time; one criterion per shot (at most 4); the statement names the criterion, the halves show it; the verdict is a visible merge or a visible winner, not a line of text."
+  ],
+  "thesis": "TODO: one concrete sentence",
+  "hook": "TODO: the question the first 2 seconds ask",
+  "format": { "W": 1080, "H": 1920, "FPS": 30 },
+  "tempo": 120,
+  "voice": { "engine": "edge", "voice": "ru-RU-DmitryNeural", "rate": "-5%", "file": "voice.txt", "offset": 0 },
+  "style": { "themes": ["paper", "blueprint"], "display": "Oswald", "mono": "IBM Plex Mono", "statementSize": 94 },
+  "music": { "seed": 1, "key": "A minor", "style": "drive", "gain": 0.55 },
+  "hud": { "kind": "counter", "key": "criterion" },
+  "shots": [
+    {
+      "id": "hook",
+      "phrases": [0],
+      "claim": "comparison",
+      "energy": 0.4,
+      "set": { "criterion": 0 },
+      "say": { "text": "TODO: A or B?|*PAYOFF*", "start": { "$word": "TODO" }, "payoff": { "$word": "TODO" } },
+      "picture": {
+        "block": "split",
+        "divider": true,
+        "left": {
+          "label": "TODO: A",
+          "pic": {
+            "block": "card",
+            "layers": [
+              {
+                "kind": "dictionary",
+                "title": "TODO: title",
+                "lines": 9,
+                "stamps": [{ "text": "TODO", "at": { "$word": "TODO" }, "tone": "accent", "rot": -0.16 }]
+              }
+            ]
+          }
+        },
+        "right": {
+          "label": "TODO: B",
+          "pic": {
+            "block": "card",
+            "layers": [
+              {
+                "kind": "dictionary",
+                "title": "TODO: title",
+                "lines": 9,
+                "stamps": [{ "text": "TODO", "at": { "$word": "TODO" }, "tone": "accent", "rot": -0.16 }]
+              }
+            ]
+          }
+        }
+      },
+      "note": "A and B side by side, the question between them."
+    },
+    {
+      "id": "criterion-1",
+      "phrases": [1],
+      "chapter": "TODO: criterion",
+      "claim": "comparison",
+      "energy": 0.5,
+      "in": "cut",
+      "set": { "criterion": 1 },
+      "facts": ["f1"],
+      "say": {
+        "text": "TODO: point 1|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "split",
+        "divider": true,
+        "left": {
+          "label": "TODO: A",
+          "pic": {
+            "block": "bars",
+            "unit": "TODO: unit",
+            "order": "given",
+            "showValue": true,
+            "items": [
+              { "label": "TODO: yardstick", "value": 1, "ref": true },
+              { "label": "TODO: datum", "value": 10, "accent": true }
+            ],
+            "max": 10
+          }
+        },
+        "right": {
+          "label": "TODO: B",
+          "pic": {
+            "block": "bars",
+            "unit": "TODO: unit",
+            "order": "given",
+            "showValue": true,
+            "items": [
+              { "label": "TODO: yardstick", "value": 1, "ref": true },
+              { "label": "TODO: datum", "value": 10, "accent": true }
+            ],
+            "max": 10
+          }
+        }
+      },
+      "note": "Criterion 1: the same bars, the same scale (max), on both sides."
+    },
+    {
+      "id": "criterion-2",
+      "phrases": [2],
+      "claim": "comparison",
+      "energy": 0.6,
+      "in": "push-up",
+      "set": { "criterion": 2 },
+      "facts": ["f2"],
+      "say": {
+        "text": "TODO: point 2|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "split",
+        "divider": true,
+        "left": {
+          "label": "TODO: A",
+          "pic": {
+            "block": "bars",
+            "unit": "TODO: unit",
+            "order": "given",
+            "showValue": true,
+            "items": [
+              { "label": "TODO: yardstick", "value": 1, "ref": true },
+              { "label": "TODO: datum", "value": 10, "accent": true }
+            ],
+            "max": 10
+          }
+        },
+        "right": {
+          "label": "TODO: B",
+          "pic": {
+            "block": "bars",
+            "unit": "TODO: unit",
+            "order": "given",
+            "showValue": true,
+            "items": [
+              { "label": "TODO: yardstick", "value": 1, "ref": true },
+              { "label": "TODO: datum", "value": 10, "accent": true }
+            ],
+            "max": 10
+          }
+        }
+      },
+      "note": "Criterion 2: same grammar."
+    },
+    {
+      "id": "criterion-3",
+      "phrases": [3],
+      "claim": "comparison",
+      "energy": 0.1,
+      "in": "push-up",
+      "set": { "criterion": 3 },
+      "facts": ["f3"],
+      "say": {
+        "text": "TODO: point 3|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "split",
+        "divider": true,
+        "left": {
+          "label": "TODO: A",
+          "pic": {
+            "block": "bars",
+            "unit": "TODO: unit",
+            "order": "given",
+            "showValue": true,
+            "items": [
+              { "label": "TODO: yardstick", "value": 1, "ref": true },
+              { "label": "TODO: datum", "value": 10, "accent": true }
+            ],
+            "max": 10
+          }
+        },
+        "right": {
+          "label": "TODO: B",
+          "pic": {
+            "block": "bars",
+            "unit": "TODO: unit",
+            "order": "given",
+            "showValue": true,
+            "items": [
+              { "label": "TODO: yardstick", "value": 1, "ref": true },
+              { "label": "TODO: datum", "value": 10, "accent": true }
+            ],
+            "max": 10
+          }
+        }
+      },
+      "note": "Criterion 3: the deciding one. Silence in the music before the verdict."
+    },
+    {
+      "id": "verdict",
+      "phrases": [4],
+      "claim": "comparison",
+      "energy": 0.95,
+      "in": "flash",
+      "facts": ["f4"],
+      "say": {
+        "text": "TODO: verdict|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "split",
+        "divider": true,
+        "left": {
+          "label": "TODO: A",
+          "pic": {
+            "block": "counter",
+            "value": 10,
+            "from": 0,
+            "unit": "TODO: unit",
+            "format": "int",
+            "ref": { "label": "TODO: yardstick", "value": 1 },
+            "label": "TODO: what is counted"
+          }
+        },
+        "right": {
+          "label": "TODO: B",
+          "pic": {
+            "block": "counter",
+            "value": 10,
+            "from": 0,
+            "unit": "TODO: unit",
+            "format": "int",
+            "ref": { "label": "TODO: yardstick", "value": 1 },
+            "label": "TODO: what is counted"
+          }
+        },
+        "dead": "right",
+        "deadAt": { "$word": "TODO" }
+      },
+      "sfx": [{ "at": { "$word": "TODO" }, "kind": "stamp" }],
+      "note": "A visible winner: the loser dims."
+    },
+    {
+      "id": "end",
+      "phrases": [5],
+      "tail": 1.5,
+      "claim": "typographic",
+      "energy": 0.35,
+      "in": "cut",
+      "picture": { "block": "type", "lines": [{ "text": "TODO: the reframed claim", "tone": "accent" }] },
+      "note": "The thesis, reframed. Resolve in the last 2 s."
+    }
+  ],
+  "facts": [
+    { "id": "f1", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f2", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f3", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f4", "text": "TODO: the fact, with its number", "source": "TODO: https://..." }
+  ],
+  "post": {
+    "title": "TODO: post title (a promise, not a label)",
+    "description": "TODO: one or two sentences",
+    "tags": ["TODO"],
+    "cover": { "shot": "verdict", "at": 2 }
+  }
+}

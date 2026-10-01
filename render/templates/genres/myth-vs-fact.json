@@ -1,0 +1,182 @@
+{
+  "id": "new-video",
+  "title": "TODO: working title",
+  "lang": "ru",
+  "genre": "myth-vs-fact",
+  "note": [
+    "Every shot: one claim in <= 8 words (the statement), one picture that proves it, a caption with the source.",
+    "The hook question is on screen by 2 s; no title card.",
+    "Replace every TODO, then: node render/lint-spec.mjs spec.json.",
+    "Transitions, one meaning each: cut = the next step of one thought; push-up = the next item of a list; dip = a new chapter; flash = the reveal; punch = the turn.",
+    "MYTH VS FACT (30-50 s, 90-130 words): the myth is told SINCERELY for 5-8 s with its own picture, so the crack is felt when it comes (do not announce it as a myth); the crack is a visible contradiction in the same picture (a bar that does not reach, a date that is wrong); the evidence is one picture with a source; the ending restates the myth with ONE word changed."
+  ],
+  "thesis": "TODO: one concrete sentence",
+  "hook": "TODO: the question the first 2 seconds ask",
+  "format": { "W": 1080, "H": 1920, "FPS": 30 },
+  "tempo": 120,
+  "voice": { "engine": "edge", "voice": "ru-RU-DmitryNeural", "rate": "-5%", "file": "voice.txt", "offset": 0 },
+  "style": { "themes": ["paper", "blueprint"], "display": "Oswald", "mono": "IBM Plex Mono", "statementSize": 94 },
+  "music": { "seed": 1, "key": "A minor", "style": "tense", "gain": 0.55 },
+  "hud": { "kind": "none" },
+  "shots": [
+    {
+      "id": "myth",
+      "phrases": [0],
+      "claim": "identity",
+      "energy": 0.3,
+      "say": { "text": "TODO: the myth|*PAYOFF*", "start": { "$word": "TODO" }, "payoff": { "$word": "TODO" } },
+      "picture": {
+        "block": "card",
+        "layers": [
+          {
+            "kind": "dictionary",
+            "title": "TODO: title",
+            "lines": 9,
+            "stamps": [{ "text": "TODO", "at": { "$word": "TODO" }, "tone": "accent", "rot": -0.16 }]
+          }
+        ]
+      },
+      "note": "The myth, told straight, as a prop. Do not say it is a myth."
+    },
+    {
+      "id": "belief",
+      "phrases": [1],
+      "claim": "magnitude",
+      "energy": 0.4,
+      "in": "cut",
+      "facts": ["f1"],
+      "say": {
+        "text": "TODO: belief|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "bars",
+        "unit": "TODO: unit",
+        "order": "given",
+        "showValue": true,
+        "items": [
+          { "label": "TODO: yardstick", "value": 1, "ref": true },
+          { "label": "TODO: datum", "value": 10, "accent": true }
+        ]
+      },
+      "note": "The myth's own picture: the number or the bar everyone believes."
+    },
+    {
+      "id": "crack",
+      "phrases": [2],
+      "claim": "comparison",
+      "energy": 0.1,
+      "in": "punch",
+      "say": { "text": "TODO: the crack|*PAYOFF*", "start": { "$word": "TODO" }, "payoff": { "$word": "TODO" } },
+      "picture": {
+        "block": "bars",
+        "unit": "TODO: unit",
+        "order": "given",
+        "showValue": true,
+        "items": [
+          { "label": "TODO: the myth", "value": 10, "ref": true },
+          { "label": "TODO: the fact", "value": 3, "accent": true }
+        ]
+      },
+      "sfx": [{ "at": { "$word": "TODO" }, "kind": "impact" }],
+      "note": "The crack: the same picture contradicts itself. Silence before it."
+    },
+    {
+      "id": "evidence",
+      "phrases": [3],
+      "claim": "identity",
+      "energy": 0.55,
+      "in": "cut",
+      "facts": ["f2"],
+      "say": {
+        "text": "TODO: evidence|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "card",
+        "layers": [
+          {
+            "kind": "article",
+            "title": "TODO: the source",
+            "stamps": [{ "text": "TODO", "at": { "$word": "TODO" }, "tone": "ok" }]
+          }
+        ]
+      },
+      "note": "The evidence: one picture, one source."
+    },
+    {
+      "id": "truth",
+      "phrases": [4],
+      "claim": "mechanism",
+      "energy": 0.65,
+      "in": "cut",
+      "facts": ["f3"],
+      "say": {
+        "text": "TODO: the story|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "flow",
+        "nodes": [
+          { "id": "a", "kind": "box", "label": "TODO: step", "letter": "A" },
+          { "id": "b", "kind": "diamond", "label": "TODO: test" },
+          { "id": "c", "kind": "pill", "label": "TODO: result" }
+        ],
+        "edges": [["a", "b"], ["b", "c", { "label": "TODO" }], ["b", "a", { "label": "TODO" }]],
+        "token": { "route": ["a", "b", "a", "b", "c"], "at": { "$word": "TODO" }, "dur": 4 }
+      },
+      "note": "The real mechanism or story."
+    },
+    {
+      "id": "corrected",
+      "phrases": [5],
+      "claim": "comparison",
+      "energy": 0.95,
+      "in": "flash",
+      "say": { "text": "TODO: corrected|*PAYOFF*", "start": { "$word": "TODO" }, "payoff": { "$word": "TODO" } },
+      "picture": {
+        "block": "bars",
+        "unit": "TODO: unit",
+        "order": "given",
+        "showValue": true,
+        "items": [
+          { "label": "TODO: the myth", "value": 10, "ref": true },
+          { "label": "TODO: the fact", "value": 3, "accent": true }
+        ],
+        "tone": "ok"
+      },
+      "sfx": [{ "at": { "$word": "TODO" }, "kind": "stamp" }],
+      "note": "The same picture as the belief shot, corrected."
+    },
+    {
+      "id": "restated",
+      "phrases": [6],
+      "tail": 1.5,
+      "claim": "typographic",
+      "energy": 0.35,
+      "in": "dip",
+      "picture": {
+        "block": "type",
+        "lines": [{ "text": "TODO: the myth", "tone": "ink" }, { "text": "TODO: with one word changed", "tone": "accent" }]
+      },
+      "note": "The myth restated with ONE word changed. Resolve in the last 2 s."
+    }
+  ],
+  "facts": [
+    { "id": "f1", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f2", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f3", "text": "TODO: the fact, with its number", "source": "TODO: https://..." }
+  ],
+  "post": {
+    "title": "TODO: post title (a promise, not a label)",
+    "description": "TODO: one or two sentences",
+    "tags": ["TODO"],
+    "cover": { "shot": "crack", "at": 1.5 }
+  }
+}

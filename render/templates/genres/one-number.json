@@ -1,0 +1,183 @@
+{
+  "id": "new-video",
+  "title": "TODO: working title",
+  "lang": "ru",
+  "genre": "one-number",
+  "note": [
+    "Every shot: one claim in <= 8 words (the statement), one picture that proves it, a caption with the source.",
+    "The hook question is on screen by 2 s; no title card.",
+    "Replace every TODO, then: node render/lint-spec.mjs spec.json.",
+    "Transitions, one meaning each: cut = the next step of one thought; push-up = the next item of a list; dip = a new chapter; flash = the reveal; punch = the turn.",
+    "ONE NUMBER (20-45 s, 60-100 words): the number is the hook AND the ending: it appears early, large, with a question, and returns at the end with its meaning; it needs a yardstick in the same frame, drawn first (a known quantity, a before, a human scale); the middle is where the number comes from (its arithmetic as counters) and what moves it (one variable at a time); length or position, never area; animate the bar, not the axis; one number per frame."
+  ],
+  "thesis": "TODO: one concrete sentence",
+  "hook": "TODO: the question the first 2 seconds ask",
+  "format": { "W": 1080, "H": 1920, "FPS": 30 },
+  "tempo": 120,
+  "voice": { "engine": "edge", "voice": "ru-RU-DmitryNeural", "rate": "-5%", "file": "voice.txt", "offset": 0 },
+  "style": { "themes": ["paper", "blueprint"], "display": "Oswald", "mono": "IBM Plex Mono", "statementSize": 94 },
+  "music": { "seed": 1, "key": "A minor", "style": "tense", "gain": 0.55 },
+  "hud": { "kind": "counter", "key": "value" },
+  "shots": [
+    {
+      "id": "number",
+      "phrases": [0],
+      "claim": "magnitude",
+      "energy": 0.4,
+      "set": { "value": 0 },
+      "facts": ["f1"],
+      "say": {
+        "text": "TODO: the number|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "counter",
+        "value": 10,
+        "from": 0,
+        "unit": "TODO: unit",
+        "format": "int",
+        "ref": { "label": "TODO: yardstick", "value": 1 },
+        "label": "TODO: what is counted"
+      },
+      "note": "The number, large, counting up against its yardstick. A question on it."
+    },
+    {
+      "id": "origin",
+      "phrases": [1],
+      "claim": "part",
+      "energy": 0.45,
+      "in": "cut",
+      "set": { "value": 1 },
+      "facts": ["f2"],
+      "say": {
+        "text": "TODO: made of|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "units",
+        "n": 20,
+        "perRow": 10,
+        "icon": "person",
+        "unit": "TODO: unit",
+        "groups": [
+          { "n": 15, "label": "TODO: the rest", "tone": "muted" },
+          { "n": 5, "label": "TODO: the share", "tone": "accent" }
+        ]
+      },
+      "note": "Where the number comes from: a unit chart, a share."
+    },
+    {
+      "id": "arithmetic",
+      "phrases": [2],
+      "claim": "magnitude",
+      "energy": 0.55,
+      "in": "cut",
+      "set": { "value": 2 },
+      "say": {
+        "text": "TODO: arithmetic|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: the arithmetic, e.g. A x B = C"
+      },
+      "picture": {
+        "block": "counter",
+        "value": 10,
+        "from": 1,
+        "unit": "TODO: unit",
+        "format": "int",
+        "label": "TODO: what is counted"
+      },
+      "note": "The arithmetic as a running counter (one multiplication, one step)."
+    },
+    {
+      "id": "lever",
+      "phrases": [3],
+      "claim": "comparison",
+      "energy": 0.1,
+      "in": "push-up",
+      "set": { "value": 3 },
+      "facts": ["f3"],
+      "say": {
+        "text": "TODO: what moves|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "bars",
+        "unit": "TODO: unit",
+        "order": "given",
+        "showValue": true,
+        "items": [
+          { "label": "TODO: yardstick", "value": 1, "ref": true },
+          { "label": "TODO: datum", "value": 10, "accent": true }
+        ]
+      },
+      "sfx": [{ "at": { "$word": "TODO" }, "kind": "impact" }],
+      "note": "What moves the number: ONE variable, one bar against a reference. Silence before the meaning."
+    },
+    {
+      "id": "scale",
+      "phrases": [4],
+      "claim": "comparison",
+      "energy": 0.95,
+      "in": "flash",
+      "set": { "value": 4 },
+      "say": { "text": "TODO: scale|*PAYOFF*", "start": { "$word": "TODO" }, "payoff": { "$word": "TODO" } },
+      "picture": {
+        "block": "bars",
+        "unit": "TODO: unit",
+        "order": "given",
+        "showValue": true,
+        "items": [
+          { "label": "TODO: familiar", "value": 5, "ref": true },
+          { "label": "TODO: the number", "value": 10, "accent": true }
+        ]
+      },
+      "sfx": [{ "at": { "$word": "TODO" }, "kind": "stamp" }],
+      "note": "The reveal, a human scale: the number against something the viewer owns."
+    },
+    {
+      "id": "meaning",
+      "phrases": [5],
+      "tail": 1.5,
+      "claim": "magnitude",
+      "energy": 0.35,
+      "in": "cut",
+      "set": { "value": 5 },
+      "facts": ["f4"],
+      "say": {
+        "text": "TODO: it means|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "counter",
+        "value": 10,
+        "from": 0,
+        "unit": "TODO: unit",
+        "format": "int",
+        "ref": { "label": "TODO: yardstick", "value": 1 },
+        "label": "TODO: what is counted"
+      },
+      "note": "The number returns with its meaning. Resolve in the last 2 s."
+    }
+  ],
+  "facts": [
+    { "id": "f1", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f2", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f3", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f4", "text": "TODO: the fact, with its number", "source": "TODO: https://..." }
+  ],
+  "post": {
+    "title": "TODO: post title (a promise, not a label)",
+    "description": "TODO: one or two sentences",
+    "tags": ["TODO"],
+    "cover": { "shot": "number", "at": 2 }
+  }
+}
