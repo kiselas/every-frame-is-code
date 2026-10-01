@@ -298,16 +298,19 @@ export function wordBudget(film) {
   let statements = 0, captions = 0;
   for (const s of film.shots || []) for (const x of s.says || []) { statements += countWords(x.text); captions += countWords(x.caption); }
   const voice = film.voice ? (film.voice.words || []).length : 0, D = film.duration;
-  return { statements, captions, voice, total: statements + captions + voice, duration: D, rate: (statements + captions + voice) / D, voiceRate: voice / D };
+  // a voiced film is read as statements + the voice-over; its source captions are for the one viewer who stops to check, so they are not counted.
+  // A silent film is read as statements + captions.
+  const read = voice ? statements + voice : statements + captions;
+  return { statements, captions, voice, total: read, duration: D, rate: read / D, voiceRate: voice / D };
 }
 
 export function checkBudget(film) {
-  const id = 'budget', rule = `statements + captions + voice at most ${LIMITS.budget} words per second of film, the voice alone at most ${LIMITS.budgetVoice}`, sev = 'warn';
+  const id = 'budget', rule = `silent film: statements + captions at most ${LIMITS.budget} words per second; voiced film: statements + voice at most ${LIMITS.budget} (source captions not counted), the voice alone at most ${LIMITS.budgetVoice}`, sev = 'warn';
   const b = wordBudget(film), d = [];
   if (b.rate > LIMITS.budget) d.push(`${b.total} words in ${fmtT(b.duration)} = ${b.rate.toFixed(2)} words/s (at most ${LIMITS.budget}, i.e. ${Math.floor(LIMITS.budget * b.duration)} words): cut words before cutting pictures`);
   if (b.voice && b.voiceRate > LIMITS.budgetVoice) d.push(`the voice alone: ${b.voice} words = ${b.voiceRate.toFixed(2)} words/s (at most ${LIMITS.budgetVoice})`);
   return mk(id, rule, sev, d.length ? 'WARN' : 'PASS',
-    `${b.statements} statement + ${b.captions} caption + ${b.voice} voice = ${b.total} words in ${fmtT(b.duration)} = ${b.rate.toFixed(2)} words/s${b.voice ? `, voice alone ${b.voiceRate.toFixed(2)}` : ''}`, d,
+    `${b.statements} statement + ${b.voice ? b.voice + ' voice' : b.captions + ' caption'} = ${b.total} words in ${fmtT(b.duration)} = ${b.rate.toFixed(2)} words/s${b.voice ? `, voice alone ${b.voiceRate.toFixed(2)} (${b.captions} caption words not counted)` : ''}`, d,
     { ...b, rate: +b.rate.toFixed(3), voiceRate: +b.voiceRate.toFixed(3) });
 }
 
@@ -338,7 +341,7 @@ export function checkPace(film) {
   const id = 'pace', rule = `no voice phrase faster than ${LIMITS.pace} words per second`, sev = 'warn';
   if (!film.voice || !(film.voice.words || []).length) return skip(id, rule, sev, 'the film has no voice-over');
   const ph = voicePhrases(film.voice.words, film.phrases).filter(p => p.n >= LIMITS.paceMinWords && p.end > p.start);   // two words in half a second say nothing about a pace
-  const fast = ph.filter(p => p.n / (p.end - p.start) > LIMITS.pace);
+  const fast = ph.filter(p => Math.round(p.n / (p.end - p.start) * 10) / 10 > LIMITS.pace);   // one decimal, like lint-spec
   const top = Math.max(0, ...ph.map(p => p.n / (p.end - p.start)));
   return mk(id, rule, sev, fast.length ? 'WARN' : 'PASS', fast.length ? `${fast.length} phrase(s) too fast` : `${ph.length} phrases, fastest ${top.toFixed(2)} words/s`,
     fast.map(p => `${range(p.start, p.end)}${inShot(film, p.start)}: ${p.n} words = ${(p.n / (p.end - p.start)).toFixed(2)} words/s "${clip(p.text, 60)}"`), { phrases: ph.length, fastest: +top.toFixed(3) });

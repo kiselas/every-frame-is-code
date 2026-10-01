@@ -453,7 +453,8 @@ export function coverTime(spec, T) {
   const sh = T.shots[i];
   let at = cover.at === undefined ? 2.0 : cover.at;
   if (!isNum(at)) at = T.anchor(i, at);
-  const local = clamp(at, 0, Math.max(0, sh.dur - 0.05));
+  // keep off the edges of the shot: a transition (up to 0.75 s) is blending the neighbour in there and the frame is half transparent
+  const edge = Math.min(0.8, sh.dur / 3), local = clamp(at, edge, Math.max(edge, sh.dur - edge));
   return { shot: id, index: i, local: round(local, 3), t: round(Math.min(sh.start + local, T.duration - 0.05), 3) };
 }
 
@@ -483,7 +484,9 @@ export function buildPostMd(spec, { duration = null, cover = null } = {}) {
   lines.push(spec.hook || post.title || spec.title, '');
   if (post.description) lines.push(post.description, '');
   const src = sourcesOf(spec);
-  if (src.length) lines.push('Sources:', ...src.map(f => `- ${f.text} — ${f.source}`), '');
+  // one line per source page, not per fact: a post is read by a person, and ten facts often come from three pages
+  const urls = [...new Set(src.map(f => f.source))];
+  if (urls.length) lines.push('Sources:', ...urls.map(u => `- ${u}`), '');
   const tags = (post.tags || []).map(hashtag).filter(Boolean);
   if (tags.length) lines.push(tags.join(' '), '');
   lines.push('---', `Title: ${post.title || spec.title}`, `Alt text: ${altText(spec)}`);

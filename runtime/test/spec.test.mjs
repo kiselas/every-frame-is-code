@@ -227,10 +227,12 @@ test('cover time: default the hook at 2.0 s; post.cover = { shot, at }; clamped 
   const c0 = coverTime(noCover, T);
   assert.equal(c0.shot, 'hook'); assert.equal(c0.t, 2.0);
   const c1 = coverTime(SPEC, T);
-  assert.equal(c1.shot, 'label'); assert.equal(c1.local, 6.0); assert.equal(c1.t, +(T.shots[1].start + 6).toFixed(3));
+  const want = +Math.min(6, T.shots[1].dur - 0.8).toFixed(3);   // 6.0 s asked, but never within 0.8 s of the end of the shot
+  assert.equal(c1.shot, 'label'); assert.equal(c1.local, want); assert.equal(c1.t, +(T.shots[1].start + want).toFixed(3));
   const late = clone(SPEC); late.post.cover = { shot: 'hook', at: 99 };
   const c2 = coverTime(late, T);
-  assert.ok(c2.t < T.shots[0].end && c2.t > T.shots[0].end - 0.2, 'clamped to the end of the shot');
+  assert.ok(c2.t < T.shots[0].end && c2.t >= T.shots[0].end - 0.85, 'clamped away from the end of the shot, where a transition is blending the next one in');
+  assert.ok(c0.t >= T.shots[0].start + 0.5, 'and away from its start');
   const word = clone(SPEC); word.post.cover = { shot: 'label', at: { $word: 'лжеучёным', off: 0.3 } };
   assert.equal(coverTime(word, T).t, +(T.wordTime('лжеучёным') + 0.3).toFixed(3));
   const bad = clone(SPEC); bad.post.cover = { shot: 'nowhere' };
@@ -245,7 +247,8 @@ test('post.md: the hook first, the sources the shots use, the tags, an alt text 
   const md = buildPostMd(SPEC, { duration: 59.7 });
   const lines = md.split('\n');
   assert.equal(lines[0], SPEC.hook);
-  assert.match(md, /\nSources:\n- .* — https:\/\//);
+  assert.match(md, /\nSources:\n- https:\/\//);
+  assert.equal(md.split('\n').filter(l => l.startsWith('- https://')).length, new Set(SPEC.facts.map(f => f.source)).size, 'one line per source page, not per fact');
   assert.match(md, /#история #программирование #кибернетика #Ляпунов/);
   assert.match(md, /Title: Ляпунов: сначала схема, потом код/);
   assert.equal(sourcesOf(SPEC).length, SPEC.facts.length, 'every fact of the fixture is used by a shot');

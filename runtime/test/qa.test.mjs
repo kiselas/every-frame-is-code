@@ -198,7 +198,10 @@ test('word budget: 40 words in a 3 s film fail the 2.5 words per second, 107 wor
   assert.equal(v.status, 'WARN');
   assert.match(v.details[0], /voice alone/);
   assert.equal(Q.checkBudget(film({ duration: 50, voice: voice(100) })).status, 'PASS');
-  assert.equal(Q.wordBudget(film({ duration: 10, shots: [{ id: 'a', start: 0, end: 10, says: [{ text: 'A B|*C*', caption: 'D E' }] }], voice: voice(5) })).total, 10);
+  // a voiced film is read as statements + voice: the source captions are not counted (a silent film counts them)
+  assert.equal(Q.wordBudget(film({ duration: 10, shots: [{ id: 'a', start: 0, end: 10, says: [{ text: 'A B|*C*', caption: 'D E' }] }], voice: voice(5) })).total, 8);
+  assert.equal(Q.wordBudget(film({ duration: 10, shots: [{ id: 'a', start: 0, end: 10, says: [{ text: 'A B|*C*', caption: 'D E' }] }] })).total, 5);
+  assert.equal(Q.checkBudget(film({ duration: 20, shots: [{ id: 'a', start: 0, end: 20, says: [{ text: words(5), caption: words(60) }] }], voice: voice(40) })).status, 'PASS');
 });
 
 test('voice pace: a phrase over 2.6 words per second warns, short phrases are not judged', () => {

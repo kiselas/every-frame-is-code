@@ -156,7 +156,7 @@ async function main() {
   const notes = [];
   if (film.noFilm) notes.push('the page has no window.__film (not built on runtime/film.js): box checks are skipped');
   let spec = film.spec || null;
-  if (specArg) { try { spec = JSON.parse(fs.readFileSync(specArg, 'utf8')); } catch (e) { fail(`cannot read ${specArg}: ${e.message}`); } }
+  if (specArg) { try { spec = JSON.parse(fs.readFileSync(specArg, 'utf8')); if (spec && spec.spec && spec.timing) spec = spec.spec; } catch (e) { fail(`cannot read ${specArg}: ${e.message}`); } }
 
   const checks = [];
   let series = null, loud = null, v = null, sheetFile = null;

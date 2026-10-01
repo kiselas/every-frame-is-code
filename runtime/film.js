@@ -460,7 +460,7 @@ function create(cfg) {
   const vc = cfg.voice && { at: 'bc', size: Math.round(portrait ? W * .056 : H * .05), group: 3, highlight: true, box: true, offset: 0, duck: true, duckDb: 12, ...cfg.voice };
   // the picture band: where a shot's picture lives (portrait: under the statement, above the subtitles and the platform UI)
   const band = cfg.band || (portrait
-    ? (() => { const y = Math.round(H * .385), bottom = H - margin.yb - (vc ? Math.round(H * .08) : 0); return { x: margin.x, y, w: W - margin.x * 2, h: bottom - y }; })()
+    ? (() => { const y = Math.round(H * .385), bottom = H - margin.yb - (vc ? Math.round(H * .08) : 0), side = Math.max(margin.x, Math.round(W * .11)); return { x: side, y, w: W - side * 2, h: bottom - y }; })()
     : { x: margin.x, y: margin.y, w: W - margin.x * 2, h: H - margin.y - margin.yb });
 
   // --- compile shots: beats -> seconds, inherited chapter / theme / HUD values
@@ -756,14 +756,14 @@ function create(cfg) {
     const g = vGroups[gi]; if (!g || t > g.end + .45) return;
     const words = vWords.slice(g.a, g.b), full = words.map(w => w.word + (w.punct || ''));
     const a = clamp((t - (g.start - .06)) / .14) * (1 - clamp((t - g.end - .2) / .25)), rise = (1 - ease.outCubic(clamp((t - (g.start - .06)) / .18))) * 14;
-    const avail = W - margin.x * 2 - vc.size * .9;
+    const side = portrait ? Math.max(margin.x, Math.round(W * .11)) : margin.x, avail = W - side * 2 - vc.size * 1.1;   // portrait: clear of the button column on both sides, so the plate is centered
     let size = vc.size; c.save();
     const setFont = sz => { c.font = font(sz, vc.font || type.display, vc.weight ?? 700); c.letterSpacing = `${sz * .01}px`; };
     setFont(size); const spW = c.measureText(' ').width;
     let widths = full.map(x => c.measureText(x).width), total = widths.reduce((x, y) => x + y, 0) + spW * (full.length - 1);
     if (total > avail) { size = Math.floor(size * avail / total * .99); setFont(size); widths = full.map(x => c.measureText(x).width); total = widths.reduce((x, y) => x + y, 0) + c.measureText(' ').width * (full.length - 1); }
     const sp = c.measureText(' ').width, padX = size * .55, padY = size * .34, h = size * 1.2 + padY * 2;
-    const zone = f.zone(vc.at), cx = Array.isArray(vc.at) ? vc.at[0] : zone[0], bottom = (Array.isArray(vc.at) ? vc.at[1] : zone[1]) + rise;
+    const zone = f.zone(vc.at), cx = Array.isArray(vc.at) ? vc.at[0] : zone[0], bottom = (Array.isArray(vc.at) ? vc.at[1] : zone[1]) - Math.round(size * .3) + rise;   // above the bottom margin, also while it rises into place
     const x0 = cx - total / 2, top = bottom - h;
     c.globalAlpha = a;
     if (vc.box) { c.fillStyle = alpha(T.bg, .88); c.beginPath(); c.roundRect(x0 - padX, top, total + padX * 2, h, size * .3); c.fill(); c.strokeStyle = alpha(T.ink, .16); c.lineWidth = 2; c.stroke(); }
