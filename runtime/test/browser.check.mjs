@@ -124,6 +124,25 @@ const res = await page.evaluate(async () => {
   const band = (c, a, b) => ({ low: goertzel(c, .1, .3, 60) + goertzel(c, .1, .3, 90), tone: goertzel(c, .1, .2, 200), mid: goertzel(c, .1, .3, 2500) + goertzel(c, .1, .3, 3500), high: goertzel(c, .1, .2, 9000) + goertzel(c, .1, .2, 11000) });
   const bk = band(kk), bs = band(sn2), bh = band(ht);
   out.drums = { kickLowOverHigh: +(bk.low / bk.high).toFixed(1), hatHighOverLow: +(bh.high / bh.low).toFixed(1), snareMidOverKickMid: +(bs.mid / bk.mid).toFixed(1), snareHasBody: +(bs.tone / bs.high).toFixed(2) };
+  // 6. vertical film: orientation, a taller bottom margin, wide text shrinks to fit (and says so), vertical transitions, landscape unchanged
+  const warns = [], warn0 = console.warn; console.warn = m => warns.push(String(m));
+  const mkFilm = (W, H, say) => Film.create({ W, H, canvas: document.createElement('canvas'), shots: [{ id: 'a', bars: 1, say }] });
+  const land = mkFilm(1920, 1080, { text: 'HELLO|*WORLD*' });
+  const port = mkFilm(1080, 1920, { text: 'AN EXTREMELY LONG STATEMENT LINE THAT CANNOT FIT|*SHORT*', size: 160, caption: 'A CAPTION THAT IS ALSO FAR TOO LONG FOR ONE LINE OF A PHONE SCREEN, REALLY', captionSize: 40, captionAt: 0 });
+  window.__draw(1.9);                                     // draws the portrait film's frame, with its statement and caption
+  console.warn = warn0;
+  out.vertical = {
+    landscape: { portrait: land.portrait, u: land.u, sameMargins: land.margin.y === land.margin.yb, bottomZone: land.zone('bl')[1] },
+    portrait: { portrait: port.portrait, u: +port.u.toFixed(3), margin: port.margin, bottomZone: port.zone('bl')[1] },
+    fitWarnings: warns.length, fitMessage: warns[0] || '', captionWarned: warns.some(w => w.startsWith('caption ')),
+  };
+  const vt = (name, opts) => { const c = mk(640, 360, () => {}), g = c.getContext('2d'); Film.TRANSITIONS[name](g, A, B, .5, opts, null); return px(c, [[320, 90], [320, 270], [160, 180], [480, 180]]); };
+  const redder = (a, b) => (a[0] - a[1]) > (b[0] - b[1]) + 60;        // A is red, B is green; whip blurs, so compare instead of matching a color
+  for (const name of ['push', 'whip']) {
+    const [top, bottom] = vt(name, { axis: 'y', dir: 1 });
+    const [, , left, right] = vt(name, { dir: 1 });
+    out.vertical[name] = { yOldAbove: redder(top, bottom), xOldLeft: redder(left, right) };
+  }
   return out;
 });
 await browser.close();
@@ -134,6 +153,11 @@ need(res.postOnlyPalette, 'post: every output pixel is a palette color'); need(r
 need(res.midGrayDitherRatio > .4 && res.midGrayDitherRatio < .6, `post: 50% gray dithers to about half white (got ${res.midGrayDitherRatio})`);
 need(res.flipScale === 12, `flip: 4x3 screen onto 48x36 scales 12x (got ${res.flipScale})`); need(res.flipRed, 'flip: pixel color comes from the palette'); need(res.keyAlpha === 0, 'flip: key index is transparent');
 for (const [n, t] of Object.entries(res.transitions)) { need(t.startsAsA, `${n}: p=0 shows the old frame`); need(t.endsAsB, `${n}: p=1 shows the new frame`); need(t.middleMixed, `${n}: p=.5 is a mix`); }
+const vv = res.vertical;
+need(vv.landscape.portrait === false && vv.landscape.u === 1 && vv.landscape.sameMargins && vv.landscape.bottomZone === 1080 - 108, `vertical: a landscape film keeps equal top and bottom margins (${JSON.stringify(vv.landscape)})`);
+need(vv.portrait.portrait === true && vv.portrait.u === 1 && vv.portrait.margin.yb === 422 && vv.portrait.margin.y === 192 && vv.portrait.bottomZone === 1920 - 422, `vertical: a portrait film defaults to 7% / 10% / 22% safe margins (${JSON.stringify(vv.portrait)})`);
+need(vv.fitWarnings >= 2 && /widest line/.test(vv.fitMessage) && vv.captionWarned, `vertical: a too-wide statement and a too-long caption each shrink and warn (got ${vv.fitWarnings}: ${vv.fitMessage})`);
+for (const n of ['push', 'whip']) need(vv[n].yOldAbove && vv[n].xOldLeft, `${n}: axis y slides vertically, the default slides sideways (${JSON.stringify(vv[n])})`);
 need(res.music.events > 100 && res.music.errors === 0 && res.music.lint > 60, `music: the generated score is well formed and lints clean (${JSON.stringify(res.music)})`);
 need(res.music.peak > .05 && res.music.peak < 1 && res.music.rms > .01 && res.music.nan === 0 && res.music.identical, `music: the generated score plays audibly, finitely and identically twice (${JSON.stringify(res.music)})`);
 need(res.chip.peak > .05 && res.chip.peak < 1 && res.chip.nan === 0 && res.chip.identical, `chip: audible, finite, deterministic (${JSON.stringify(res.chip)})`);

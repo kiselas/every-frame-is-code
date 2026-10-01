@@ -40,8 +40,13 @@ The runtime sets up the canvas, the render contract for `render/render.mjs` (`__
 | `score` | none | `(ac, bus, f, at) => {}` schedules the music, see Audio |
 | `post` | grain + vignette | `(ctx, T, f) => {}` after the HUD |
 | `transitions` | {} | Extra transitions `{ name: (ctx, A, B, p, opts, f) => {} }` |
-| `safe` | [.065, .1] | Safe margins as fractions of W and H |
+| `safe` | `[.065, .1]`; portrait `[.07, .1, .22]` | Safe margins as fractions: `[sides, top, bottom]`, bottom defaults to top. Portrait leaves room for the platform UI at the bottom |
+| `fontText` | '' | Characters drawn inside `draw()` functions, so each font in `fonts` is loaded with the right unicode-range file (statements and captions are added automatically). Needed for Cyrillic, Greek, accents |
 | `tail` | 0 | Seconds after the last shot |
+
+## Vertical films
+
+`W: 1080, H: 1920` switches the runtime to portrait: `f.portrait`, `f.u` (the unit, `min(W, H) / 1080`), a taller bottom margin `f.margin.yb`, statements sized from the width, the HUD scaled by the short side. A statement or caption wider than its room shrinks to fit and logs a `console.warn`; `fit: false` turns that off and `maxWidth` sets the room. Chapter and checklist: [19-vertical.md](../19-vertical.md); example: [examples/lyapunov/](../examples/lyapunov/). `node render/textcheck.mjs film.html` sweeps a film for those warnings.
 
 ## Shots
 
@@ -103,7 +108,7 @@ Digits sit in fixed cells, so a running number doesn't jitter. `format`: `'int'`
 
 ## Transitions
 
-`fade`, `dip` (color), `flash` (to white and out with rays), `punch` (hard cut with a zoom punch, ghosting and rays), `push` (dir), `whip` (dir), `zoom` (at, color: into a point of the old shot), `iris` (at), `wipe`. Options go into the `in` object; `beats` is the window, centered on the cut.
+`fade`, `dip` (color), `flash` (to white and out with rays), `punch` (hard cut with a zoom punch, ghosting and rays), `push` (dir, axis), `whip` (dir, axis; `axis: 'y'` slides vertically), `zoom` (at, color: into a point of the old shot), `iris` (at), `wipe`. Options go into the `in` object; `beats` is the window, centered on the cut.
 
 ## Drawing helpers
 
