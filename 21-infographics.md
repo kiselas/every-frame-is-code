@@ -114,7 +114,7 @@ Over any of these, split the shot.
 
 ## A worked critique: Lyapunov, version 1
 
-The first version of [examples/lyapunov/film.html](examples/lyapunov/film.html) has good typography, a sound structure and a stamp motif that works. Its pictures are the weak layer: five of the eleven fail the label test. Shot by shot:
+The first version of [examples/lyapunov/v1/film.html](examples/lyapunov/v1/film.html) has good typography, a sound structure and a stamp motif that works. Its pictures are the weak layer: five of the eleven fail the label test. Shot by shot:
 
 | Shot | Claim | Claim type | What v1 shows | Verdict | What it should show |
 |---|---|---|---|---|---|

@@ -74,6 +74,29 @@ node textcheck.mjs ../film.html 0.25     # a finer sweep
 
 `runtime/film.js` shrinks a statement or caption that is wider than its room and logs a warning; the sweep collects them, plus page errors, so a type size that would wander from shot to shot is caught before a render. Matters most for vertical films ([19-vertical.md](../19-vertical.md)).
 
+## The short factory
+
+Spoken, subtitled vertical shorts on a line: one `spec.json` per video, a command per step. The format of the spec and the whole line: [23-short-factory.md](../23-short-factory.md).
+
+```bash
+node new.mjs lyapunov --genre one-life --lang ru        # videos/lyapunov/spec.json + voice.txt from a genre template (--genres lists the 11)
+node make.mjs ../videos/lyapunov/spec.json --draft      # lint, voice, page, draft render, review: about 2 minutes
+node make.mjs ../videos/lyapunov/spec.json              # final render, review, captions, cover, post text, upload export
+node make.mjs ../videos/*/spec.json                     # a batch: the voice is cached per sentence, an unchanged render is skipped
+```
+
+| Tool | What it does |
+|---|---|
+| `make.mjs` | the orchestrator. Options: `--draft`, `--shot id[..id]`, `--out dir`, `--no-render` (stop at the page), `--no-qa`, `--no-post`, `--no-lint`, `--force`, `--inline`, `--strict`. Writes `out/` next to the spec: `film.html`, `voice.*`, `spec.resolved.json`, `<id>.mp4`, `qa/`, `captions.srt`, `cover.jpg`, `post.md`, `exports/`. Exit 0 all passed, 1 lint errors or a failed review, 2 a tool failed |
+| `voice.mjs script.txt out/voice` | text to `voice.wav` + word and phrase timings; `--engine edge` (free, `pip install edge-tts`, runs as an external tool) or `openrouter` (paid, `OPENROUTER_API_KEY`); `--voice`, `--rate`, `--gap`, `--sentence-gap`, `--voices ru` lists voices. Synthesizes sentence by sentence, cuts the service's padding, calibrates word times to the audio (its offsets run about 0.16 s ahead) |
+| `lint-spec.mjs spec.json [--voice out/voice] [--json]` | checks a spec before anything is made: budgets, anchors against the voice, blocks and their parameters, facts with sources, genre rules, leftover `TODO`s. Exit 1 on errors |
+| `qa.mjs film.html --video v.mp4 [--spec s.json] [--out dir] [--strict]` | the automatic review: frame 0 motion, hook, dead stretches, safe zones, overlaps, text-fit warnings, statement and word budgets, voice pace, loudness, black and frozen frames; writes `report.md`, `report.json`, `sheet.png`, `poster/`. Exit 1 on a failure |
+| `post.mjs out/` | `captions.srt`/`.vtt` from the voice, `cover.jpg` (1080x1920) and a 4:5 crop, `post.md` (title, hook, description, sources, tags, alt text), `exports/<id>-upload.mp4` (crf 22) |
+| `new.mjs id --genre g` | a spec and a voice text from `templates/genres/<g>.json`; refuses to overwrite |
+| `textcheck.mjs film.html` | the sweep for text-fit warnings alone |
+
+Edge TTS talks to the service behind Microsoft Edge's "Read aloud": free and keyless, but not an official public API. It is right for drafts and for projects where that is acceptable; for a commercial release use the `openrouter` engine (models such as `openai/gpt-4o-mini-tts` or `mistralai/voxtral-mini-tts-2603`; it returns no word times, so they are spread by letter count and marked `approx`).
+
 ## Stills
 
 ```bash

@@ -74,7 +74,7 @@ jobs:
           mkdir -p _site/lyapunov
           cp examples/lyapunov/preview.jpg _site/lyapunov/preview.jpg
           lyap_url="${SITE_URL}lyapunov/"
-          lyap_desc="Lyapunov: a 50-second vertical film (Reels, Shorts) about the mathematician who taught programming and gave cybernetics its name back, drawn entirely by code in your browser. Made with motion-kit."
+          lyap_desc="Lyapunov (silent version 1): a 50-second vertical film (Reels, Shorts) about the mathematician who taught programming and gave cybernetics its name back, drawn entirely by code in your browser. Made with motion-kit."
           cat > _site/lyapunov/meta.html <<'META'
           <meta name="description" content="@DESC@">
           <meta property="og:title" content="Lyapunov · a vertical film made of code">
@@ -84,7 +84,7 @@ jobs:
           <meta name="twitter:card" content="summary_large_image">
           META
           sed -i "s|@DESC@|$lyap_desc|; s|@URL@|$lyap_url|" _site/lyapunov/meta.html
-          node runtime/inline.mjs examples/lyapunov/film.html _site/lyapunov/film.html
+          node runtime/inline.mjs examples/lyapunov/v1/film.html _site/lyapunov/film.html
           sed '/<\/title>/r _site/lyapunov/meta.html' _site/lyapunov/film.html > _site/lyapunov/index.html
           rm _site/lyapunov/film.html _site/lyapunov/meta.html
           grep -q 'og:image' _site/lyapunov/index.html

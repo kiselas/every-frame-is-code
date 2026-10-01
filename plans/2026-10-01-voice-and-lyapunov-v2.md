@@ -1,5 +1,8 @@
 # План: озвучка в ките и вторая версия ролика про Ляпунова
 
+> **Status (2026-10-01): done, and widened.** The plan's tools were built as a general line for voiced shorts instead of one-off scripts: `render/voice.mjs` (§3.1), subtitles/ducking/word anchors in `runtime/film.js` (§3.3; ducking from word times replaced the sidechain of §3.2), and the film itself became data: `examples/lyapunov/spec.json` built by `render/make.mjs` from `runtime/short.js` and `runtime/blocks.js`. See [23-short-factory.md](../23-short-factory.md). Deviations from this plan: 9 shots, the Ershov line limited to what the source supports, a `tree` of five instead of an invented count, and the §4.4 pictures realized as blocks (`split`, `rail`, `flow`, `tree`, `card`, `counter`).
+
+
 Рабочий документ для исполнителя (сессия Claude Sonnet 5.5). Самодостаточен: контекст, решения, шаги, критерии приёмки, ловушки. Папка `plans/` в архив скилла не попадает (`scripts/pack-skill.sh` берёт только перечисленные файлы).
 
 ## 0. Контекст

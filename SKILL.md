@@ -19,11 +19,12 @@ description: Code-drawn motion graphics, animated videos, explainers of 1-3 minu
    - chiptune music and 8-bit sound effects as text (MML) and as data (Scores, real drums, echo, ducking): `16-chiptune.md` and `runtime/chip.js`;
    - a whole score from a short plan (key, style, an energy per section), with a linter and an audio report so you can fix music you cannot hear: `18-music-generation.md`, `runtime/compose.js`, `runtime/music-lint.js`, `render/music-report.mjs`;
    - demoscene effects (plasma, tunnel, rotozoom, copper bars, metaballs, starfield) as functions of x, y, t: `17-demoscene.md` and `runtime/pixel-fx.js`;
-   - a film longer than ~45 s, an explainer, a story on any topic: `14-long-form.md` and `runtime/README.md`, build on `runtime/film.js`, see `examples/gps/`;
    - a vertical video for Reels, Shorts or TikTok (1080×1920): safe zones, type, fonts for Cyrillic and other non-Latin text, text-fit checks: `19-vertical.md`, build on `runtime/film.js` with `H > W`, see `examples/lyapunov/`;
    - any film watched without sound (all social video): the silent contract, the word budget, the genre map (how it works, one life, one number, timeline, versus, myth vs fact, countdown, process, statement, teaser, loop) and each genre's requirements: `20-silent-social.md`;
    - the pictures of an explainer: claim types, the label test, encodings, yardsticks, motion as data, density limits for a phone: `21-infographics.md`;
+   - a series of spoken, subtitled vertical shorts made on a line (one `spec.json` per video: voice-over, shots tied to the spoken words, picture blocks, music, facts with sources; then `render/new.mjs`, `render/make.mjs`, `render/qa.mjs`, `render/post.mjs`): `23-short-factory.md`, `runtime/short.js`, `runtime/blocks.js`, see `examples/lyapunov/`;
    - a reference video to learn from: `node render/analyze.mjs ref.mp4 out/`, then read its report and sheets.
+   - a film longer than ~45 s, an explainer, a story on any topic: `14-long-form.md` and `runtime/README.md`, build on `runtime/film.js`, see `examples/gps/`;
 3. Show the plan as data first (style, beat grid, shots, events), then write the code. For a long film, the plan is `SCRIPT.md`: thesis, spine, through-line and the shot table (`14-long-form.md`).
 4. Write the page to render fast from the start (`13-performance.md`): sprites instead of per-draw blur, no pixel readbacks in the frame loop, static layers cached. Iterate with `render.mjs --draft` on fragments.
 5. After rendering, build a contact sheet (`render/contact-sheet.sh`), look at it, and fix issues by specific timecodes. Check single frames at full size with `render/still.mjs`.

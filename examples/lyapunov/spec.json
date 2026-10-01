@@ -1,0 +1,961 @@
+{
+  "id": "lyapunov",
+  "title": "Ляпунов: сначала схема",
+  "lang": "ru",
+  "genre": "one-life",
+  "thesis": "Программу сначала рисуют схемой, а потом пишут кодом; этому в СССР учил человек, которого в 1954-м называли лжеучёным, и он же вернул слову «кибернетика» право быть наукой.",
+  "hook": "Хорошая программа начинается не с кода, а со схемы. А человека, который этому учил, называли лжеучёным.",
+  "format": {
+    "W": 1080,
+    "H": 1920,
+    "FPS": 30
+  },
+  "tempo": 120,
+  "voice": {
+    "engine": "edge",
+    "voice": "ru-RU-DmitryNeural",
+    "rate": "-5%",
+    "file": "voice.txt"
+  },
+  "style": {
+    "themes": [
+      "paper",
+      "blueprint"
+    ],
+    "display": "Oswald",
+    "mono": "IBM Plex Mono",
+    "statementSize": 94
+  },
+  "music": {
+    "seed": 5,
+    "key": "A minor",
+    "style": "tense",
+    "gain": 0.55
+  },
+  "hud": {
+    "kind": "rail",
+    "key": "year",
+    "span": [
+      1911,
+      1973
+    ],
+    "marks": [
+      1911,
+      1932,
+      1944,
+      1952,
+      1955,
+      1959,
+      1961,
+      1973
+    ]
+  },
+  "shots": [
+    {
+      "id": "hook",
+      "phrases": [
+        0
+      ],
+      "chapter": "",
+      "theme": "paper",
+      "claim": "comparison",
+      "energy": 0.2,
+      "hud": false,
+      "say": {
+        "text": "НЕ С КОДА,|*СО СХЕМЫ.*",
+        "start": {
+          "$word": "начинается"
+        },
+        "payoff": {
+          "$word": "схемы"
+        }
+      },
+      "picture": {
+        "block": "split",
+        "divider": true,
+        "dead": "left",
+        "deadAt": {
+          "$word": "схемы"
+        },
+        "left": {
+          "label": "КОД",
+          "pic": {
+            "block": "columns",
+            "cols": 3,
+            "rows": 8,
+            "base": 8,
+            "digits": 4,
+            "scroll": 70
+          }
+        },
+        "right": {
+          "label": "СХЕМА",
+          "pic": {
+            "block": "flow",
+            "nodes": [
+              {
+                "id": "A",
+                "kind": "box",
+                "label": "ЧИТАТЬ",
+                "letter": "A"
+              },
+              {
+                "id": "B",
+                "kind": "box",
+                "label": "СЧИТАТЬ",
+                "letter": "B"
+              },
+              {
+                "id": "D",
+                "kind": "diamond",
+                "label": "ГОТОВО?"
+              }
+            ],
+            "edges": [
+              [
+                "A",
+                "B"
+              ],
+              [
+                "B",
+                "D"
+              ],
+              [
+                "D",
+                "A",
+                {
+                  "label": "НЕТ"
+                }
+              ]
+            ],
+            "token": {
+              "route": [
+                "A",
+                "B",
+                "D",
+                "A",
+                "B",
+                "D",
+                "A"
+              ],
+              "at": {
+                "$word": "а"
+              },
+              "dur": 3.2
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "label",
+      "phrases": [
+        1
+      ],
+      "chapter": "I · ЯРЛЫК",
+      "theme": "paper",
+      "claim": "identity",
+      "energy": 0.3,
+      "in": "push-up",
+      "set": {
+        "year": 1954
+      },
+      "facts": [
+        "f_dict"
+      ],
+      "say": {
+        "text": "В 1954-М —|*ЛЖЕУЧЁНЫЙ.*",
+        "start": {
+          "$word": "называли",
+          "off": -0.6
+        },
+        "payoff": {
+          "$word": "лжеучёным"
+        },
+        "caption": "КРАТКИЙ ФИЛОСОФСКИЙ СЛОВАРЬ, 1954"
+      },
+      "picture": {
+        "block": "card",
+        "layers": [
+          {
+            "kind": "dictionary",
+            "title": "КИБЕРНЕТИКА",
+            "lines": 9,
+            "stamps": [
+              {
+                "text": "ЛЖЕНАУКА",
+                "at": {
+                  "$word": "лжеучёным"
+                },
+                "tone": "accent",
+                "rot": -0.16
+              }
+            ]
+          }
+        ]
+      },
+      "sfx": [
+        {
+          "at": {
+            "$word": "лжеучёным"
+          },
+          "kind": "stamp"
+        }
+      ]
+    },
+    {
+      "id": "who",
+      "phrases": [
+        2
+      ],
+      "claim": "identity",
+      "energy": 0.25,
+      "in": "dip",
+      "set": {
+        "year": {
+          "to": 1911,
+          "dur": 1.4
+        }
+      },
+      "facts": [
+        "f_born",
+        "f_luzin",
+        "f_war"
+      ],
+      "say": {
+        "text": "МАТЕМАТИК,|*НЕ ИНЖЕНЕР.*",
+        "start": {
+          "$word": "Математик"
+        },
+        "payoff": {
+          "$word": "Лузина"
+        }
+      },
+      "picture": [
+        {
+          "block": "plate",
+          "title": "ЛЯПУНОВ",
+          "sub": "АЛЕКСЕЙ АНДРЕЕВИЧ",
+          "years": "1911 — 1973",
+          "area": {
+            "frac": [
+              0,
+              0,
+              1,
+              0.5
+            ]
+          }
+        },
+        {
+          "block": "rail",
+          "span": [
+            1911,
+            1973
+          ],
+          "area": {
+            "frac": [
+              0,
+              0.54,
+              1,
+              0.46
+            ]
+          },
+          "spans": [
+            {
+              "a": 1942,
+              "b": 1945,
+              "label": "АРТИЛЛЕРИЯ",
+              "style": "hatch",
+              "at": {
+                "$word": "артиллерист"
+              }
+            }
+          ],
+          "marks": [
+            {
+              "t": 1911,
+              "label": "РОДИЛСЯ"
+            },
+            {
+              "t": 1932,
+              "label": "ЛУЗИН",
+              "at": {
+                "$word": "Лузина"
+              }
+            },
+            {
+              "t": 1944,
+              "label": "ЗВЕЗДА",
+              "at": {
+                "$word": "артиллерист",
+                "off": 0.3
+              }
+            },
+            {
+              "t": 1952,
+              "label": "КУРС",
+              "accent": true,
+              "at": {
+                "$phrase": 2,
+                "at": "end"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "numbers",
+      "phrases": [
+        3
+      ],
+      "chapter": "II · СХЕМА",
+      "theme": "blueprint",
+      "claim": "identity",
+      "energy": 0.45,
+      "in": "dip",
+      "set": {
+        "year": {
+          "to": 1952,
+          "dur": 1.4
+        }
+      },
+      "facts": [
+        "f_mesm"
+      ],
+      "say": {
+        "text": "ТОЛЬКО|*ЧИСЛА.*",
+        "start": {
+          "$word": "только"
+        },
+        "payoff": {
+          "$word": "числа"
+        },
+        "caption": "ПРОГРАММА — СТОЛБЦЫ МАШИННЫХ КОДОВ, 1952"
+      },
+      "picture": {
+        "block": "columns",
+        "cols": 5,
+        "rows": 9,
+        "base": 8,
+        "digits": 5,
+        "scroll": 70,
+        "glitch": {
+          "at": {
+            "$word": "ошибка"
+          },
+          "col": 2,
+          "row": 4
+        },
+        "label": "МАШИННЫЙ КОД"
+      }
+    },
+    {
+      "id": "scheme",
+      "phrases": [
+        4
+      ],
+      "theme": "blueprint",
+      "claim": "comparison",
+      "energy": 0.65,
+      "in": "push-up",
+      "set": {
+        "year": {
+          "to": 1953,
+          "dur": 1.0
+        }
+      },
+      "facts": [
+        "f_operator"
+      ],
+      "say": {
+        "text": "СНАЧАЛА|*СХЕМА.*",
+        "start": {
+          "$word": "сначала"
+        },
+        "payoff": {
+          "$word": "схему"
+        },
+        "caption": "ОПЕРАТОРНЫЙ МЕТОД, 1952–1953"
+      },
+      "picture": {
+        "block": "split",
+        "divider": true,
+        "dead": "left",
+        "deadAt": {
+          "$word": "схему"
+        },
+        "left": {
+          "label": "КОД ВРУЧНУЮ",
+          "pic": {
+            "block": "columns",
+            "cols": 3,
+            "rows": 9,
+            "base": 8,
+            "digits": 4,
+            "scroll": 70
+          }
+        },
+        "right": {
+          "label": "СХЕМА",
+          "pic": {
+            "block": "flow",
+            "nodes": [
+              {
+                "id": "S",
+                "kind": "pill",
+                "label": "ЗАДАЧА"
+              },
+              {
+                "id": "A",
+                "kind": "box",
+                "label": "ЧИТАТЬ",
+                "letter": "A"
+              },
+              {
+                "id": "B",
+                "kind": "box",
+                "label": "СЧИТАТЬ",
+                "letter": "B"
+              },
+              {
+                "id": "D",
+                "kind": "diamond",
+                "label": "ГОТОВО?"
+              },
+              {
+                "id": "E",
+                "kind": "pill",
+                "label": "РЕЗУЛЬТАТ"
+              }
+            ],
+            "edges": [
+              [
+                "S",
+                "A"
+              ],
+              [
+                "A",
+                "B"
+              ],
+              [
+                "B",
+                "D"
+              ],
+              [
+                "D",
+                "A",
+                {
+                  "label": "НЕТ"
+                }
+              ],
+              [
+                "D",
+                "E",
+                {
+                  "label": "ДА"
+                }
+              ]
+            ],
+            "token": {
+              "route": [
+                "S",
+                "A",
+                "B",
+                "D",
+                "A",
+                "B",
+                "D",
+                "E"
+              ],
+              "at": {
+                "$word": "условия"
+              },
+              "dur": 4.0
+            },
+            "counters": [
+              {
+                "label": "ВРУЧНУЮ",
+                "from": 0,
+                "to": 0
+              },
+              {
+                "label": "СТРОК КОДА",
+                "from": 0,
+                "to": 24,
+                "at": {
+                  "$word": "соберёт"
+                },
+                "dur": 2.4
+              }
+            ]
+          }
+        }
+      },
+      "sfx": [
+        {
+          "at": {
+            "$word": "соберёт"
+          },
+          "kind": "print",
+          "count": 24,
+          "every": 0.1
+        }
+      ]
+    },
+    {
+      "id": "ban",
+      "phrases": [
+        5
+      ],
+      "chapter": "III · ИМЯ",
+      "theme": "paper",
+      "claim": "identity",
+      "energy": 0.25,
+      "in": "punch",
+      "set": {
+        "year": {
+          "to": 1954,
+          "dur": 1.0
+        }
+      },
+      "facts": [
+        "f_article53",
+        "f_dict"
+      ],
+      "say": {
+        "text": "СЛОВО —|*КЛЕЙМО.*",
+        "start": {
+          "$word": "слово"
+        },
+        "payoff": {
+          "$word": "лженаукой"
+        },
+        "caption": "1953 · СТАТЬЯ, 1954 · СЛОВАРЬ"
+      },
+      "picture": {
+        "block": "card",
+        "layers": [
+          {
+            "kind": "article",
+            "title": "КОМУ СЛУЖИТ КИБЕРНЕТИКА?",
+            "meta": "ВОПРОСЫ ФИЛОСОФИИ №5 · 1953 · «МАТЕРИАЛИСТ»",
+            "offset": [
+              -130,
+              -120
+            ],
+            "rot": -0.05,
+            "scale": 0.8
+          },
+          {
+            "kind": "dictionary",
+            "title": "КИБЕРНЕТИКА",
+            "meta": "КРАТКИЙ СЛОВАРЬ · 1954",
+            "lines": 6,
+            "offset": [
+              90,
+              110
+            ],
+            "rot": 0.025,
+            "scale": 0.8,
+            "at": {
+              "$word": "слово"
+            },
+            "stamps": [
+              {
+                "text": "ЛЖЕНАУКА",
+                "at": {
+                  "$word": "лженаукой"
+                },
+                "tone": "accent",
+                "rot": -0.14,
+                "size": 120
+              }
+            ]
+          }
+        ]
+      },
+      "sfx": [
+        {
+          "at": {
+            "$word": "лженаукой"
+          },
+          "kind": "stamp",
+          "gain": 0.7
+        }
+      ]
+    },
+    {
+      "id": "fight",
+      "phrases": [
+        6
+      ],
+      "claim": "change",
+      "energy": 0.85,
+      "in": "cut",
+      "set": {
+        "year": {
+          "to": 1959,
+          "dur": 4.5
+        }
+      },
+      "facts": [
+        "f_seminar",
+        "f_article55",
+        "f_council"
+      ],
+      "say": {
+        "text": "ДЕСЯТЬ ЛЕТ|*СЕМИНАРА.*",
+        "start": {
+          "$word": "десять"
+        },
+        "payoff": {
+          "$word": "семинара"
+        },
+        "caption": "СЕМИНАР 1954–1964 · СТАТЬЯ 1955 · СОВЕТ 1959"
+      },
+      "picture": [
+        {
+          "block": "rail",
+          "span": [
+            1953,
+            1965
+          ],
+          "spans": [
+            {
+              "a": 1954,
+              "b": 1964,
+              "label": "СЕМИНАР",
+              "style": "solid",
+              "at": {
+                "$word": "десять"
+              },
+              "dur": 2.2
+            }
+          ],
+          "marks": [
+            {
+              "t": 1955,
+              "label": "СТАТЬЯ",
+              "at": {
+                "$word": "статья"
+              }
+            },
+            {
+              "t": 1959,
+              "label": "СОВЕТ АН",
+              "accent": true,
+              "at": {
+                "$word": "совет"
+              }
+            }
+          ],
+          "area": {
+            "frac": [
+              0,
+              0,
+              1,
+              0.5
+            ]
+          }
+        },
+        {
+          "block": "counter",
+          "value": 10,
+          "from": 0,
+          "unit": "ЛЕТ СЕМИНАРА",
+          "format": "int",
+          "at": {
+            "$word": "десять"
+          },
+          "dur": 1.6,
+          "area": {
+            "frac": [
+              0,
+              0.52,
+              1,
+              0.48
+            ]
+          },
+          "tone": "accent"
+        }
+      ],
+      "sfx": [
+        {
+          "at": {
+            "$word": "совет"
+          },
+          "kind": "ping"
+        }
+      ]
+    },
+    {
+      "id": "school",
+      "phrases": [
+        7
+      ],
+      "chapter": "IV · ШКОЛА",
+      "theme": "paper",
+      "claim": "structure",
+      "energy": 0.6,
+      "in": "dip",
+      "set": {
+        "year": {
+          "to": 1961,
+          "dur": 1.4
+        }
+      },
+      "facts": [
+        "f_ershov",
+        "f_students"
+      ],
+      "say": {
+        "text": "ВОКРУГ ВЫРОСЛА|*ШКОЛА.*",
+        "start": {
+          "$word": "вернули"
+        },
+        "payoff": {
+          "$word": "школа"
+        },
+        "caption": "ЕРШОВ · ЖУРАВЛЁВ · ЛУПАНОВ · КЕТКОВ · ФЕДОТОВ"
+      },
+      "picture": {
+        "block": "tree",
+        "root": "ЛЯПУНОВ",
+        "levels": [
+          5
+        ],
+        "countLabel": "УЧЕНИКОВ",
+        "grow": "up",
+        "at": {
+          "$word": "ученик"
+        },
+        "names": [
+          {
+            "label": "ЕРШОВ",
+            "level": 1,
+            "accent": true,
+            "at": {
+              "$word": "Ершов"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "end",
+      "phrases": [
+        8
+      ],
+      "claim": "identity",
+      "energy": 0.15,
+      "in": "push-up",
+      "tail": 1.6,
+      "set": {
+        "year": {
+          "to": 1973,
+          "dur": 2.5
+        }
+      },
+      "say": {
+        "text": "ЯРЛЫК ОТЛЕПИЛСЯ.|*СХЕМА* ОСТАЛАСЬ.",
+        "start": {
+          "$word": "ярлык"
+        },
+        "payoff": {
+          "$word": "схема"
+        }
+      },
+      "picture": [
+        {
+          "block": "card",
+          "area": {
+            "frac": [
+              0,
+              0,
+              1,
+              0.76
+            ]
+          },
+          "layers": [
+            {
+              "kind": "dictionary",
+              "title": "КИБЕРНЕТИКА",
+              "lines": 0,
+              "stamps": [
+                {
+                  "text": "ЛЖЕНАУКА",
+                  "at": -1,
+                  "tone": "accent",
+                  "rot": -0.14,
+                  "size": 120,
+                  "out": {
+                    "at": {
+                      "$word": "отлепился"
+                    },
+                    "dur": 1.2
+                  }
+                },
+                {
+                  "text": "НАУКА",
+                  "at": -1,
+                  "tone": "ok",
+                  "rot": 0.05,
+                  "size": 150
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "block": "flow",
+          "layout": "row",
+          "area": {
+            "frac": [
+              0,
+              0.8,
+              1,
+              0.2
+            ]
+          },
+          "nodes": [
+            {
+              "id": "A",
+              "kind": "box",
+              "label": "A"
+            },
+            {
+              "id": "B",
+              "kind": "box",
+              "label": "B"
+            },
+            {
+              "id": "D",
+              "kind": "diamond",
+              "label": "?"
+            }
+          ],
+          "edges": [
+            [
+              "A",
+              "B"
+            ],
+            [
+              "B",
+              "D"
+            ],
+            [
+              "D",
+              "A"
+            ]
+          ],
+          "token": {
+            "route": [
+              "A",
+              "B",
+              "D",
+              "A",
+              "B",
+              "D",
+              "A",
+              "B",
+              "D"
+            ],
+            "at": {
+              "$word": "схема"
+            },
+            "dur": 4.0
+          }
+        }
+      ],
+      "sfx": [
+        {
+          "at": {
+            "$word": "отлепился"
+          },
+          "kind": "whoosh"
+        }
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "id": "f_born",
+      "text": "Родился 25 сентября (8 октября) 1911 года в Москве, умер 23 июня 1973 года.",
+      "source": "https://ru.wikipedia.org/wiki/Ляпунов,_Алексей_Андреевич"
+    },
+    {
+      "id": "f_luzin",
+      "text": "С 1932 года ученик академика Н. Н. Лузина.",
+      "source": "https://ru.wikipedia.org/wiki/Ляпунов,_Алексей_Андреевич"
+    },
+    {
+      "id": "f_war",
+      "text": "1942–1945: командир топографического взвода в артиллерии; орден Красной Звезды (1944).",
+      "source": "https://ru.wikipedia.org/wiki/Ляпунов,_Алексей_Андреевич"
+    },
+    {
+      "id": "f_dict",
+      "text": "Краткий философский словарь, издание 1954 года, определил кибернетику как буржуазную реакционную лженауку.",
+      "source": "https://computer-museum.ru/articles/aleksey-andreevich-lyapunov-ocherk-zhizni-i-tvorchestva-okruzhenie-i-lichnost/270/"
+    },
+    {
+      "id": "f_mesm",
+      "text": "В конце 1952 года Ляпунов познакомился с МЭСМ, первой советской ЭВМ; программы писались в машинных кодах.",
+      "source": "https://www.computer-museum.ru/galglory/lypunov2.htm"
+    },
+    {
+      "id": "f_operator",
+      "text": "1952–1953: первый спецкурс «Принципы программирования» (8 лекций) в МГУ; операторный метод и программирующая программа.",
+      "source": "https://www.computer-museum.ru/galglory/lypunov2.htm"
+    },
+    {
+      "id": "f_article53",
+      "text": "«Кому служит кибернетика?», «Вопросы философии» №5, 1953, под псевдонимом «Материалист».",
+      "source": "https://computer-museum.ru/articles/aleksey-andreevich-lyapunov-ocherk-zhizni-i-tvorchestva-okruzhenie-i-lichnost/270/"
+    },
+    {
+      "id": "f_seminar",
+      "text": "Семинар «Автоматы и мышление» на мехмате МГУ существовал с 1954 по 1964 год.",
+      "source": "https://ru.wikipedia.org/wiki/Ляпунов,_Алексей_Андреевич"
+    },
+    {
+      "id": "f_article55",
+      "text": "С. Л. Соболев, А. И. Китов, А. А. Ляпунов, «Основные черты кибернетики», «Вопросы философии» №4, 1955: первая положительная статья о кибернетике в СССР.",
+      "source": "https://kitov.rea.ru/pervaa-pozitivnaa-stata-o-kibernetike"
+    },
+    {
+      "id": "f_council",
+      "text": "1959: Научный совет по кибернетике при Президиуме АН СССР; председатель А. И. Берг, заместитель А. А. Ляпунов.",
+      "source": "https://computer-museum.ru/articles/aleksey-andreevich-lyapunov-ocherk-zhizni-i-tvorchestva-okruzhenie-i-lichnost/270/"
+    },
+    {
+      "id": "f_ershov",
+      "text": "А. П. Ершов, ученик Ляпунова, создал одну из первых программирующих программ для БЭСМ и «Стрелы»; монография 1958 года.",
+      "source": "https://ru.wikipedia.org/wiki/Ершов,_Андрей_Петрович"
+    },
+    {
+      "id": "f_students",
+      "text": "Среди учеников: А. П. Ершов, Ю. И. Журавлёв, Ю. Л. Кетков, О. Б. Лупанов, А. М. Федотов.",
+      "source": "https://ru.wikipedia.org/wiki/Ляпунов,_Алексей_Андреевич"
+    }
+  ],
+  "post": {
+    "title": "Человек, которого называли лжеучёным, научил страну программировать",
+    "description": "Алексей Ляпунов учил этому с 1952 года, когда слово «кибернетика» в СССР считали лженаукой, и добился того, чтобы оно стало наукой. 8 октября ему исполнилось бы 115.",
+    "tags": [
+      "программирование",
+      "история",
+      "кибернетика",
+      "ляпунов",
+      "наука"
+    ],
+    "cover": {
+      "shot": "label",
+      "at": {
+        "$word": "лжеучёным",
+        "off": 0.5
+      }
+    }
+  }
+}

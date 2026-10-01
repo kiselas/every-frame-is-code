@@ -53,6 +53,7 @@ Short rules. Details in the neighboring files.
 ## Silent social video and infographics (20, 21)
 33. Social video is watched without sound: the picture is the film, music is a bonus layer. Review once with the sound off. Word budget 2.5 words per second of film; a statement is at most 8 words and stays at least 2 s; frame 0 moves and the question is on screen by 2 s. Name the genre in `SCRIPT.md` and check its requirement card (`20-silent-social.md`).
 34. A picture proves the statement or it is not a picture. Write the claim type per shot (magnitude, comparison, change, mechanism, structure, location, identity); apply the label test (cover the drawing, read the labels as a list: if nothing is lost, redraw); encode with position, length or counts, never area; every number has a yardstick drawn first and a source in the caption; animate the datum, keep the chrome still, hold the end state at least 1.5 s (`21-infographics.md`).
+35. A voiced short is data, not code: write `spec.json` + `voice.txt` (facts first, then the script, then the shots), run `node render/make.mjs spec.json --draft`, read `report.md`, fix findings in the spec, never hand-tune seconds: place pictures and effects on spoken words with anchors (`{ "$word": "..." }`). Pictures come from `runtime/blocks.js`; a new block is added only when no block fits the claim (`23-short-factory.md`).
 
 ## Review
 23. Iterate on fragments with `render.mjs --draft`; run `--profile` when a render is slow, it names the slowest timecodes.
