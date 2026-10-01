@@ -29,7 +29,7 @@ const HELP = `usage: node render.mjs <input.html> [out.mp4] [options]
   --crf N, --preset P     x264 settings (default 18, slow)
   --voice FILE.wav        mix a voice-over into the page audio
   --music FILE            mix a music track (any format ffmpeg reads); can be combined with --voice
-  --loudnorm              normalize the final audio to -14 LUFS
+  --loudnorm              normalize the final audio to -14 LUFS, with a limiter (-3 dB, room for the AAC overshoot) after it (single-pass loudnorm alone can overshoot)
   --no-audio              skip window.__renderAudio
   --profile               time every frame, print the slowest ones and where the time goes`;
 
@@ -184,7 +184,7 @@ ffArgs.push('-map', '0:v');
 const af = [];
 if (audioInputs.length > 1) af.push(audioInputs.map((_, i) => `[${i + 1}:a]`).join('') + `amix=inputs=${audioInputs.length}:normalize=0`);
 else if (audioInputs.length === 1) af.push('[1:a]anull');
-if (af.length) { ffArgs.push('-filter_complex', af[0] + (loudnorm ? ',loudnorm=I=-14:TP=-1.5:LRA=11' : '') + '[a]', '-map', '[a]', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000'); }
+if (af.length) { ffArgs.push('-filter_complex', af[0] + (loudnorm ? ',loudnorm=I=-14:TP=-1.5:LRA=11,alimiter=limit=0.72:attack=5:release=60:level=disabled' : '') + '[a]', '-map', '[a]', '-c:a', 'aac', '-b:a', '192k', '-ar', '48000'); }
 ffArgs.push('-c:v', 'copy', '-movflags', '+faststart', path.resolve(out));
 await run('ffmpeg', ffArgs).done;
 fs.rmSync(tmp, { recursive: true, force: true });

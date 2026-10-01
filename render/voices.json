@@ -1,0 +1,88 @@
+{
+  "doc": "Voice profiles for the openrouter engine of voice.mjs. A spec says WHICH KIND of voice it wants (voice.profile, e.g. documentary) and the tool resolves the name here, so changing a voice for a genre is one edit in this file, and a single spec can still pin a voice (voice.voice) or a style (voice.style). 'status' says how a choice was made: 'chosen by ear' = a human listened and picked it; 'proposal' = picked from the voice's published character (Google's descriptor in 'character'), NOT heard against the genre yet: audition before relying on it (node render/voice-audition.mjs). Voices of the Gemini models are multilingual: the same name speaks Russian and English.",
+  "openrouter": {
+    "model": "google/gemini-3.8-flash-tts"
+  },
+  "characters": {
+    "_source": "Google's Gemini TTS documentation (ai.google.dev/gemini-api/docs/speech-generation): the 30 prebuilt voices and their published character",
+    "Zephyr": "Bright",
+    "Puck": "Upbeat",
+    "Charon": "Informative",
+    "Kore": "Firm",
+    "Fenrir": "Excitable",
+    "Leda": "Youthful",
+    "Orus": "Firm",
+    "Aoede": "Breezy",
+    "Callirrhoe": "Easy-going",
+    "Autonoe": "Bright",
+    "Enceladus": "Breathy",
+    "Iapetus": "Clear",
+    "Umbriel": "Easy-going",
+    "Algieba": "Smooth",
+    "Despina": "Smooth",
+    "Erinome": "Clear",
+    "Algenib": "Gravelly",
+    "Rasalgethi": "Informative",
+    "Laomedeia": "Upbeat",
+    "Achernar": "Soft",
+    "Alnilam": "Firm",
+    "Schedar": "Even",
+    "Gacrux": "Mature",
+    "Pulcherrima": "Forward",
+    "Achird": "Friendly",
+    "Zubenelgenubi": "Casual",
+    "Vindemiatrix": "Gentle",
+    "Sadachbia": "Lively",
+    "Sadaltager": "Knowledgeable",
+    "Sulafat": "Warm"
+  },
+  "profiles": {
+    "default": {
+      "voice": "Algieba",
+      "character": "Smooth",
+      "status": "fallback when a spec names no profile: the voice chosen for documentaries"
+    },
+    "documentary": {
+      "voice": "Algieba",
+      "character": "Smooth",
+      "status": "chosen by ear (ru, Lyapunov script, 2026-10-01), against Charon, Orus and Sulafat",
+      "use": "a story told calmly: a life, a history, a discovery"
+    },
+    "explainer": {
+      "voice": "Charon",
+      "character": "Informative",
+      "status": "proposal (heard in the audition, no verdict); alternatives: Sadaltager (Knowledgeable), Rasalgethi (Informative)",
+      "use": "how a thing works, a process, a number explained"
+    },
+    "assertive": {
+      "voice": "Orus",
+      "character": "Firm",
+      "status": "proposal (heard in the audition, no verdict); alternative: Alnilam (Firm), Kore (Firm)",
+      "use": "a statement, a verdict, a myth knocked down"
+    },
+    "warm": {
+      "voice": "Sulafat",
+      "character": "Warm",
+      "status": "proposal (heard in the audition, no verdict); alternatives: Achird (Friendly), Vindemiatrix (Gentle)",
+      "use": "a human story, an invitation"
+    },
+    "energetic": {
+      "voice": "Puck",
+      "character": "Upbeat",
+      "status": "proposal (never heard); alternatives: Fenrir (Excitable), Sadachbia (Lively), Laomedeia (Upbeat)",
+      "use": "a countdown, a teaser, anything that must hurry"
+    }
+  },
+  "genres": {
+    "one-life": "documentary",
+    "timeline": "documentary",
+    "how-it-works": "explainer",
+    "process": "explainer",
+    "one-number": "explainer",
+    "myth-vs-fact": "assertive",
+    "versus": "assertive",
+    "statement": "assertive",
+    "countdown": "energetic",
+    "teaser": "energetic"
+  }
+}

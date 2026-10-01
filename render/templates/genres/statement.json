@@ -1,0 +1,87 @@
+{
+  "id": "new-video",
+  "title": "TODO: working title",
+  "lang": "ru",
+  "genre": "statement",
+  "note": [
+    "Every shot: one claim in <= 8 words (the statement), one picture that proves it, a caption with the source.",
+    "The hook question is on screen by 2 s; no title card.",
+    "Replace every TODO, then: node render/lint-spec.mjs spec.json.",
+    "Transitions, one meaning each: cut = the next step of one thought; push-up = the next item of a list; dip = a new chapter; flash = the reveal; punch = the turn.",
+    "STATEMENT (10-25 s, 20-50 words): only when the text IS the point (a quote, a thesis, a manifesto); one typeface idea in two weights, one accent color, ONE turn (a word that changes meaning, a line that reverses); rhythm from word size and timing; never animate letters so that reading falls below 3 words per second.",
+    "The picture is the type block itself: no separate say."
+  ],
+  "thesis": "TODO: one concrete sentence",
+  "hook": "TODO: the question the first 2 seconds ask",
+  "format": { "W": 1080, "H": 1920, "FPS": 30 },
+  "tempo": 120,
+  "voice": { "engine": "edge", "voice": "ru-RU-DmitryNeural", "rate": "-5%", "file": "voice.txt", "offset": 0 },
+  "style": { "themes": ["paper", "blueprint"], "display": "Oswald", "mono": "IBM Plex Mono", "statementSize": 94 },
+  "music": { "seed": 1, "key": "A minor", "style": "tense", "gain": 0.55 },
+  "hud": { "kind": "none" },
+  "shots": [
+    {
+      "id": "line-1",
+      "phrases": [0],
+      "claim": "typographic",
+      "energy": 0.25,
+      "picture": {
+        "block": "type",
+        "lines": [{ "text": "TODO: line 1", "size": 94 }, { "text": "TODO: line 2", "tone": "accent" }]
+      },
+      "note": "The first line is the hook: the claim, in type. Frame 0 moves."
+    },
+    {
+      "id": "line-2",
+      "phrases": [1],
+      "claim": "typographic",
+      "energy": 0.4,
+      "in": "cut",
+      "picture": {
+        "block": "type",
+        "lines": [{ "text": "TODO: line 3", "size": 94 }, { "text": "TODO: line 4", "tone": "accent" }]
+      },
+      "note": "Build the argument."
+    },
+    {
+      "id": "turn",
+      "phrases": [2],
+      "claim": "typographic",
+      "energy": 0.1,
+      "in": "punch",
+      "picture": { "block": "type", "lines": [{ "text": "TODO: the turn", "size": 120, "tone": "accent" }] },
+      "sfx": [{ "at": { "$word": "TODO" }, "kind": "impact" }],
+      "note": "THE turn: a word that changes meaning, or a line that reverses. Silence before it."
+    },
+    {
+      "id": "payoff",
+      "phrases": [3],
+      "claim": "typographic",
+      "energy": 0.95,
+      "in": "flash",
+      "picture": {
+        "block": "type",
+        "lines": [{ "text": "TODO: payoff", "size": 110 }, { "text": "TODO: the last word", "tone": "accent" }]
+      },
+      "sfx": [{ "at": { "$word": "TODO" }, "kind": "stamp" }],
+      "note": "The payoff, large."
+    },
+    {
+      "id": "close",
+      "phrases": [4],
+      "tail": 1.5,
+      "claim": "typographic",
+      "energy": 0.3,
+      "in": "cut",
+      "picture": { "block": "type", "lines": [{ "text": "TODO: the closing line", "tone": "accent" }] },
+      "note": "The closing line, held. Resolve in the last 2 s."
+    }
+  ],
+  "facts": [],
+  "post": {
+    "title": "TODO: post title (a promise, not a label)",
+    "description": "TODO: one or two sentences",
+    "tags": ["TODO"],
+    "cover": { "shot": "turn", "at": 1 }
+  }
+}

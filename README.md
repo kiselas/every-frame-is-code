@@ -59,6 +59,18 @@ Long films need more than good frames: a question, a through-line, chapters, cal
 
 To learn from someone else's film: `node render/analyze.mjs reference.mp4 out/` writes a report on its shots, pace, tempo and cuts, with contact sheets.
 
+## Vertical video
+
+Reels, Shorts and TikTok are a different screen: 9:16, the platform's own interface over the edges, a hook in the first second, text read at arm's length. [19-vertical.md](19-vertical.md) is the frame (safe zones, three bands, type, fonts for Cyrillic and other non-Latin scripts, tools), [20-silent-social.md](20-silent-social.md) is the film (the contract with a viewer who has the sound off, the word budget, eleven genres and what each demands), [21-infographics.md](21-infographics.md) is the picture (how a diagram proves a claim instead of decorating it), and `runtime/film.js` switches to portrait defaults when `H > W`. The worked example, [examples/lyapunov/](examples/lyapunov/), is a 50-second film in Russian about the mathematician Alexey Lyapunov: a rubber stamp that lands, a flowchart that runs, a program that assembles itself, a stamp that is struck out.
+
+<div align="center">
+<img src="examples/lyapunov/preview.jpg" width="270" alt="Lyapunov: the 1953 article that attacked cybernetics and the 1954 dictionary page stamped as pseudoscience">
+</div>
+
+Spec: [examples/lyapunov/spec.json](examples/lyapunov/spec.json) (voiced, version 2) · script, facts and sources: [examples/lyapunov/SCRIPT.md](examples/lyapunov/SCRIPT.md) · the silent first version, a [live page](https://kiselas.github.io/every-frame-is-code/lyapunov/): [v1/](examples/lyapunov/v1/)
+
+For a series, [23-short-factory.md](23-short-factory.md) is the line: a voiced, subtitled short is described by one `spec.json` (a voice text, shots tied to the spoken words, picture blocks, a music plan, facts with sources), and `node render/make.mjs spec.json` lints it, synthesizes the voice (free Edge TTS or OpenRouter), builds the film, renders it, reviews it against the rules above and writes the captions, the cover and the post text.
+
 ## Pixel and retro
 
 A limit is a style. 160×90 pixels, 16 colors and four sound channels take away the defaults a model reaches for (gradients, glow, navy and amber) and leave what it does well: composition, timing, shapes. The pixel toolkit borrows the best ideas of [Pyxel](https://github.com/kitao/pyxel), PICO-8 and the demoscene and rebuilds them around `draw(t)`:
@@ -161,11 +173,18 @@ node render.mjs ../examples/demo/demo.html ../examples/demo/demo.mp4
 | [15-pixel-retro.md](15-pixel-retro.md) | Pixel art and retro looks: fixed palettes, dithering, sprites as text, Mode 7, the palette post pass, dithered transitions |
 | [16-chiptune.md](16-chiptune.md) | A score as text: MML on four channels, 8-bit sound effects, synced to the film's tempo map |
 | [17-demoscene.md](17-demoscene.md) | Per-pixel effects as functions of (x, y, t): plasma, tunnel, rotozoom, copper bars, fire and more |
-| [runtime/](runtime/) | `film.js`: the runtime for long films, `pixel.js`, `pixel-fx.js` and `chip.js` for pixel and retro films, and `inline.mjs` to fold a film into one file |
+| [18-music-generation.md](18-music-generation.md) | A score from a plan: key, style and an energy per section become chords, bass, hook, groove and fills; a linter and an audio report for music you cannot hear |
+| [19-vertical.md](19-vertical.md) | Vertical video for Reels, Shorts and TikTok: 1080×1920, safe zones, type, non-Latin fonts, text-fit checks, review |
+| [20-silent-social.md](20-silent-social.md) | Silent social video: the contract with a muted viewer, the word budget, eleven genres (how it works, one life, one number, timeline, versus, myth vs fact, countdown, process, statement, teaser, loop) and their requirements |
+| [21-infographics.md](21-infographics.md) | Infographics in motion: claim types, the label test, encodings people read accurately, yardsticks, motion as data, density limits for a phone, a worked critique |
+| [22-electronic-music.md](22-electronic-music.md) | Electronic music for a film without hunting for a licensed track: a local open-source model (ACE-Step 1.5, MIT) makes house, techno, lo-fi, synthwave and more at the film's tempo, a prompt library, a tempo fit and a grid check for music you cannot hear; Strudel patterns as a fallback; a list of what to use and what to avoid, with licences |
+| [23-short-factory.md](23-short-factory.md) | A line for voiced vertical shorts: one `spec.json` per video, picture blocks, anchors on spoken words, and the tools that lint, voice, build, render, review and package it |
+| [runtime/](runtime/) | `film.js`: the runtime for long films, `pixel.js`, `pixel-fx.js`, `chip.js`, `compose.js` and `music-lint.js` for pixel, retro and generated music, and `inline.mjs` to fold a film into one file |
 | [render/](render/) | Render, contact sheets, stills, reference breakdown, beat maps (Node + Playwright + ffmpeg) |
 | [examples/demo/](examples/demo/) | Demo film: script and source |
 | [examples/gps/](examples/gps/) | Four Clocks: a 90 s explainer built on the runtime, with its script and sources |
 | [examples/pixel/](examples/pixel/) | Sixteen Colors: a 64 s pixel film that uses the whole pixel toolkit, with its script |
+| [examples/lyapunov/](examples/lyapunov/) | Lyapunov: a 60 s voiced vertical short for Reels and Shorts (in Russian) built from one `spec.json`, with its script, facts and sources; `v1/` is the silent hand-drawn first version |
 | [scripts/pack-skill.sh](scripts/pack-skill.sh) | Builds `motion-kit.zip` for ChatGPT and Claude.ai. Releases build it automatically: just push a `vX.Y.Z` tag |
 | [sources.md](sources.md) | Sources and further reading |
 

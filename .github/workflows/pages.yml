@@ -1,11 +1,11 @@
 # Publishes the films to GitHub Pages: each page draws every frame live in the browser.
-# / is examples/demo/demo.html, /gps/ and /pixel/ are examples/gps/film.html and examples/pixel/film.html folded
+# / is examples/demo/demo.html, /music-lab/ is the audition page for generated music, /gps/, /pixel/ and /lyapunov/ are examples/gps/film.html, examples/pixel/film.html and examples/lyapunov/film.html folded
 # into one file by runtime/inline.mjs; social preview tags are added at build time.
 name: pages
 on:
   push:
     branches: [main]
-    paths: ['examples/demo/**', 'examples/gps/**', 'examples/pixel/**', 'runtime/**', '.github/workflows/pages.yml']
+    paths: ['examples/demo/**', 'examples/gps/**', 'examples/pixel/**', 'examples/lyapunov/**', 'runtime/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -70,6 +70,29 @@ jobs:
           rm _site/pixel/film.html _site/pixel/meta.html
           grep -q 'og:image' _site/pixel/index.html
           grep -q 'inlined: ../../runtime/pixel.js' _site/pixel/index.html
+          # the vertical film: one self-contained page (best opened on a phone)
+          mkdir -p _site/lyapunov
+          cp examples/lyapunov/preview.jpg _site/lyapunov/preview.jpg
+          lyap_url="${SITE_URL}lyapunov/"
+          lyap_desc="Lyapunov (silent version 1): a 50-second vertical film (Reels, Shorts) about the mathematician who taught programming and gave cybernetics its name back, drawn entirely by code in your browser. Made with motion-kit."
+          cat > _site/lyapunov/meta.html <<'META'
+          <meta name="description" content="@DESC@">
+          <meta property="og:title" content="Lyapunov · a vertical film made of code">
+          <meta property="og:description" content="@DESC@">
+          <meta property="og:image" content="@URL@preview.jpg">
+          <meta property="og:url" content="@URL@">
+          <meta name="twitter:card" content="summary_large_image">
+          META
+          sed -i "s|@DESC@|$lyap_desc|; s|@URL@|$lyap_url|" _site/lyapunov/meta.html
+          node runtime/inline.mjs examples/lyapunov/v1/film.html _site/lyapunov/film.html
+          sed '/<\/title>/r _site/lyapunov/meta.html' _site/lyapunov/film.html > _site/lyapunov/index.html
+          rm _site/lyapunov/film.html _site/lyapunov/meta.html
+          grep -q 'og:image' _site/lyapunov/index.html
+          grep -q 'inlined: ../../runtime/compose.js' _site/lyapunov/index.html
+          # the music lab: an audition page for generated scores
+          mkdir -p _site/music-lab
+          node runtime/inline.mjs examples/pixel/music-lab.html _site/music-lab/index.html
+          grep -q 'inlined: ../../runtime/compose.js' _site/music-lab/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
       - id: deployment

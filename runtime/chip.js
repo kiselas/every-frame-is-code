@@ -2,6 +2,8 @@
 // A whole score is a compact text string on a few channels with four tones (triangle, square, pulse, noise):
 //   Chip.play(ac, t, out, ['T140 @1 O4 L8 CEGE', 'T140 @0 O2 L4 C G'])
 // Classic script, no dependencies, works from file://:  <script src="../../runtime/chip.js"></script>
+// Two more paths: Chip.playScore plays a Score (music as data: tracks of note events in beats, with roles, envelopes, echo, pan, ducking),
+// and Chip.drums.* are real kick / snare / hat / tom / crash / clap / rim hits (also the MML tones @4..@10).
 // Instruments have the same signature as Film.audio ones: (ac, t, out, gain) with t in AudioContext seconds.
 // The pure part (Chip.parse) also loads in Node: require('./chip.js'). No Math.random anywhere: same input, same samples.
 // Time base: 192 ticks per whole note (48 per quarter, L1..L192), the unit of @ENV / @VIB / @GLI durations. Docs: 16-chiptune.md.
@@ -25,6 +27,14 @@ const TONES = {
   1: { type: 'square', gain: .55 },
   2: { type: 'pulse', duty: .25, gain: .6 },
   3: { type: 'noise', gain: .5 },
+  // drum voices: the note plays a real drum hit (Chip.drums), its own envelope; Q, @ENV and the note length do not apply. Note pitch only bends the tom.
+  4: { type: 'drum', drum: 'kick', gain: 1 },
+  5: { type: 'drum', drum: 'snare', gain: 1 },
+  6: { type: 'drum', drum: 'hat', gain: 1 },
+  7: { type: 'drum', drum: 'ohat', gain: 1 },
+  8: { type: 'drum', drum: 'tom', gain: 1 },
+  9: { type: 'drum', drum: 'crash', gain: 1 },
+  10: { type: 'drum', drum: 'clap', gain: 1 },
 };
 const tonesOf = o => Object.assign({}, TONES, o && o.tones);
 
@@ -249,7 +259,12 @@ function envLevel(env, tau) {                     // envelope value (0..1) at ta
 }
 
 // one voice = a run of events: a note and any legato notes tied to it (one oscillator, no re-attack)
-function voice(ac, dest, spec, run, ts, rng) {
+function voice(ac, dest, spec, run, ts, rng, lanes) {
+  if (spec.type === 'drum') {                     // a drum tone: one hit, its own envelope, routed through the track's lanes (see Lanes)
+    const h = run[0]; if (!(h.vol > 0)) return ts;
+    const hg = ac.createGain(), r = drums[spec.drum](ac, ts, hg, { gain: h.vol * (spec.gain ?? 1), pitch: spec.drum === 'tom' ? 2 ** ((h.midi - 60) / 12) : 1, seed: rng() * 4294967296 >>> 0 });
+    lanes.add(hg, ts, r.end); return r.end;
+  }
   const head = run[0], first = head.t, ne = run.length, last = run[ne - 1];
   const len = last.t - first + last.dur * last.gate;
   if (!(len > 0) || !(head.vol > 0)) return ts;
@@ -305,15 +320,31 @@ function sumTree(ac, xs) {
   return xs[0];
 }
 
+// Lanes: sounds that can overlap (drum hits with tails, chord notes) are dealt to lanes so that only one is audible per lane at any time.
+// A lane sums its sources with silence (exact in any order); the lanes are then added pairwise. Result: bit-identical renders with any number of overlapping sounds.
+function makeLanes(ac) {
+  const lanes = [];
+  return {
+    add(node, t, end) {                                   // node: the sound's output; it is audible from t until end
+      let l = lanes.find(x => x.free <= t + 1e-9);
+      if (!l) lanes.push(l = { node: ac.createGain(), free: 0 });
+      node.connect(l.node); l.free = end + .005; return l;
+    },
+    out() { return lanes.length ? sumTree(ac, lanes.map(l => l.node)) : null; },
+    get count() { return lanes.length; },
+  };
+}
+
 function schedule(ac, t0, out, prepared, opts) {
   const rng = mulberry32(opts.seed ?? 1), now = ac.currentTime, outs = []; let end = t0;
   for (const { x, p, tones } of prepared) {
     const tg = ac.createGain(); tg.gain.value = x.gain ?? .3;
     if (x.pan && ac.createStereoPanner) { const pn = ac.createStereoPanner(); pn.pan.value = x.pan; tg.connect(pn); outs.push(pn); } else outs.push(tg);
-    let run = null;
-    const flush = () => { if (run) { const ts = t0 + run[0].t; if (ts >= now - 1e-3) end = Math.max(end, voice(ac, tg, tones[run[0].tone], run, ts, rng)); run = null; } };
+    let run = null; const lanes = makeLanes(ac);
+    const flush = () => { if (run) { const ts = t0 + run[0].t; if (ts >= now - 1e-3) end = Math.max(end, voice(ac, tg, tones[run[0].tone], run, ts, rng, lanes)); run = null; } };
     for (const e of p.events) { if (e.tie && run) run.push(e); else { flush(); run = [e]; } }
     flush();
+    const lo = lanes.out(); if (lo) lo.connect(tg);
   }
   const master = ac.createGain(); master.gain.value = opts.gain ?? 1;
   if (outs.length) sumTree(ac, outs).connect(master);
@@ -379,7 +410,299 @@ for (const name of Object.keys(BUILD)) {
 sfx.lengths = LEN;                                // seconds until each preset is silent
 sfx.length = name => { if (!(name in LEN)) throw new Error(`Chip.sfx.length: unknown sfx "${name}" (${Object.keys(LEN).join(', ')})`); return LEN[name]; };
 
-const Chip = { parse, play, instrument, sfx, midiToHz, noteToMidi, TICKS };
+// ---------------------------------------------------------------- drums
+// Chip.drums.{kick, snare, hat, ohat, tom, crash, clap, rim}(ac, t, out, { gain (1), pitch (x frequencies, 1), decay (x lengths, 1), seed, choke })  ->  { end }
+// Each hit is a few oscillators / filtered noise bursts with their own envelopes, summed pairwise (deterministic), with a fixed loudness: gain 1 is a full-strength hit.
+// choke (seconds, ohat only): cut the open hat after that long, like a closed hat stepping on it.
+const DRUM_NAMES = ['kick', 'snare', 'hat', 'ohat', 'tom', 'crash', 'clap', 'rim'];
+const DLEN = { kick: .4, snare: .3, hat: .07, ohat: .42, tom: .45, crash: 1.7, clap: .32, rim: .09 };     // seconds until each hit is silent, at decay 1
+function envAt(gp, t, pts) {                       // [[dt, level, 'lin' | 'exp'], ...] the first is the start; exp targets stay above 0; the end goes to exactly 0
+  gp.setValueAtTime(pts[0][1], t + pts[0][0]);
+  for (let i = 1; i < pts.length; i++) { const [dt, v, m] = pts[i]; if (m === 'lin') gp.linearRampToValueAtTime(v, t + dt); else gp.exponentialRampToValueAtTime(Math.max(v, 1e-4), t + dt); }
+  gp.setValueAtTime(0, t + pts[pts.length - 1][0]);
+}
+const stretch = (pts, D) => pts.map((p, i) => i < 2 ? p : [p[0] * D, p[1], p[2]]);     // stretch the decay part of an envelope (everything after the attack)
+function dTone(ac, t, type, fs, pts, shape) {      // oscillator with a pitch path fs [[dt, hz], ...] (exponential between) and an amplitude envelope; returns its output node
+  const o = ac.createOscillator(), g = ac.createGain(), end = t + pts[pts.length - 1][0] + .01; o.type = type;
+  o.frequency.setValueAtTime(fs[0][1], t + fs[0][0]); for (let i = 1; i < fs.length; i++) o.frequency.exponentialRampToValueAtTime(fs[i][1], t + fs[i][0]);
+  envAt(g.gain, t, pts); o.connect(g); o.start(t); o.stop(end);
+  if (!shape) return g;
+  const w = ac.createWaveShaper(); w.curve = SOFT; g.connect(w); return w;
+}
+function dNoise(ac, t, k, filters, pts) {          // seeded noise -> filters [[type, hz, Q, gainDb], ...] -> amplitude envelope
+  const dur = pts[pts.length - 1][0] + .01, s = ac.createBufferSource(), g = ac.createGain(); let n = s;
+  s.buffer = noiseBuf(ac);
+  for (const [type, f, q, db] of filters) { const b = ac.createBiquadFilter(); b.type = type; b.frequency.value = Math.min(f, ac.sampleRate * .45); b.Q.value = q; if (db) b.gain.value = db; n.connect(b); n = b; }
+  envAt(g.gain, t, pts); n.connect(g); s.start(t, k.rng() * Math.max(0, 1.9 - dur)); s.stop(t + dur); return g;
+}
+const BUILD_DRUM = {
+  kick(ac, t, k, parts) {                          // sine, exponential pitch drop 150 -> 45 Hz, saturated for punch, plus a short click
+    const D = k.D, p = k.p;
+    parts.push(dTone(ac, t, 'sine', [[0, 150 * p], [.11, 46 * p], [Math.max(.3 * D, .15), 38 * p]], stretch([[0, 0], [.001, 1.15, 'lin'], [.07, .55, 'exp'], [.36, .001, 'exp']], D), true));
+    parts.push(dNoise(ac, t, k, [['highpass', 2200, .7]], [[0, 0], [.0006, .32, 'lin'], [.009, .001, 'exp']]));
+  },
+  snare(ac, t, k, parts) {                         // band-passed noise crack + a short 190 Hz tone body
+    const D = k.D, p = k.p;
+    parts.push(dNoise(ac, t, k, [['highpass', 1300 * p, .7], ['peaking', 3800 * p, .8, 5]], stretch([[0, 0], [.001, .85, 'lin'], [.05, .32, 'exp'], [.2, .001, 'exp']], D)));
+    parts.push(dTone(ac, t, 'triangle', [[0, 215 * p], [.05, 175 * p]], stretch([[0, 0], [.001, .62, 'lin'], [.09, .001, 'exp']], D)));
+  },
+  hat(ac, t, k, parts) {                           // very short high-passed noise
+    parts.push(dNoise(ac, t, k, [['highpass', 7000 * k.p, .8], ['highpass', 5500 * k.p, .7]], stretch([[0, 0], [.0005, .55, 'lin'], [.05, .001, 'exp']], k.D)));
+  },
+  ohat(ac, t, k, parts) {                          // the same, longer; a choke cuts it short
+    let pts = stretch([[0, 0], [.001, .5, 'lin'], [.07, .2, 'exp'], [.32, .001, 'exp']], k.D);
+    const c = k.choke;
+    if (c != null && c < pts[pts.length - 1][0]) {                     // the level at the choke time on the exponential path, then a fast fade
+      let pt = pts[1][0], pv = pts[1][1];
+      for (let i = 2; i < pts.length; i++) {
+        const [dt, v] = pts[i];
+        if (c <= dt) { const at = Math.max(c, pt + 1e-4); pts = [...pts.slice(0, i), [at, pv * (v / pv) ** ((at - pt) / (dt - pt)), 'exp'], [at + .012, .001, 'exp']]; break; }
+        pt = dt; pv = v;
+      }
+    }
+    parts.push(dNoise(ac, t, k, [['highpass', 6800 * k.p, .8], ['highpass', 5200 * k.p, .7]], pts));
+  },
+  tom(ac, t, k, parts) {                           // sine with a pitch drop; `pitch` multiplies (2^((n-60)/12) from a score note)
+    const D = k.D, p = k.p * 118;
+    parts.push(dTone(ac, t, 'sine', [[0, p * 1.9], [.09, p], [Math.max(.3 * D, .12), p * .82]], stretch([[0, 0], [.002, 1, 'lin'], [.32, .001, 'exp']], D), true));
+    parts.push(dNoise(ac, t, k, [['highpass', 1800, .7]], [[0, 0], [.0006, .22, 'lin'], [.008, .001, 'exp']]));
+  },
+  crash(ac, t, k, parts) {                         // long high-passed noise: a bright burst, a slow shimmer
+    parts.push(dNoise(ac, t, k, [['highpass', 4200 * k.p, .6], ['highpass', 3000 * k.p, .5]], stretch([[0, 0], [.002, .6, 'lin'], [.12, .24, 'exp'], [1.6, .001, 'exp']], k.D)));
+  },
+  clap(ac, t, k, parts) {                          // three short noise bursts and a longer fourth
+    const pts = [[0, 0]], gap = .011;
+    for (let i = 0; i < 3; i++) pts.push([i * gap + .0008, .8 + i * .05, 'lin'], [i * gap + .009, .06, 'exp']);
+    pts.push([3 * gap + .0008, 1, 'lin'], [3 * gap + .15 * k.D, .001, 'exp']);
+    parts.push(dNoise(ac, t, k, [['highpass', 700, .7], ['bandpass', 1700 * k.p, 1.1]], pts));
+  },
+  rim(ac, t, k, parts) {                           // a tiny click and two short tones
+    const p = k.p;
+    parts.push(dTone(ac, t, 'triangle', [[0, 420 * p]], [[0, 0], [.0005, .7, 'lin'], [.05, .001, 'exp']]));
+    parts.push(dTone(ac, t, 'sine', [[0, 1650 * p]], [[0, 0], [.0005, .35, 'lin'], [.03, .001, 'exp']]));
+    parts.push(dNoise(ac, t, k, [['bandpass', 2600, 1.5]], [[0, 0], [.0004, .45, 'lin'], [.006, .001, 'exp']]));
+  },
+};
+const DRUM_LEVEL = { kick: .8, snare: .5, hat: .45, ohat: .45, tom: .75, crash: .5, clap: 1.1, rim: .55 };   // per-drum trim: gain 1 is a full-strength hit
+const drums = {};
+for (const name of DRUM_NAMES) {
+  drums[name] = (ac, t, out, o = {}) => {
+    const k = { p: o.pitch ?? 1, D: o.decay ?? 1, rng: mulberry32(o.seed ?? 0), choke: o.choke }, parts = [];
+    if (!(k.p > 0) || !(k.D >= .05 && k.D <= 10)) throw new Error(`Chip.drums.${name}: pitch must be > 0 and decay 0.05..10`);
+    BUILD_DRUM[name](ac, t, k, parts);
+    const v = ac.createGain(); v.gain.value = (o.gain ?? 1) * DRUM_LEVEL[name]; sumTree(ac, parts).connect(v); v.connect(out);
+    return { end: name === 'ohat' && k.choke != null ? Math.min(t + DLEN[name] * k.D, t + k.choke + .03) : t + DLEN[name] * k.D };
+  };
+}
+drums.names = DRUM_NAMES; drums.lengths = DLEN;
+drums.length = name => { if (!(name in DLEN)) throw new Error(`Chip.drums.length: unknown drum "${name}" (${DRUM_NAMES.join(', ')})`); return DLEN[name]; };
+
+// ---------------------------------------------------------------- scores: music as data
+// Chip.playScore(ac, t0, out, score, opts?) -> { end, tail, length }     schedule a Score (16-chiptune.md, "Scores: music as data")
+// Chip.scoreEvents(score, opts?) -> [{ t, dur, midi, drum, voice, vel, gain, track, ti, role, b, d, glide }]   the same notes as a flat list, pure (no WebAudio)
+// Chip.scoreDucks(score, opts?) -> [{ t, depth, rel }]     the duck events on absolute time
+// Chip.validateScore(score)     throws a readable error, returns true
+// opts: timeOf(beat) -> absolute context time (default t0 + beat * 60 / bpm; a Film passes a tempo-map-aware one), t0 (scoreEvents only, for the default timeOf),
+//       from (skip events that start before this context time; playScore default: now, so a live seek skips what already sounded), gain (master, 1),
+//       limit (false = no soft limiter), seed (noise start offsets).
+const MELODIC = ['triangle', 'square', 'pulse', 'saw', 'sine', 'noise'];
+const VOICE_GAIN = { triangle: .8, square: .5, pulse: 1, saw: .85, sine: .75, noise: 1.7 };      // loudness balance between voices at the same velocity
+const ENV_ROLE = { bass: { a: .004, d: .06, s: .9, r: .06 }, lead: { a: .012, d: .12, s: .75, r: .14 }, arp: { a: .002, d: .12, s: .3, r: .05 }, pad: { a: .22, d: .3, s: .8, r: .45 }, fx: { a: .004, d: .25, s: .3, r: .2 } };
+const ENV_VOICE = { triangle: 'bass', sine: 'bass', square: 'lead', saw: 'lead', pulse: 'arp', noise: 'fx' };
+const ROLE_VOICE = { bass: 'triangle', lead: 'square', arp: 'pulse', pad: 'triangle', fx: 'noise' };
+const ROLES = ['bass', 'lead', 'arp', 'pad', 'drums', 'fx'];
+const FLOOR = 1e-3;                                  // exponential ramps end here (-60 dB), then the gain goes to exactly 0
+
+function normalizeScore(score) {
+  const bad = (msg) => { throw new Error(`Chip score: ${msg}`); };
+  const fin = (v, what, min = -Infinity, max = Infinity) => {
+    if (typeof v !== 'number' || !Number.isFinite(v)) bad(`${what} must be a finite number, got ${typeof v === 'number' ? v : JSON.stringify(v)}`);
+    if (v < min || v > max) bad(`${what} must be ${min === -Infinity ? '' : min}..${max === Infinity ? '' : max}, got ${v}`);
+    return v;
+  };
+  if (!score || typeof score !== 'object') bad('the score must be an object { bpm, tracks: [...] }');
+  const bpm = fin(score.bpm ?? 120, 'bpm', 1e-3), length = score.length == null ? null : fin(score.length, 'length', 0);
+  if (!Array.isArray(score.tracks)) bad('tracks must be an array');
+  const tracks = score.tracks.map((tr, ti) => {
+    if (!tr || typeof tr !== 'object') bad(`track ${ti} must be an object`);
+    const name = tr.name == null ? `track${ti}` : String(tr.name), at = `track "${name}"`, role = tr.role ?? null;
+    if (role != null && !ROLES.includes(role)) bad(`${at}: unknown role "${role}" (${ROLES.join(', ')})`);
+    const drumTrack = role === 'drums';
+    if (tr.voice != null && !MELODIC.includes(tr.voice) && !DRUM_NAMES.includes(tr.voice)) bad(`${at}: unknown voice "${tr.voice}" (${MELODIC.join(', ')}, or drums: ${DRUM_NAMES.join(', ')})`);
+    const voice = tr.voice ?? (drumTrack ? null : ROLE_VOICE[role] ?? 'square');
+    const gain = fin(tr.gain ?? .5, `${at}: gain`, 0), pan = fin(tr.pan ?? 0, `${at}: pan`, -1, 1);
+    let duty = tr.duty ?? .25;
+    duty = Array.isArray(duty) ? duty.map((d, i) => fin(d, `${at}: duty[${i}]`, .02, .98)) : fin(duty, `${at}: duty`, .02, .98);
+    if (Array.isArray(duty) && duty.length !== 2) bad(`${at}: duty as a sweep is [from, to]`);
+    const eb = ENV_ROLE[role] ?? ENV_ROLE[ENV_VOICE[voice]] ?? ENV_ROLE.lead, e = tr.env || {};
+    const env = { a: fin(e.a ?? eb.a, `${at}: env.a`, 0), d: fin(e.d ?? eb.d, `${at}: env.d`, 0), s: fin(e.s ?? eb.s, `${at}: env.s`, 0, 1), r: fin(e.r ?? eb.r, `${at}: env.r`, 0) };
+    let vib = null;
+    if (tr.vib) vib = { delay: fin(tr.vib.delay ?? 0, `${at}: vib.delay`, 0), rate: fin(tr.vib.rate ?? 5, `${at}: vib.rate`, .01), depth: fin(tr.vib.depth ?? 0, `${at}: vib.depth`) };
+    let echo = null;
+    if (tr.echo) echo = { time: fin(tr.echo.time ?? .75, `${at}: echo.time`, 1e-3), fb: Math.min(.6, fin(tr.echo.fb ?? .35, `${at}: echo.fb`, 0)), mix: fin(tr.echo.mix ?? .3, `${at}: echo.mix`, 0, 1) };
+    if (!Array.isArray(tr.events)) bad(`${at}: events must be an array`);
+    const events = tr.events.map((ev, i) => {
+      const w = `${at} event ${i}`;
+      if (!ev || typeof ev !== 'object') bad(`${w} must be an object { b, d, n, v }`);
+      const b = fin(ev.b, `${w}: b (start beat)`, 0), d = fin(ev.d ?? 0, `${w}: d (duration in beats)`);
+      if (d < 0) bad(`${w}: d (duration) must not be negative, got ${d}`);
+      if (ev.voice != null && !MELODIC.includes(ev.voice) && !DRUM_NAMES.includes(ev.voice)) bad(`${w}: unknown voice "${ev.voice}" (${MELODIC.join(', ')}, or drums: ${DRUM_NAMES.join(', ')})`);
+      const vname = ev.voice ?? voice, vel = fin(ev.v ?? .8, `${w}: v (velocity)`, 0, 1);
+      const drum = vname != null && DRUM_NAMES.includes(vname);
+      if (drumTrack && !drum) bad(`${w}: a drum event needs voice: one of ${DRUM_NAMES.join(', ')}${vname ? ` (got "${vname}")` : ''}`);
+      if (vname == null) bad(`${w}: no voice (set voice on the track or on the event)`);
+      const out = { b, d, vname, vel, drum: drum ? vname : null, midi: null, glide: null };
+      if (ev.n != null) out.midi = fin(ev.n, `${w}: n (MIDI note)`, 0, 127);
+      else if (!drum) bad(`${w}: a note event needs n (MIDI note number)`);
+      if (ev.g != null) { out.glide = { midi: fin(ev.g, `${w}: g (glide start note)`, 0, 127), beats: ev.gd == null ? null : fin(ev.gd, `${w}: gd (glide beats)`, 0) }; if (drum) out.glide = null; }
+      return out;
+    });
+    return { name, role, voice, gain, pan, duty, env, vib, echo, duck: !!tr.duck, drumTrack, events };
+  });
+  const duck = (score.duck ?? []).map((k, i) => ({ b: fin(k.b, `duck ${i}: b`, 0), depth: fin(k.depth ?? .5, `duck ${i}: depth`, 0, 1), rel: fin(k.rel ?? .2, `duck ${i}: rel (seconds)`, 1e-3) }));
+  return { bpm, length, tracks, duck };
+}
+const validateScore = score => (normalizeScore(score), true);
+
+const defaultTimeOf = (S, t0) => b => t0 + b * 60 / S.bpm;
+function resolveScore(S, timeOf, from) {             // events of every track on absolute time, sorted by start (stable: then by track, then by order)
+  const byTrack = S.tracks.map(() => []), flat = [];
+  S.tracks.forEach((tr, ti) => tr.events.forEach((e, i) => {
+    const t = timeOf(e.b);
+    if (!Number.isFinite(t)) throw new Error(`Chip score: timeOf(${e.b}) returned ${t} (track "${tr.name}" event ${i})`);
+    if (t < from) return;
+    const dur = Math.max(0, timeOf(e.b + e.d) - t), vel = e.vel ** 1.5;
+    const ev = { t, dur, midi: e.midi, drum: e.drum, voice: e.vname, vel, gain: vel * tr.gain, track: tr.name, ti, role: tr.role, b: e.b, d: e.d, glide: null };
+    if (e.midi == null) delete ev.midi;
+    if (!e.drum) delete ev.drum;
+    if (e.glide) ev.glide = { midi: e.glide.midi, dur: e.glide.beats == null ? .06 : Math.max(0, timeOf(e.b + e.glide.beats) - t) };
+    ev.order = i; byTrack[ti].push(ev); flat.push(ev);
+  }));
+  const cmp = (a, c) => a.t - c.t || a.ti - c.ti || a.order - c.order;
+  flat.sort(cmp); byTrack.forEach(l => l.sort(cmp));
+  return { flat, byTrack };
+}
+function scoreEvents(score, opts = {}) {
+  const S = normalizeScore(score), timeOf = opts.timeOf || defaultTimeOf(S, opts.t0 ?? 0);
+  return resolveScore(S, timeOf, opts.from ?? -Infinity).flat.map(e => { const { order, ...rest } = e; return rest; });
+}
+const ducksOf = (S, timeOf) => S.duck.map(k => ({ t: timeOf(k.b), depth: k.depth, rel: k.rel })).sort((a, c) => a.t - c.t);
+function scoreDucks(score, opts = {}) { const S = normalizeScore(score); return ducksOf(S, opts.timeOf || defaultTimeOf(S, opts.t0 ?? 0)); }
+
+// ---- voices
+const adsrAt = (E, tau) => {                          // relative level (0..1) tau seconds after the note start, before note-off; E.d >= .001
+  if (tau <= E.a) return tau / E.a;
+  const s = Math.max(E.s, FLOOR);
+  return tau >= E.a + E.d ? s : s ** ((tau - E.a) / E.d);
+};
+function shapeGain(gp, ts, dur, peak, E0) {             // attack (linear), decay (exponential to the sustain), hold, release (exponential) - then exactly 0
+  const E = { ...E0, a: Math.max(E0.a, .002), d: Math.max(E0.d, .001) }, a = E.a;
+  gp.setValueAtTime(0, ts);
+  if (dur <= a) gp.linearRampToValueAtTime(peak * dur / a, ts + dur);
+  else {
+    gp.linearRampToValueAtTime(peak, ts + a);
+    if (E.s < 1) gp.exponentialRampToValueAtTime(peak * adsrAt(E, Math.min(dur, a + E.d)), ts + Math.min(dur, a + E.d));
+  }
+  const lo = peak * adsrAt(E, dur), r = Math.max(E.r, .004);
+  gp.setValueAtTime(lo, ts + dur);
+  if (lo > 1e-5) gp.exponentialRampToValueAtTime(Math.max(lo * FLOOR, 1e-6), ts + dur + r);
+  gp.setValueAtTime(0, ts + dur + r);
+  return ts + dur + r;
+}
+function vibrato(param, ts, dur, v) {                  // a scheduled sine on detune, fading in over the first cycle: no free-running LFO
+  if (!v || !v.depth || !(v.rate > 0)) return;
+  const s0 = ts + v.delay, end = ts + dur, step = 1 / (v.rate * 16);
+  if (s0 >= end) return;
+  param.setValueAtTime(0, s0);
+  for (let k = 1; k <= 6000; k++) { const tt = s0 + k * step; if (tt >= end) break; param.linearRampToValueAtTime(v.depth * Math.sin(Math.PI * 2 * k / 16) * Math.min(1, k / 16), tt); }
+}
+// one note -> { node (output), end }; the source stops by `end`
+function scoreNote(ac, ev, tr, rng) {
+  const ts = ev.t, dur = Math.max(ev.dur, .01), voice = ev.voice, E = tr.env, g = ac.createGain();
+  const peak = ev.vel * VOICE_GAIN[voice], f0 = midiToHz(ev.midi), end = shapeGain(g.gain, ts, dur, peak, E), stop = end + .01;
+  const glide = ev.glide && ev.glide.dur > 0 ? ev.glide : null, fg = glide ? midiToHz(glide.midi) : f0, gd = glide ? Math.min(glide.dur, dur) : 0;
+  const slide = p => { if (glide) { p.setValueAtTime(fg, ts); p.exponentialRampToValueAtTime(f0, ts + gd); } else p.setValueAtTime(f0, ts); };
+  if (voice === 'noise') {                                              // pitched noise: the note is the centre of a band-pass, so higher notes are brighter
+    const s = ac.createBufferSource(), f = ac.createBiquadFilter(), top = ac.sampleRate * .45;
+    s.buffer = noiseBuf(ac); f.type = 'bandpass'; f.Q.value = 1.1;
+    const c = x => Math.min(top, x * 2);
+    if (glide) { f.frequency.setValueAtTime(c(fg), ts); f.frequency.exponentialRampToValueAtTime(c(f0), ts + gd); } else f.frequency.setValueAtTime(c(f0), ts);
+    vibrato(f.detune, ts, dur, tr.vib);
+    s.connect(f).connect(g); s.start(ts, rng() * 1.5); s.stop(stop);
+  } else if (voice === 'pulse' && Array.isArray(tr.duty)) {              // PWM: a saw minus the same saw delayed by duty/f; the delay sweeps over the note
+    const [d0, d1] = tr.duty, a = ac.createOscillator(), b = ac.createOscillator(), inv = ac.createGain(), dl = ac.createDelay(.1), mix = ac.createGain();
+    a.type = b.type = 'sawtooth'; slide(a.frequency); slide(b.frequency);
+    vibrato(a.detune, ts, dur, tr.vib); vibrato(b.detune, ts, dur, tr.vib);
+    inv.gain.value = -1; mix.gain.value = 1 / (2 * Math.max((d0 + d1) / 2, 1 - (d0 + d1) / 2));
+    dl.delayTime.setValueAtTime(Math.min(.095, d0 / f0), ts); dl.delayTime.linearRampToValueAtTime(Math.min(.095, d1 / f0), ts + dur);
+    a.connect(mix); b.connect(inv).connect(dl).connect(mix); mix.connect(g);
+    a.start(ts); b.start(ts); a.stop(stop); b.stop(stop);
+  } else {
+    const o = ac.createOscillator();
+    if (voice === 'pulse') o.setPeriodicWave(waveOf(ac, { type: 'pulse', duty: tr.duty })); else o.type = voice === 'saw' ? 'sawtooth' : voice;
+    slide(o.frequency); vibrato(o.detune, ts, dur, tr.vib);
+    o.connect(g); o.start(ts); o.stop(stop);
+  }
+  return { node: g, end: stop };
+}
+
+function playScore(ac, t0, out, score, opts = {}) {
+  const S = normalizeScore(score), timeOf = opts.timeOf || defaultTimeOf(S, t0);
+  const from = opts.from ?? ((ac.currentTime || 0) - 1e-3), { byTrack } = resolveScore(S, timeOf, from);
+  const rng = mulberry32(opts.seed ?? 1), plain = [], ducked = []; let end = t0, tail = t0;
+  S.tracks.forEach((tr, ti) => {
+    const evs = byTrack[ti]; if (!evs.length) return;
+    const lanes = makeLanes(ac); let last = t0;
+    evs.forEach((ev, i) => {
+      if (ev.drum) {
+        let choke;
+        if (ev.drum === 'ohat') for (let j = i + 1; j < evs.length; j++) if ((evs[j].drum === 'hat' || evs[j].drum === 'ohat') && evs[j].t > ev.t + 1e-6) { choke = evs[j].t - ev.t; break; }
+        const hg = ac.createGain(), r = drums[ev.drum](ac, ev.t, hg, { gain: ev.vel, pitch: ev.drum === 'tom' && ev.midi != null ? 2 ** ((ev.midi - 60) / 12) : 1, seed: rng() * 4294967296 >>> 0, choke });
+        lanes.add(hg, ev.t, ev.drum === 'ohat' && choke != null ? Math.min(r.end, ev.t + choke + .03) : r.end); last = Math.max(last, r.end);
+      } else {
+        const n = scoreNote(ac, ev, tr, rng); lanes.add(n.node, ev.t, n.end); last = Math.max(last, n.end);
+      }
+    });
+    end = Math.max(end, last);
+    const tg = ac.createGain(); tg.gain.value = tr.gain; lanes.out().connect(tg);
+    let node = tg, tl = last;
+    if (tr.echo) {                                                    // feedback delay with a low-passed feedback path; dry stays at 1, the repeats are `mix`
+      const e = tr.echo, b0 = evs[0].b, dt = Math.max(.005, timeOf(b0 + e.time) - timeOf(b0));
+      const del = ac.createDelay(Math.max(1, dt + .1)), fb = ac.createGain(), lp = ac.createBiquadFilter(), wet = ac.createGain(), sum = ac.createGain();
+      del.delayTime.value = dt; fb.gain.value = e.fb; lp.type = 'lowpass'; lp.frequency.value = 3200; wet.gain.value = e.mix;
+      tg.connect(sum); tg.connect(del); del.connect(wet).connect(sum); del.connect(fb); fb.connect(lp); lp.connect(del);
+      node = sum; tl = last + dt * Math.min(12, e.fb > 0 && e.mix > 0 ? Math.ceil(Math.log(.005 / e.mix) / Math.log(e.fb)) : 1) + .05;
+    }
+    tail = Math.max(tail, tl);
+    if (tr.pan && ac.createStereoPanner) { const pn = ac.createStereoPanner(); pn.pan.value = Math.max(-1, Math.min(1, tr.pan)); node.connect(pn); node = pn; }
+    (tr.duck ? ducked : plain).push(node);
+  });
+  if (ducked.length) {                                                  // one gain for the whole ducked group: a 3 ms dip at each event, then a linear recovery over `rel`
+    const dg = ac.createGain(), gp = dg.gain, ks = [];
+    for (const k of ducksOf(S, timeOf)) {                               // events closer than 4 ms are one dip (the deepest, the longest)
+      const p = ks[ks.length - 1];
+      if (p && k.t - p.t < .004) { p.depth = Math.max(p.depth, k.depth); p.rel = Math.max(p.rel, k.rel); } else if (k.depth > 0) ks.push({ ...k });
+    }
+    let dip = null;                                                     // the running dip: from time t (attack done) it recovers from v to 1 over rel
+    const lvl = t => !dip ? 1 : t >= dip.t + dip.rel ? 1 : dip.v + (1 - dip.v) * (t - dip.t) / dip.rel;
+    const settle = t => { if (dip) { const e = dip.t + dip.rel; gp.linearRampToValueAtTime(t >= e ? 1 : lvl(t), Math.min(t, e)); } };     // finish the recovery, or cut it where the next dip starts
+    gp.setValueAtTime(1, 0);
+    for (const k of ks) {
+      settle(k.t); const cur = lvl(k.t), v = Math.min(cur, 1 - k.depth);
+      gp.setValueAtTime(cur, k.t); gp.linearRampToValueAtTime(v, k.t + .003);
+      dip = { t: k.t + .003, rel: Math.max(k.rel - .003, 1e-3), v };
+    }
+    settle(Infinity);
+    sumTree(ac, ducked).connect(dg); plain.push(dg);
+  }
+  const master = ac.createGain(); master.gain.value = opts.gain ?? 1;
+  if (plain.length) sumTree(ac, plain).connect(master);
+  if (opts.limit === false) master.connect(out);
+  else { const pre = ac.createGain(), ws = ac.createWaveShaper(); pre.gain.value = .5; ws.curve = SOFT; master.connect(pre).connect(ws).connect(out); }
+  return { end, tail: Math.max(end, tail), length: S.length == null ? end : timeOf(S.length) };
+}
+
+const Chip = { parse, play, instrument, sfx, drums, playScore, scoreEvents, scoreDucks, validateScore, midiToHz, noteToMidi, TICKS };
 if (typeof window !== 'undefined') window.Chip = Chip;
 if (typeof module !== 'undefined' && module.exports) module.exports = Chip;
 })();

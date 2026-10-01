@@ -1,0 +1,11 @@
+[TODO: the number and the question it raises, <= 12 words]
+
+[TODO: where the number comes from]
+
+[TODO: the arithmetic in one sentence]
+
+[TODO: what changes the number, one variable]
+
+[TODO: the number in human terms]
+
+[TODO: what the number means for the viewer]

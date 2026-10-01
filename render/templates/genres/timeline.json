@@ -1,0 +1,197 @@
+{
+  "id": "new-video",
+  "title": "TODO: working title",
+  "lang": "ru",
+  "genre": "timeline",
+  "note": [
+    "Every shot: one claim in <= 8 words (the statement), one picture that proves it, a caption with the source.",
+    "The hook question is on screen by 2 s; no title card.",
+    "Replace every TODO, then: node render/lint-spec.mjs spec.json.",
+    "Transitions, one meaning each: cut = the next step of one thought; push-up = the next item of a list; dip = a new chapter; flash = the reveal; punch = the turn.",
+    "TIMELINE (45-60 s, 120-160 words): a rail with true placement of dates (or a log scale labelled as such); eras get screen time by IMPORTANCE, not duration, and the pace accelerates toward the present; one picture per era and the eras share a world (the same object transformed, not a new slide); the HUD marker never stops moving."
+  ],
+  "thesis": "TODO: one concrete sentence",
+  "hook": "TODO: the question the first 2 seconds ask",
+  "format": { "W": 1080, "H": 1920, "FPS": 30 },
+  "tempo": 120,
+  "voice": { "engine": "edge", "voice": "ru-RU-DmitryNeural", "rate": "-5%", "file": "voice.txt", "offset": 0 },
+  "style": { "themes": ["paper", "blueprint"], "display": "Oswald", "mono": "IBM Plex Mono", "statementSize": 94 },
+  "music": { "seed": 1, "key": "A minor", "style": "adventure", "gain": 0.55 },
+  "hud": { "kind": "rail", "key": "year", "span": [1900, 2000], "marks": [1900, 1930, 1960, 1990, 2000] },
+  "shots": [
+    {
+      "id": "hook",
+      "phrases": [0],
+      "claim": "change",
+      "energy": 0.3,
+      "set": { "year": 1900 },
+      "say": { "text": "TODO: the span|*PAYOFF*", "start": { "$word": "TODO" }, "payoff": { "$word": "TODO" } },
+      "picture": {
+        "block": "rail",
+        "span": [1900, 2000],
+        "spans": [{ "a": 1900, "b": 1950, "label": "TODO", "style": "solid" }],
+        "marks": [{ "t": 1900, "label": "TODO" }, { "t": 1950, "label": "TODO", "accent": true, "at": { "$word": "TODO" } }]
+      },
+      "note": "The whole span at a glance, then the question: how did we get here?"
+    },
+    {
+      "id": "era-1",
+      "phrases": [1],
+      "chapter": "TODO: era 1",
+      "claim": "identity",
+      "energy": 0.35,
+      "in": "cut",
+      "set": { "year": { "to": 1930, "dur": 1.5 } },
+      "facts": ["f1"],
+      "say": {
+        "text": "TODO: era 1|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "card",
+        "layers": [
+          {
+            "kind": "dictionary",
+            "title": "TODO: title",
+            "lines": 9,
+            "stamps": [{ "text": "TODO", "at": { "$word": "TODO" }, "tone": "accent", "rot": -0.16 }]
+          }
+        ]
+      },
+      "note": "Era 1: the object of the world, in its first form. The longest era in the film."
+    },
+    {
+      "id": "era-2",
+      "phrases": [2],
+      "chapter": "TODO: era 2",
+      "claim": "change",
+      "energy": 0.45,
+      "in": "push-up",
+      "set": { "year": { "to": 1950, "dur": 1.2 } },
+      "facts": ["f2"],
+      "say": {
+        "text": "TODO: era 2|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "rail",
+        "span": [1930, 1960],
+        "spans": [{ "a": 1900, "b": 1950, "label": "TODO", "style": "solid" }],
+        "marks": [{ "t": 1900, "label": "TODO" }, { "t": 1950, "label": "TODO", "accent": true, "at": { "$word": "TODO" } }]
+      },
+      "note": "Era 2: the same object, transformed."
+    },
+    {
+      "id": "era-3",
+      "phrases": [3],
+      "chapter": "TODO: era 3",
+      "claim": "magnitude",
+      "energy": 0.55,
+      "in": "push-up",
+      "set": { "year": { "to": 1970, "dur": 1 } },
+      "facts": ["f3"],
+      "say": {
+        "text": "TODO: era 3|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "bars",
+        "unit": "TODO: unit",
+        "order": "given",
+        "showValue": true,
+        "items": [
+          { "label": "TODO: yardstick", "value": 1, "ref": true },
+          { "label": "TODO: datum", "value": 10, "accent": true }
+        ]
+      },
+      "note": "Era 3: faster."
+    },
+    {
+      "id": "era-4",
+      "phrases": [4],
+      "chapter": "TODO: era 4",
+      "claim": "structure",
+      "energy": 0.7,
+      "in": "push-up",
+      "set": { "year": { "to": 1990, "dur": 0.8 } },
+      "facts": ["f4"],
+      "say": {
+        "text": "TODO: era 4|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit, arithmetic"
+      },
+      "picture": {
+        "block": "tree",
+        "root": "TODO: root",
+        "levels": [3, 9],
+        "names": [{ "label": "TODO: one name", "level": 1, "accent": true }],
+        "countLabel": "TODO: what is counted",
+        "grow": "up"
+      },
+      "note": "Era 4: faster again."
+    },
+    {
+      "id": "era-5",
+      "phrases": [5],
+      "chapter": "TODO: era 5",
+      "claim": "magnitude",
+      "energy": 0.95,
+      "in": "push-up",
+      "set": { "year": { "to": 2010, "dur": 0.6 } },
+      "facts": ["f5"],
+      "say": {
+        "text": "TODO: era 5|*PAYOFF*",
+        "start": { "$word": "TODO" },
+        "payoff": { "$word": "TODO" },
+        "caption": "TODO: source, unit"
+      },
+      "picture": {
+        "block": "counter",
+        "value": 10,
+        "from": 0,
+        "unit": "TODO: unit",
+        "format": "int",
+        "ref": { "label": "TODO: yardstick", "value": 1 },
+        "label": "TODO: what is counted"
+      },
+      "note": "Era 5: the shortest era before today."
+    },
+    {
+      "id": "now",
+      "phrases": [6],
+      "tail": 1.5,
+      "claim": "change",
+      "energy": 0.4,
+      "in": "flash",
+      "set": { "year": { "to": 2000, "dur": 1 } },
+      "say": { "text": "TODO: today|*PAYOFF*", "start": { "$word": "TODO" }, "payoff": { "$word": "TODO" } },
+      "picture": {
+        "block": "rail",
+        "span": [1900, 2000],
+        "spans": [{ "a": 1900, "b": 1950, "label": "TODO", "style": "solid" }],
+        "marks": [{ "t": 1900, "label": "TODO" }, { "t": 1950, "label": "TODO", "accent": true, "at": { "$word": "TODO" } }]
+      },
+      "note": "Today: the marker lands; the opening rail, now complete. Resolve in the last 2 s."
+    }
+  ],
+  "facts": [
+    { "id": "f1", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f2", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f3", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f4", "text": "TODO: the fact, with its number", "source": "TODO: https://..." },
+    { "id": "f5", "text": "TODO: the fact, with its number", "source": "TODO: https://..." }
+  ],
+  "post": {
+    "title": "TODO: post title (a promise, not a label)",
+    "description": "TODO: one or two sentences",
+    "tags": ["TODO"],
+    "cover": { "shot": "now", "at": 1.5 }
+  }
+}

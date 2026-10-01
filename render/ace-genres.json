@@ -1,0 +1,82 @@
+[
+  {
+    "name": "deep",
+    "bpm": 124,
+    "keyscale": "C minor",
+    "duration": 60,
+    "seeds": [
+      1
+    ],
+    "caption": "Deep house instrumental, 124 BPM, four-on-the-floor kick, warm sub bass, crisp hi-hats, sidechained chord stabs, lush pads, clean modern mix, no vocals, steady groove for a background music bed"
+  },
+  {
+    "name": "techhouse",
+    "bpm": 126,
+    "keyscale": "F minor",
+    "duration": 60,
+    "seeds": [
+      1
+    ],
+    "caption": "Tech house instrumental, punchy four-on-the-floor kick, tight rolling bassline, crisp shuffled hi-hats, percussive clicks and rimshots, short vocal-chop stabs, minimal and groovy, modern club mix, no vocals"
+  },
+  {
+    "name": "melodic",
+    "bpm": 122,
+    "keyscale": "A minor",
+    "duration": 60,
+    "seeds": [
+      1
+    ],
+    "caption": "Melodic progressive house instrumental, emotional arpeggiated synth lead, wide warm pads, deep pulsing bass, soft four-on-the-floor kick, slow build with a filter sweep and a euphoric drop, cinematic and uplifting, no vocals"
+  },
+  {
+    "name": "techno",
+    "bpm": 130,
+    "keyscale": "D minor",
+    "duration": 60,
+    "seeds": [
+      1
+    ],
+    "caption": "Driving peak-time techno instrumental, hard punchy kick, rumbling sub bass, hypnotic repetitive synth stab, metallic percussion, dark industrial atmosphere, relentless energy, no vocals"
+  },
+  {
+    "name": "lofi",
+    "bpm": 84,
+    "keyscale": "Eb major",
+    "duration": 60,
+    "seeds": [
+      1
+    ],
+    "caption": "Lo-fi chillhop instrumental, dusty boom-bap drums with soft swing, warm Rhodes electric piano chords, mellow jazzy bass, vinyl crackle, gentle tape saturation, relaxed study-beat mood, no vocals"
+  },
+  {
+    "name": "synthwave",
+    "bpm": 110,
+    "keyscale": "C minor",
+    "duration": 60,
+    "seeds": [
+      1
+    ],
+    "caption": "Synthwave retrowave instrumental, 80s analog synths, gated reverb drums, pulsing octave bassline, bright arpeggios, nostalgic neon night-drive mood, polished modern production, no vocals"
+  },
+  {
+    "name": "ambient",
+    "bpm": 70,
+    "keyscale": "G major",
+    "duration": 60,
+    "seeds": [
+      1
+    ],
+    "caption": "Cinematic ambient electronic instrumental, slow evolving pads, soft piano motif, subtle pulsing sub bass, light glitchy percussion textures, spacious reverb, calm and thoughtful mood for a documentary, no vocals"
+  },
+  {
+    "name": "disco",
+    "bpm": 120,
+    "keyscale": "F major",
+    "duration": 60,
+    "seeds": [
+      1
+    ],
+    "caption": "Funky disco house instrumental, filtered disco strings and brass stabs, groovy slap bass, four-on-the-floor kick with open hi-hats, rhythmic wah guitar, joyful and danceable, French house flavor, no vocals"
+  }
+]

@@ -39,7 +39,7 @@ node render.mjs ../film.html ../part.mp4 --shot two --draft      # one shot, a c
 | `--shots` | off | Print the shot list with timecodes and exit |
 | `--voice FILE` | none | Mix a voice-over into the page audio |
 | `--music FILE` | none | Mix a music track; combines with `--voice` and the page audio |
-| `--loudnorm` | off | Normalize the final audio to −14 LUFS |
+| `--loudnorm` | off | Normalize the final audio to −14 LUFS, then a limiter at −3 dB (single-pass loudnorm alone can overshoot, and AAC adds a little more) |
 | `--no-audio` | off | Skip `window.__renderAudio` |
 | `--profile` | off | Report per-frame draw and capture times, the 10 slowest frames and the mean per second |
 
@@ -59,11 +59,46 @@ The page is opened with `?render`: in this mode it must not run its own requestA
 ## Contact sheet
 
 ```bash
-./contact-sheet.sh ../film.mp4 ../sheet.png        # 2 frames/s, 8 columns
+./contact-sheet.sh ../film.mp4 ../sheet.png        # 2 frames/s, 8 columns (12 for a portrait video)
 ./contact-sheet.sh ../film.mp4 ../sheet.png 4 10   # 4 frames/s, 10 columns
 ```
 
-Requires an ffmpeg build with drawtext (freetype). Builds without fontconfig (common on Windows) need a font file: the script uses Consolas on Windows, or set `FONTFILE=/path/to/font.ttf`. If drawtext isn't available at all, remove it from the filter in the script.
+Tiles are 320 px wide for a landscape video and 190 px for a portrait one, so a 50-second 1080×1920 film at 1 frame/s fits one readable image. Requires an ffmpeg build with drawtext (freetype). Builds without fontconfig (common on Windows) need a font file: the script uses Consolas on Windows, or set `FONTFILE=/path/to/font.ttf`. If drawtext isn't available at all, remove it from the filter in the script.
+
+## Text check
+
+```bash
+node textcheck.mjs ../film.html          # draws the whole film every 0.5 s, lists warnings and errors, exit code 1 if any
+node textcheck.mjs ../film.html 0.25     # a finer sweep
+```
+
+`runtime/film.js` shrinks a statement or caption that is wider than its room and logs a warning; the sweep collects them, plus page errors, so a type size that would wander from shot to shot is caught before a render. Matters most for vertical films ([19-vertical.md](../19-vertical.md)).
+
+## The short factory
+
+Spoken, subtitled vertical shorts on a line: one `spec.json` per video, a command per step. The format of the spec and the whole line: [23-short-factory.md](../23-short-factory.md).
+
+```bash
+node new.mjs lyapunov --genre one-life --lang ru        # videos/lyapunov/spec.json + voice.txt from a genre template (--genres lists the 11)
+node make.mjs ../videos/lyapunov/spec.json --draft      # lint, voice, page, draft render, review: about 2 minutes
+node make.mjs ../videos/lyapunov/spec.json              # final render, review, captions, cover, post text, upload export
+node make.mjs ../videos/*/spec.json                     # a batch: the voice is cached per sentence, an unchanged render is skipped
+```
+
+| Tool | What it does |
+|---|---|
+| `make.mjs` | the orchestrator. Options: `--draft`, `--shot id[..id]`, `--out dir`, `--no-render` (stop at the page), `--no-qa`, `--no-post`, `--no-lint`, `--force`, `--inline`, `--strict`. Writes `out/` next to the spec: `film.html`, `voice.*`, `spec.resolved.json`, `<id>.mp4`, `qa/`, `captions.srt`, `cover.jpg`, `post.md`, `exports/`. Exit 0 all passed, 1 lint errors or a failed review, 2 a tool failed |
+| `voice.mjs script.txt out/voice` | text to `voice.wav` + word and phrase timings; `--engine edge` (free, `pip install edge-tts`, runs as an external tool) or `openrouter` (paid, `OPENROUTER_KEY` in the kit's git-ignored `.env`, see `.env.example`; default model `google/gemini-3.8-flash-tts`, 30 voices); `--profile documentary|explainer|assertive|warm|energetic` (a KIND of voice from `voices.json`, so a genre is not tied to one voice; `--voice` and `--model` override it); `--style TEXT` (how to speak, sent as `instructions`, never in the text), `--align whisper|letters`, `--max-cost USD`, `--models` (speech models and prices), `--rate`, `--gap`, `--sentence-gap`, `--voices ru` lists Edge voices. Synthesizes sentence by sentence, cuts the service's padding, re-times the words to the audio |
+| `voice-audition.mjs script.txt [--voices A,B \| all] [--profiles p1,p2]` | choose a voice by ear for THIS script: the same few sentences in several voices, loudness-matched mp3s, each voice with its published character; about 0.4 cent a voice. The winner goes into `voices.json` as a profile |
+| `lint-spec.mjs spec.json [--voice out/voice] [--json]` | checks a spec before anything is made: budgets, anchors against the voice, blocks and their parameters, facts with sources, genre rules, leftover `TODO`s. Exit 1 on errors |
+| `qa.mjs film.html --video v.mp4 [--spec s.json] [--out dir] [--strict]` | the automatic review: frame 0 motion, hook, dead stretches, safe zones, overlaps, text-fit warnings, statement and word budgets, voice pace, loudness, black and frozen frames; writes `report.md`, `report.json`, `sheet.png`, `poster/`. Exit 1 on a failure |
+| `post.mjs out/` | `captions.srt`/`.vtt` from the voice, `cover.jpg` (1080x1920) and a 4:5 crop, `post.md` (title, hook, description, sources, tags, alt text), `exports/<id>-upload.mp4` (crf 22) |
+| `new.mjs id --genre g` | a spec and a voice text from `templates/genres/<g>.json`; refuses to overwrite; `--engine openrouter` writes `voice.profile` (the genre's kind of voice from `voices.json`) instead of a voice name |
+| `textcheck.mjs film.html` | the sweep for text-fit warnings alone |
+
+Edge TTS talks to the service behind Microsoft Edge's "Read aloud": free and keyless, but not an official public API. It is right for drafts and for projects where that is acceptable; for a commercial release use the `openrouter` engine.
+
+The `openrouter` engine (paid; checked with Gemini TTS, which speaks Russian well enough that a transcription returns the script word for word): put `OPENROUTER_KEY=...` into `.env` at the kit root (it is git-ignored; `.env.example` shows the line). Cost for a 970-character script, about 75 s of speech: about 1.5 cents on `google/gemini-3.8-flash-tts`, 3 on `google/gemini-3.1-flash-tts-preview`, plus about 0.85 cent for the transcription that gives real word times (`--align whisper`, the default; `--align letters` is free but spreads the words by letter count and marks them `approx`). The cost is estimated BEFORE anything is spent and the run stops if it is above `--max-cost` (default $0.25); the estimate runs about 35% high, and a spend ledger is written to `<out>.cache/spend.json`. Which voice: the film asks for a kind (`voice.profile`: `documentary` is Algieba, picked by ear on the Lyapunov script; the others are proposals from Google's published voice characters and have to be auditioned for the genre; `voices.json` says which is which), and the tool resolves the name, so one edit in `voices.json` changes a genre and one spec can still pin `voice.voice`. Write numbers as words only if you accept that the recognizer returns digits for them: those words get times spread between their neighbours and are marked `approx` (6 of 130 in the Lyapunov script). Notes: (1) Gemini reads an instruction that is put into the text aloud, so give the manner of speech with `--style`; it is sent as `instructions` and was not spoken, but it did not speed up the test narration (70.5 s with "brisk" against 68.1 s without); the pace follows the voice (Charon is the quickest of the four tried); (2) voices belong to models: change both together; (3) Gemini returns raw PCM only, which the tool decodes to a lossless wav; (4) from some networks `openrouter.ai` answers 403: the tool fails with that message and spends nothing; (5) `openai/gpt-4o-mini-tts` is no longer in the catalog.
 
 ## Stills
 
@@ -92,3 +127,34 @@ Tempo map for `Film.create({ tempo })`, beats, downbeats, quiet stretches, stron
 ## Speed
 
 Rendering is still slower than real time. Iterate on fragments with `--draft`, render the whole film only for the final cut, and run `--profile` when a render feels slow: it names the timecodes to look at. Rules for writing pages that render fast are in [13-performance.md](../13-performance.md).
+
+## Music report
+
+```bash
+node music-report.mjs ../runtime/test/fixtures/score-basic.json ../music-report/ --wav ../track.wav
+node music-report.mjs ../film.html ../music-report/       # window.__score and window.__renderAudio() of the page
+```
+
+Eyes and lint for music, for an agent that cannot listen. The input is a Score (the format is in the header of [runtime/music-lint.js](../runtime/music-lint.js)): bpm, tracks with events, and optionally key, chords and sections. With a film page the script opens it with `?render`, reads `window.__score` and renders the audio through `window.__renderAudio()` (saved as `audio.wav`); `--wav` uses an existing file instead. A score JSON without `--wav` gets the piano roll and the lint only.
+
+| File | What it shows |
+|---|---|
+| `report.md` | Lint findings by severity with bar and beat and what to do, the text summary of the score, per-track and per-section tables, loudness (integrated LUFS, max short-term, true peak) per section and overall |
+| `piano-roll.png` | 1920 px wide: pitch of the bass, lead, arp and pad tracks (colour by role, opacity = velocity), one lane per drum voice, chord symbols, bars, sections with energy, lint markers, energy bars with notes per beat |
+| `spectrogram.png` | ffmpeg `showspectrumpic`, log frequency 20 Hz to Nyquist, bar grid, section boundaries and integrated loudness in every section |
+| `lint.json` | `{ findings, stats, score }` as returned by `MusicLint.lint` |
+
+Exit code 1 when the lint has `error` findings (a note outside both the chord and the key on a strong beat), 2 when the tool failed, otherwise 0. Chrome is found like in the other tools (`CHROME_PATH` or the installed Chrome); ffmpeg and ffprobe on PATH. The linter itself is a pure function and also runs without a browser: `const { findings, score } = require('../runtime/music-lint.js').lint(score)`; `MusicLint.describe(score)` gives a compact text summary a model can read. Rules and thresholds are documented in the header of `runtime/music-lint.js` and can be overridden or disabled through `opts` (`{ disable: ['loop'], leapWarn: 14 }`).
+
+What to look at first: errors, then `strong-beat-chord`, `clash` and `parallel-perfects` (harmony), `loop` and `flat-dynamics` (the music feels mechanical), `density-vs-energy` and `drum-groove` (the structure does not lift), and in the loudness table whether the chorus is at least 2 to 3 LU louder than the verse.
+
+## Grid check and AI music
+
+```bash
+node grid-check.mjs ../track.wav --bpm 124 --sections intro:8,build:8,drop:16,break:8,drop2:16,outro:8 --riser build,break   # a track at a tempo you chose
+node grid-check.mjs ../take.wav --bpm 126 --sections all:15 --fit                                                         # a take from a model
+uv run --project ../local/ACE-Step-1.5 python ace-gen.py --out ../local/ace-out --name genres --jobs ace-genres.json      # ACE-Step takes
+node ace-batch-check.mjs ../local/ace-out/genres-report.json                                                              # a table per take
+```
+
+For a track **you generated** (see [22-electronic-music.md](../22-electronic-music.md)), not a found one (that is `beatmap.mjs`). `grid-check.mjs` per section: level, low-band level and the phase of the pulse against the ideal grid (the low band for a kick, the onsets on eighths for any other mix); then the lag behind the grid, whether the rhythm stops for the last beat of each seam, and whether a riser really rises. `--fit` finds the constant tempo within 3 bpm of the request that puts the pulse on a grid, for a model that runs a little off. `ace-gen.py` runs ACE-Step 1.5 (MIT) in the mode for 6 GB cards, many jobs in one process; `ace-batch-check.mjs` tabulates the fitted tempo, the slip over the take, the pulse and the loudness and makes an MP3 of each take. Needs ffmpeg; `ace-gen.py` needs ACE-Step and uv.

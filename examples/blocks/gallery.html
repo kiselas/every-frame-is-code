@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Blocks gallery</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Oswald:wght@500;700&display=block" rel="stylesheet">
+</head><body><canvas></canvas>
+<script src="../../runtime/film.js"></script>
+<script src="../../runtime/blocks.js"></script>
+<script>
+// Gallery of runtime/blocks.js: one shot per block (some twice), 1080x1920, 30 fps, 120 bpm, no voice. Every block with its sample parameters.
+//   node render/still.mjs examples/blocks/gallery.html out/ bars@0.3 bars@0.95        (or open the page with ?shot=bars)
+// Contract and parameters: 23-short-factory.md (section "Blocks"), runtime/blocks.js (Blocks.list()).
+const W = 1080, H = 1920;
+const DISP = '"Oswald", sans-serif', MONO = '"IBM Plex Mono", monospace';
+
+// a shot's picture: one block or a list of them (layers); `areas` are fractions of the band [x, y, w, h], like the short factory resolves them
+const pic = (p, areas) => (ctx, s, f) => {
+  [].concat(p).forEach((q, i) => {
+    const fr = areas && areas[i], b = f.band;
+    Blocks.draw(ctx, s, f, q, fr ? { x: b.x + b.w * fr[0], y: b.y + b.h * fr[1], w: b.w * fr[2], h: b.h * fr[3] } : undefined);
+  });
+};
+const S = (text, extra = {}) => ({ text, weight: 700, size: 94, captionSize: 24, ...extra });
+
+Film.create({
+  W, H, FPS: 30, tempo: 120,
+  safe: [.07, .17, .22],
+  type: { display: DISP, mono: MONO },
+  fonts: ['700 100px "Oswald"', '500 30px "IBM Plex Mono"', '600 30px "IBM Plex Mono"', '700 30px "IBM Plex Mono"'],
+  fontText: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:;?!%()-–—·×≈→',
+  themes: {
+    paper: { bg: '#e9e1cd', ink: '#17150f', muted: '#756d5b', accent: '#b3261e', card: '#f7f2e4', ok: '#1d6b4b', hud: '#17150f', texture: 'paper', grain: .07, vignette: .3 },
+    blueprint: { bg: '#1b4a8a', ink: '#eaf1fb', muted: '#93b3dd', accent: '#ff8a50', card: '#1b4a8a', ok: '#7be0a6', hud: '#eaf1fb', texture: 'grid', grain: .05, vignette: .35 },
+  },
+  theme: 'paper',
+  shots: [
+    { id: 'bars', bars: 3, chapter: 'BARS', theme: 'paper',
+      draw: pic({ block: 'bars', unit: 'KM', items: [{ label: 'MOSCOW - ST PETERSBURG', value: 700, ref: true }, { label: 'MOSCOW - KAZAN', value: 800 }, { label: 'MOSCOW - NOVOSIBIRSK', value: 2800, accent: true }] }),
+      say: S('FOUR TIMES|*FARTHER*|THAN PETERSBURG.', { per: .35, caption: 'BARS · MAGNITUDE, COMPARISON, RANKING' }) },
+    { id: 'bars-log', bars: 3, in: { type: 'push', axis: 'y', beats: 1 },
+      draw: pic({ block: 'bars', unit: 'MB', log: true, dur: 3.4, items: [{ label: 'A FLOPPY DISK', value: 1.4, ref: true }, { label: 'A PHOTO', value: 4 }, { label: 'A FILM', value: 4000, accent: true }] }),
+      say: S('A FILM IS|*3 000 DISKS.*', { per: .4, caption: 'BARS · LOG SCALE, SAID ON THE PICTURE' }) },
+    { id: 'counter', bars: 3, chapter: 'COUNTER', in: { type: 'dip', color: '#e9e1cd', beats: 1.5 },
+      draw: pic({ block: 'counter', value: 2813, unit: 'KM', label: 'MOSCOW - NOVOSIBIRSK', ref: { label: 'MOSCOW - ST PETERSBURG', value: 700 } }),
+      say: S('TO SIBERIA:|*2 800 KM.*', { per: .4, caption: 'COUNTER · A NUMBER WITH ITS YARDSTICK' }) },
+    { id: 'counter-plain', bars: 3, theme: 'blueprint', in: { type: 'dip', color: '#1b4a8a', beats: 1.5 },
+      draw: pic({ block: 'counter', value: 24, unit: 'LINES', label: 'WRITTEN BY THE PROGRAM', dur: 2.2 }),
+      say: S('NOT ONE|BY HAND.|*24 BY ITSELF.*', { per: .35, caption: 'COUNTER · WITHOUT A YARDSTICK' }) },
+    { id: 'rail', bars: 3, theme: 'paper', chapter: 'RAIL', in: { type: 'dip', color: '#e9e1cd', beats: 1.5 },
+      draw: pic({ block: 'rail', span: [1911, 1973], title: 'ONE LIFE ON A LINE', dur: 3.4,
+        spans: [{ a: 1911, b: 1973, label: 'LIFE', style: 'solid' }, { a: 1942, b: 1945, label: 'WAR', style: 'hatch' }],
+        marks: [{ t: 1911, label: 'BORN' }, { t: 1932, label: 'STUDENT' }, { t: 1952, label: 'THE COURSE', accent: true }, { t: 1973, label: 'DIED' }] }),
+      say: S('62 YEARS.|*ONE COURSE*|IN 1952.', { per: .35, caption: 'RAIL · CHANGE, LOCATION IN TIME' }) },
+    { id: 'tree', bars: 3, in: { type: 'push', axis: 'y', beats: 1 },
+      draw: pic({ block: 'tree', root: 'TEACHER', levels: [5, 18], countLabel: 'STUDENTS', grow: 'up', dur: 3.6,
+        names: [{ label: 'ERSHOV', level: 1, accent: true }, { label: 'ONE OF 18', level: 2, i: 14 }] }),
+      say: S('HE RAISED|A *SCHOOL.*', { per: .4, caption: 'TREE · STRUCTURE, A FAN-OUT WITH ITS COUNT' }) },
+    { id: 'units', bars: 3, in: { type: 'dip', color: '#e9e1cd', beats: 1.5 },
+      draw: pic({ block: 'units', n: 24, perRow: 6, icon: 'person', unit: 'PEOPLE', dur: 3.4,
+        groups: [{ n: 18, label: 'STUDENTS' }, { n: 6, label: 'TEACHERS' }] }),
+      say: S('A *SEMINAR*|OF 24 PEOPLE.', { per: .4, caption: 'UNITS · PART OF A WHOLE, ONE ICON EACH' }) },
+    { id: 'split', bars: 4, chapter: 'SPLIT', theme: 'blueprint', in: { type: 'dip', color: '#1b4a8a', beats: 1.5 },
+      draw: pic({ block: 'split', divider: true, dead: 'left', deadAt: 2.4,
+        left: { label: 'BEFORE', pic: { block: 'columns', cols: 3, rows: 8, base: 8, digits: 4, scroll: 70 } },
+        right: { label: 'AFTER', pic: { block: 'flow', nodes: [{ id: 'A', kind: 'box', label: 'READ', letter: 'A' }, { id: 'B', kind: 'box', label: 'COUNT', letter: 'B' }, { id: 'D', kind: 'diamond', label: 'DONE?' }],
+          edges: [['A', 'B'], ['B', 'D'], ['D', 'A', { label: 'NO' }]], token: { route: ['A', 'B', 'D', 'A', 'B', 'D', 'A'], at: 2.6, dur: 4 } } } }),
+      say: S('FIRST THE *SCHEME,*|NOT THE NUMBERS.', { per: .35, caption: 'SPLIT · BEFORE AND AFTER AT ONE SCALE' }) },
+    { id: 'flow', bars: 5, chapter: 'FLOW', in: { type: 'push', axis: 'y', beats: 1 },
+      draw: pic({ block: 'flow', nodes: [{ id: 'S', kind: 'pill', label: 'TASK' }, { id: 'A', kind: 'box', label: 'READ', letter: 'A' }, { id: 'B', kind: 'box', label: 'COUNT', letter: 'B' }, { id: 'D', kind: 'diamond', label: 'DONE?' }, { id: 'E', kind: 'pill', label: 'RESULT' }],
+        edges: [['S', 'A'], ['A', 'B'], ['B', 'D'], ['D', 'A', { label: 'NO' }], ['D', 'E', { label: 'YES' }]],
+        token: { route: ['S', 'A', 'B', 'D', 'A', 'B', 'D', 'E'], at: 3.4, dur: 4.6 },
+        counters: [{ label: 'TYPED BY HAND', from: 0, to: 0 }, { label: 'LINES MADE', from: 0, to: 24, at: 3.6, dur: 3 }] }),
+      say: S('THE SCHEME|*RUNS BY ITSELF.*', { per: .35, caption: 'FLOW · A MECHANISM THAT LOOPS' }) },
+    { id: 'columns', bars: 3, theme: 'blueprint', chapter: 'COLUMNS', in: { type: 'dip', color: '#1b4a8a', beats: 1.5 },
+      draw: pic({ block: 'columns', cols: 5, rows: 9, base: 8, digits: 5, scroll: 70, label: 'MACHINE CODE, OCTAL', glitch: { at: 2.6, col: 2, row: 4 } }),
+      say: S('THE MACHINE|KNEW ONLY|*NUMBERS.*', { per: .38, caption: 'COLUMNS · IDENTITY, THE TEXTURE OF A THING' }) },
+    { id: 'map', bars: 3, theme: 'paper', chapter: 'MAP', in: { type: 'dip', color: '#e9e1cd', beats: 1.5 },
+      draw: pic({ block: 'map', from: { label: 'MOSCOW', at: [.2, .2] }, to: { label: 'NOVOSIBIRSK', at: [.78, .76] }, km: 2800, ref: { label: 'ST PETERSBURG', km: 700 }, dur: 3 }),
+      say: S('1961:|*TO SIBERIA.*', { per: .4, caption: 'MAP · LOCATION, WITH A REFERENCE ROUTE' }) },
+    { id: 'card', bars: 4, chapter: 'CARD', in: { type: 'push', axis: 'y', beats: 1 },
+      draw: pic({ block: 'card', layers: [
+        { kind: 'article', title: 'WHAT IS THE HARM OF CYBERNETICS?', heading: 'SOBOLEV · KITOV · LYAPUNOV', meta: 'QUESTIONS OF PHILOSOPHY, NO. 4, 1955', offset: [-40, -50], rot: -.03, scale: .8 },
+        { kind: 'dictionary', title: 'CYBERNETICS', heading: 'SHORT DICTIONARY', meta: 'MOSCOW, 1954', lines: 6, offset: [40, 70], rot: .02, scale: .82, at: 1.1,
+          stamps: [{ text: 'PSEUDOSCIENCE', at: 2.8, tone: 'accent', rot: -.14, size: 120 }, { text: 'SCIENCE', at: 6.2, tone: 'ok', rot: .05, size: 140 }], strike: { at: 5.4 } }] }),
+      say: S('A PAGE.|A STAMP.|A *VERDICT.*', { per: .38, caption: 'CARD · LAYERS, A STAMP THAT LANDS' }) },
+    { id: 'card-reversal', bars: 4, theme: 'paper', in: { type: 'dip', color: '#e9e1cd', beats: 1.5 },
+      draw: pic([
+        { block: 'card', layers: [{ kind: 'dictionary', title: 'CYBERNETICS', heading: 'SHORT DICTIONARY', lines: 0, stamps: [{ text: 'PSEUDOSCIENCE', at: -1, tone: 'accent', rot: -.14, size: 120, out: { at: 2.2, dur: 1.2 } }, { text: 'SCIENCE', at: -1, tone: 'ok', rot: .05, size: 150, pos: [-.02, .24] }] }] },
+        { block: 'flow', layout: 'row', nodes: [{ id: 'A', kind: 'box', label: 'A' }, { id: 'B', kind: 'box', label: 'B' }, { id: 'D', kind: 'diamond', label: '?' }], edges: [['A', 'B'], ['B', 'D'], ['D', 'A']], token: { route: ['A', 'B', 'D', 'A', 'B', 'D', 'A'], at: 2.4, dur: 3.2 } },
+      ], [[0, 0, 1, .66], [0, .7, 1, .3]]),
+      say: S('LABEL OFF.|*SCIENCE*|STAYED.', { per: .35, size: 80, caption: 'CARD · A STAMP LEAVES, A ROW FLOW BELOW' }) },
+    { id: 'plate', bars: 3, chapter: 'PLATE', in: { type: 'push', axis: 'y', beats: 1 },
+      draw: pic([
+        { block: 'plate', title: 'LYAPUNOV', sub: 'ALEXEY ANDREEVICH', years: '1911 - 1973' },
+        { block: 'rail', span: [1911, 1973], dur: 2.6, spans: [{ a: 1942, b: 1945, label: 'WAR', style: 'hatch', at: 2 }],
+          marks: [{ t: 1911, label: 'BORN' }, { t: 1932, label: 'STUDENT', at: 1.2 }, { t: 1944, label: 'WOUNDED', at: 2.2 }, { t: 1952, label: 'THE COURSE', accent: true, at: 3 }] },
+      ], [[0, 0, 1, .5], [0, .54, 1, .46]]),
+      say: S('A *MATHEMATICIAN*', { per: .4, caption: 'PLATE + RAIL · A NAME AND A LIFE IN A SHORT AREA' }) },
+    { id: 'plate-facts', bars: 3, in: { type: 'dip', color: '#e9e1cd', beats: 1.5 },
+      draw: pic({ block: 'plate', title: 'LYAPUNOV', sub: 'ALEXEY ANDREEVICH', years: '1911 - 1973', facts: [{ k: '1932', v: 'STUDENT OF LUZIN' }, { k: '1944', v: 'GUNNER, ORDER OF THE RED STAR' }, { k: '1952', v: 'FIRST COURSE IN THE COUNTRY' }] }),
+      say: S('HIS *NAME.*', { per: .4, caption: 'PLATE · WITH FACTS' }) },
+    { id: 'type', bars: 3, theme: 'blueprint', chapter: 'TYPE', in: { type: 'dip', color: '#1b4a8a', beats: 1.5 },
+      draw: pic({ block: 'type', lines: [{ text: 'NO ONE', size: 150 }, { text: 'KNEW THE', size: 150 }, { text: 'WORD', size: 230, tone: 'accent' }] }),
+      say: S('TYPE *ONLY.*', { per: .4, caption: 'TYPE · WHEN THE CLAIM HAS NO PICTURE' }) },
+  ],
+});
+</script>
+</body></html>

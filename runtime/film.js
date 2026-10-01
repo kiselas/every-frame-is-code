@@ -323,11 +323,15 @@ const TRANSITIONS = {
     draw(s, 1); draw(s * 1.035, .22 * (1 - q)); draw(s * 1.075, .12 * (1 - q)); ctx.globalAlpha = 1;
     fx.rays(ctx, W / 2, H / 2, (1 - q) * .55, { color: o.rays || '#ffffff', t: q, seed: 11 });
   },
-  push(ctx, A, B, p, o) { const e = ease.inOutExpo(p), d = o.dir || 1, W = A.width; ctx.drawImage(A, -d * e * W, 0); ctx.drawImage(B, d * (1 - e) * W, 0); },
+  // push and whip slide sideways; `axis: 'y'` slides vertically (dir 1: the old shot leaves upward, the new one comes from below: the swipe of a feed)
+  push(ctx, A, B, p, o) {
+    const e = ease.inOutExpo(p), d = o.dir || 1, y = o.axis === 'y', S = y ? A.height : A.width, at = k => y ? [0, k] : [k, 0];
+    ctx.drawImage(A, ...at(-d * e * S)); ctx.drawImage(B, ...at(d * (1 - e) * S));
+  },
   whip(ctx, A, B, p, o) {
-    const d = o.dir || 1, e = ease.inOutExpo(p), W = A.width, blur = Math.sin(p * Math.PI);
-    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, A.height);
-    for (let i = 0; i < 8; i++) { const k = e + (i / 8 - .5) * .25 * blur; ctx.globalAlpha = .2; ctx.drawImage(A, -d * k * W, 0); ctx.drawImage(B, d * (1 - k) * W, 0); }
+    const d = o.dir || 1, e = ease.inOutExpo(p), y = o.axis === 'y', S = y ? A.height : A.width, blur = Math.sin(p * Math.PI), at = k => y ? [0, k] : [k, 0];
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, A.width, A.height);
+    for (let i = 0; i < 8; i++) { const k = e + (i / 8 - .5) * .25 * blur; ctx.globalAlpha = .2; ctx.drawImage(A, ...at(-d * k * S)); ctx.drawImage(B, ...at(d * (1 - k) * S)); }
     ctx.globalAlpha = 1;
   },
   // push into a point of the old shot (a window, a pupil, a doorway); the new shot grows out of it.
@@ -343,9 +347,9 @@ const TRANSITIONS = {
     ctx.drawImage(A, 0, 0); ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, ease.inOutCubic(p) * Math.hypot(W, H), 0, TAU); ctx.clip(); ctx.drawImage(B, 0, 0); ctx.restore();
   },
   wipe(ctx, A, B, p, o) {                       // hard-edged wipe with an ink line on the edge
-    const W = A.width, H = A.height, e = ease.inOutCubic(p), x = e * (W + H * .3) - H * .15;
-    ctx.drawImage(A, 0, 0); ctx.save(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(x + H * .15, 0); ctx.lineTo(x - H * .15, H); ctx.lineTo(0, H); ctx.closePath(); ctx.clip(); ctx.drawImage(B, 0, 0); ctx.restore();
-    ctx.strokeStyle = o.color || '#000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + H * .15, 0); ctx.lineTo(x - H * .15, H); ctx.stroke();
+    const W = A.width, H = A.height, sl = Math.min(W, H) * .15, e = ease.inOutCubic(p), x = e * (W + sl * 2) - sl;
+    ctx.drawImage(A, 0, 0); ctx.save(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(x + sl, 0); ctx.lineTo(x - sl, H); ctx.lineTo(0, H); ctx.closePath(); ctx.clip(); ctx.drawImage(B, 0, 0); ctx.restore();
+    ctx.strokeStyle = o.color || '#000'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + sl, 0); ctx.lineTo(x - sl, H); ctx.stroke();
   },
 };
 
@@ -442,11 +446,22 @@ function wordBeat(spec, word) { const per = spec.per ?? .5; return (spec.start ?
 // ---------------------------------------------------------------- film
 function create(cfg) {
   const W = cfg.W || 1920, H = cfg.H || 1080, FPS = cfg.FPS || 30, bpb = cfg.beatsPerBar || 4;
+  // portrait (Reels, Shorts, TikTok): H > W. `u` scales anything drawn in "1080p pixels" to the short side of the frame.
+  const portrait = H > W, u = Math.min(W, H) / 1080;
   const params = new URLSearchParams(location.search), RENDER = params.has('render');
   const tm = tempoMap(cfg.tempo ?? 120, bpb, cfg.offset || 0);
   const themes = cfg.themes || { paper: { bg: '#efe9dc', ink: '#1b1a17', muted: '#6d675c', accent: '#c8321f', line: '#1b1a17' } };
   const type = { display: '"Archivo", sans-serif', mono: '"IBM Plex Mono", monospace', ...(cfg.type || {}) };
-  const margin = { x: Math.round(W * (cfg.safe?.[0] ?? .065)), y: Math.round(H * (cfg.safe?.[1] ?? .1)) };
+  // safe margins as fractions: [sides, top, bottom]; bottom defaults to top. Portrait keeps clear of the platform UI (caption and buttons live at the bottom)
+  const safe = cfg.safe || (portrait ? [.07, .1, .22] : [.065, .1]);
+  const margin = { x: Math.round(W * safe[0]), y: Math.round(H * safe[1]), yb: Math.round(H * (safe[2] ?? safe[1])) };
+  const baseSize = Math.round(portrait ? W * .095 : H * .058), bigSize = Math.round(portrait ? W * .2 : H * .12);   // default statement and counter sizes
+  // voice-over (optional): { words: [{ word, start, end, punct? }], phrases?: [{ start, end, groups: [{ words: [i0, i1) }] }], offset, src?, ... }, see the Voice section
+  const vc = cfg.voice && { at: 'bc', size: Math.round(portrait ? W * .056 : H * .05), group: 3, highlight: true, box: true, offset: 0, duck: true, duckDb: 12, ...cfg.voice };
+  // the picture band: where a shot's picture lives (portrait: under the statement, above the subtitles and the platform UI)
+  const band = cfg.band || (portrait
+    ? (() => { const y = Math.round(H * .385), bottom = H - margin.yb - (vc ? Math.round(H * .08) : 0), side = Math.max(margin.x, Math.round(W * .11)); return { x: side, y, w: W - side * 2, h: bottom - y }; })()
+    : { x: margin.x, y: margin.y, w: W - margin.x * 2, h: H - margin.y - margin.yb });
 
   // --- compile shots: beats -> seconds, inherited chapter / theme / HUD values
   let cursor = 0, chapter = '', theme = cfg.theme || Object.keys(themes)[0];
@@ -507,8 +522,10 @@ function create(cfg) {
   }
 
   const f = {
-    W, H, FPS, DURATION, bpb, shots, chapters, themes, type, margin, hits, byId,
+    W, H, FPS, DURATION, bpb, shots, chapters, themes, type, margin, hits, byId, portrait, u, band,
     t: 0, frame: 0, debug: params.has('debug'),
+    // what was drawn this frame, for review tools (render/qa.mjs): { kind: 'say'|'caption'|'subtitle'|'hud'|'label'|..., x0, y0, x1, y1, text }
+    boxes: [], box(kind, x0, y0, x1, y1, text = '') { f.boxes.push({ kind, x0: Math.round(x0), y0: Math.round(y0), x1: Math.round(x1), y1: Math.round(y1), text }); },
     time: b => tm.time(b), beat: t => tm.beat(t), bpm: b => tm.bpm(b),
     bar: n => tm.time(n * bpb),
     shot: id => { const s = byId.get(id); if (!s) throw new Error(`no shot ${id}`); return s; },
@@ -528,8 +545,8 @@ function create(cfg) {
     },
     value: (key, t = f.t) => { const sh = shots[indexAt(t)]; return hudValue(key, sh, tm.beat(t) - sh.b0); },
     zone(name) {
-      const { x: mx, y: my } = margin;
-      const Z = { tl: [mx, my, 'left', 'top'], tc: [W / 2, my, 'center', 'top'], tr: [W - mx, my, 'right', 'top'], l: [mx, H / 2, 'left', 'middle'], c: [W / 2, H / 2, 'center', 'middle'], r: [W - mx, H / 2, 'right', 'middle'], bl: [mx, H - my, 'left', 'bottom'], bc: [W / 2, H - my, 'center', 'bottom'], br: [W - mx, H - my, 'right', 'bottom'] };
+      const { x: mx, y: my, yb: mb } = margin;
+      const Z = { tl: [mx, my, 'left', 'top'], tc: [W / 2, my, 'center', 'top'], tr: [W - mx, my, 'right', 'top'], l: [mx, H / 2, 'left', 'middle'], c: [W / 2, H / 2, 'center', 'middle'], r: [W - mx, H / 2, 'right', 'middle'], bl: [mx, H - mb, 'left', 'bottom'], bc: [W / 2, H - mb, 'center', 'bottom'], br: [W - mx, H - mb, 'right', 'bottom'] };
       return Z[name] || Z.tl;
     },
     say: (c, s, spec) => say(c, s, spec),
@@ -567,7 +584,7 @@ function create(cfg) {
   function post(c, T) {
     const g = T.grain ?? .06, v = T.vignette ?? .35;
     if (v > 0) {
-      if (!vignetteImg) { const { c: cc, x } = canvas2d(W, H), gr = x.createRadialGradient(W / 2, H / 2, H * .35, W / 2, H / 2, Math.hypot(W, H) * .6); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,1)'); x.fillStyle = gr; x.fillRect(0, 0, W, H); vignetteImg = cc; }
+      if (!vignetteImg) { const { c: cc, x } = canvas2d(W, H), gr = x.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.hypot(W, H) * .6); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,1)'); x.fillStyle = gr; x.fillRect(0, 0, W, H); vignetteImg = cc; }
       c.globalAlpha = v; c.drawImage(vignetteImg, 0, 0); c.globalAlpha = 1;
     }
     if (g > 0) {
@@ -582,26 +599,48 @@ function create(cfg) {
   function say(c, s, spec) {
     if (typeof spec === 'string') spec = { text: spec };
     const parsed = spec._parsed || (spec._parsed = parseSay(spec.text));
-    const T = s.T, size = spec.size ?? Math.round(H * .058), fam = spec.font || type.display, wt = spec.weight ?? 800;
-    const big = spec.accentScale ?? 1.5, tracking = spec.tracking ?? size * .02, lead = spec.leading ?? 1.08;
+    const T = s.T, fam = spec.font || type.display, wt = spec.weight ?? 800;
+    const big = spec.accentScale ?? 1.5, lead = spec.leading ?? 1.08;
     const [zx, zy, zAlign, zV] = Array.isArray(spec.at) ? [spec.at[0], spec.at[1], spec.align || 'left', spec.valign || 'top'] : f.zone(spec.at || 'tl');
     const align = spec.align || zAlign;
+    const req = spec.size ?? baseSize;
     let L = layouts.get(spec);
-    if (!L || L.size !== size) {
-      const m = canvas2d(1, 1).x; m.letterSpacing = `${tracking}px`;
-      const rows = parsed.lines.map(ws => {
-        const allAcc = ws.length && ws.every(w => w.acc), sz = allAcc ? size * big : size, fnt = font(sz, fam, wt);
-        m.font = fnt; const sp = m.measureText(' ').width;
-        let x = 0; const items = ws.map(w => { const wd = m.measureText(w.w).width, o = { ...w, x, wd }; x += wd + sp; return o; });
-        return { items, width: Math.max(0, x - sp), size: sz, fnt };
-      });
-      let y = 0; rows.forEach(r => { y += r.size * (y ? lead : .8); r.base = y; }); L = { rows, height: y + size * .25, size };
+    if (!L || L.req !== req || L.zx !== zx || L.align !== align) {
+      // room between the zone's anchor and the safe margin on the side the text grows to
+      const avail = spec.maxWidth ?? (align === 'center' ? 2 * Math.min(zx - margin.x, W - margin.x - zx) : align === 'right' ? zx - margin.x : W - margin.x - zx);
+      const m = canvas2d(1, 1).x;
+      const build = size => {
+        const tracking = spec.tracking ?? size * .02; m.letterSpacing = `${tracking}px`;
+        const rows = parsed.lines.map(ws => {
+          const allAcc = ws.length && ws.every(w => w.acc), sz = allAcc ? size * big : size, fnt = font(sz, fam, wt);
+          m.font = fnt; const sp = m.measureText(' ').width;
+          let x = 0; const items = ws.map(w => { const wd = m.measureText(w.w).width, o = { ...w, x, wd }; x += wd + sp; return o; });
+          return { items, width: Math.max(0, x - sp), size: sz, fnt };
+        });
+        let y = 0; rows.forEach(r => { y += r.size * (y ? lead : .8); r.base = y; });
+        return { rows, height: y + size * .25, size, tracking, width: Math.max(0, ...rows.map(r => r.width)) };
+      };
+      L = build(req);
+      // a line wider than the room shrinks the whole statement (one size per statement keeps its look); `fit: false` turns this off
+      for (let k = 0; k < 3 && spec.fit !== false && avail > 0 && L.width > avail; k++) {
+        const to = Math.max(12, Math.floor(L.size * avail / L.width * .995));
+        if (!k) console.warn(`statement "${spec.text.replace(/\|/g, ' / ')}": widest line ${Math.round(L.width)} px > ${Math.round(avail)} px available, size ${L.size} -> ${to}`);
+        L = build(to);
+      }
+      // the caption is one line: it shrinks (once, here) to the same room
+      L.cs = spec.captionSize ?? Math.max(15, Math.round(L.size * .27));
+      if (spec.caption && spec.fit !== false && avail > 0) {
+        m.font = font(L.cs, type.mono, 500); m.letterSpacing = `${L.cs * .2}px`; const cw = m.measureText(String(spec.caption)).width;
+        if (cw > avail) { const to = Math.max(10, Math.floor(L.cs * avail / cw * .99)); console.warn(`caption "${spec.caption}": ${Math.round(cw)} px > ${Math.round(avail)} px available, size ${L.cs} -> ${to}`); L.cs = to; }
+      }
+      L.req = req; L.zx = zx; L.align = align; L.avail = avail;
       layouts.set(spec, L);
     }
+    const size = L.size, tracking = L.tracking;
     const oy = zV === 'top' ? zy : zV === 'bottom' ? zy - L.height - (spec.caption ? size * .9 : 0) : zy - L.height / 2;
     const plain = spec.color || T.ink, acc = spec.accentColor || T.accent, glowR = T.glow ? size * .35 : 0;
     const outT = spec.out !== undefined ? s.at(spec.out) : Infinity;
-    let x0 = Infinity, x1 = -Infinity, last = 0;
+    let x0 = Infinity, x1 = -Infinity, last = 0, shown = false;
     for (const r of L.rows) {
       const rx = align === 'center' ? zx - r.width / 2 : align === 'right' ? zx - r.width : zx;
       x0 = Math.min(x0, rx); x1 = Math.max(x1, rx + r.width);
@@ -609,6 +648,7 @@ function create(cfg) {
         const wb = wordBeat(spec, w); last = Math.max(last, wb);
         const tw = s.at(wb), dt = s.t - tw;
         if (dt < 0) continue;
+        shown = true;
         const p = ease.outExpo(clamp(dt / .45)), q = clamp((s.t - outT - w.i * .03) / .3);
         const col = w.acc ? acc : plain, spr = textSprite(w.w, r.fnt, col, T.glow ? (w.acc ? acc : T.glow) : null, glowR, tracking);
         const scale = w.acc && spec.pop !== false ? lerp(1.35, 1, spring(dt, .5, 15)) : 1;
@@ -618,11 +658,13 @@ function create(cfg) {
     if (spec.caption) {
       const cb = spec.captionAt ?? last + (spec.per ?? .5) * 2, ct = s.at(cb), p = clamp((s.t - ct) / .6), q = clamp((s.t - outT) / .3);
       if (p > 0) {
-        const cs = spec.captionSize ?? Math.max(15, Math.round(size * .27)), txt = String(spec.caption), shown = txt.slice(0, Math.ceil(txt.length * p));
+        const cs = L.cs, txt = String(spec.caption), shown_ = txt.slice(0, Math.ceil(txt.length * p));
         c.save(); c.font = font(cs, type.mono, 500); c.letterSpacing = `${cs * .2}px`; c.fillStyle = spec.captionColor || T.muted; c.globalAlpha = 1 - q;
-        c.textAlign = align; c.textBaseline = 'top'; c.fillText(shown, align === 'center' ? zx : align === 'right' ? zx : x0, oy + L.height + size * .35); c.restore();
+        c.textAlign = align; c.textBaseline = 'top'; c.fillText(shown_, align === 'center' ? zx : align === 'right' ? zx : x0, oy + L.height + size * .35); c.restore();
+        f.box('caption', x0, oy + L.height + size * .35, Math.min(x1 === -Infinity ? x0 : Math.max(x1, x0 + c.measureText(txt).width), W), oy + L.height + size * .35 + cs, txt);
       }
     }
+    if (shown && x0 !== Infinity) f.box('say', x0, oy, x1, oy + L.height, spec.text);
     return { x0, y0: oy, x1, y1: oy + L.height };
   }
 
@@ -633,7 +675,7 @@ function create(cfg) {
     const from = o.from ?? 0, to = o.to;
     const v = o.value !== undefined ? o.value : (o.log && from > 0 && to > 0 ? Math.exp(lerp(Math.log(from), Math.log(to), p)) : lerp(from, to, p));
     const fm = typeof o.format === 'function' ? o.format : fmts[o.format ?? 'int'];
-    const str = (o.prefix || '') + fm(v) + (o.suffix || ''), size = o.size ?? Math.round(H * .12), fnt = font(size, o.font || type.display, o.weight ?? 800);
+    const str = (o.prefix || '') + fm(v) + (o.suffix || ''), size = o.size ?? bigSize, fnt = font(size, o.font || type.display, o.weight ?? 800);
     const col = o.color || s.T.ink, a = (o.alpha ?? 1) * (b0 > 0 ? s.seg(b0 - .25, b0) : 1);
     const cell = textSprite('0', fnt, col).w;
     const widths = [...str].map(ch => /\d/.test(ch) ? cell : textSprite(ch, fnt, col).w);
@@ -655,7 +697,7 @@ function create(cfg) {
     c.restore();
   }
   function frame(t) {
-    f.t = t; f.frame = Math.round(t * FPS);
+    f.t = t; f.frame = Math.round(t * FPS); f.boxes.length = 0;
     const k = indexAt(t);
     let tr = null, kB = k;
     for (const kk of [k, k + 1]) { const sh = shots[kk]; if (sh && sh.tr && t >= sh.tr.t0 && t < sh.tr.t1) { tr = sh.tr; kB = kk; break; } }
@@ -675,27 +717,93 @@ function create(cfg) {
       cfg.hud(ctx, { T, alpha: hudA, t, shot: cur, s: f.state(cur, t, T), val: key => f.value(key, t), chapter: cur.chapter, progress: t / DURATION }, f);
       ctx.restore();
     }
+    if (vc) drawVoice(ctx, t, T);
     ctx.save(); (cfg.post || post)(ctx, T, f); ctx.restore();
     if (f.debug) debugOverlay(t, k);
   }
   function debugOverlay(t, k) {
     const sh = shots[k], b = tm.beat(t), bar = Math.floor(b / bpb) + 1, bt = Math.floor(b % bpb) + 1;
-    ctx.save(); ctx.strokeStyle = 'rgba(255,0,160,.6)'; ctx.setLineDash([8, 8]); ctx.strokeRect(margin.x, margin.y, W - margin.x * 2, H - margin.y * 2); ctx.setLineDash([]);
+    ctx.save(); ctx.strokeStyle = 'rgba(255,0,160,.6)'; ctx.setLineDash([8, 8]); ctx.strokeRect(margin.x, margin.y, W - margin.x * 2, H - margin.y - margin.yb); ctx.setLineDash([]);
     ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(0, H - 34, W, 34); ctx.fillStyle = '#ff4fd8'; ctx.font = '600 18px monospace';
     ctx.fillText(`${sh.id}  ·  ${sh.chapter}  ·  bar ${bar}.${bt}  ·  ${t.toFixed(2)} s  ·  ${Math.round(tm.bpm(b))} bpm  ·  shot ${k + 1}/${shots.length}  ·  frame ${f.frame}`, 14, H - 11); ctx.restore();
   }
 
+  // --- voice-over: subtitles from word timings (a group of words at a time, the spoken word highlighted), lookups, ducking
+  const norm = w => String(w).toLowerCase().replace(/ё/g, 'е').replace(/[^\p{L}\p{N}]+/gu, '');
+  const vWords = vc ? (vc.words || []).map(w => ({ ...w, start: w.start + vc.offset, end: w.end + vc.offset, n: norm(w.word) })) : [];
+  let vGroups = [];
+  if (vc && vWords.length) {
+    const spans = [];
+    if (vc.phrases) for (const ph of vc.phrases) for (const g of (ph.groups || [{ words: ph.words }])) spans.push([g.words[0], g.words[1]]);
+    else { const n = typeof vc.group === 'number' ? vc.group : 3; for (let i = 0; i < vWords.length; i += n) spans.push([i, Math.min(vWords.length, i + n)]); }
+    vGroups = spans.map(([a, b]) => ({ a, b, start: vWords[a].start, end: vWords[b - 1].end }));
+  }
+  // stretches of speech (a gap over 0.7 s ends one): the music ducks under them
+  const vSpeech = []; vWords.forEach(w => { const l = vSpeech[vSpeech.length - 1]; if (l && w.start - l[1] < .7) l[1] = w.end; else vSpeech.push([w.start, w.end]); });
+  if (vc) f.voice = {
+    words: vWords, groups: vGroups, speech: vSpeech,
+    // film time of the n-th (1-based) occurrence of a spoken word, matched ignoring case, punctuation and e/yo; `from` limits the search to words after that time
+    time(word, n = 1, from = -1) {
+      const k = norm(word); let c = 0;
+      for (const w of vWords) if (w.n === k && w.start >= from && ++c === n) return w.start;
+      throw new Error(`voice: the word "${word}" (occurrence ${n}) is not in the voice-over`);
+    },
+    has: word => vWords.some(w => w.n === norm(word)),
+  };
+  function drawVoice(c, t, T) {
+    let lo = 0, hi = vGroups.length - 1, gi = -1;
+    while (lo <= hi) { const m = (lo + hi) >> 1; if (vGroups[m].start - .06 <= t) { gi = m; lo = m + 1; } else hi = m - 1; }
+    const g = vGroups[gi]; if (!g || t > g.end + .45) return;
+    const words = vWords.slice(g.a, g.b), full = words.map(w => w.word + (w.punct || ''));
+    const a = clamp((t - (g.start - .06)) / .14) * (1 - clamp((t - g.end - .2) / .25)), rise = (1 - ease.outCubic(clamp((t - (g.start - .06)) / .18))) * 14;
+    const side = portrait ? Math.max(margin.x, Math.round(W * .11)) : margin.x, avail = W - side * 2 - vc.size * 1.1;   // portrait: clear of the button column on both sides, so the plate is centered
+    let size = vc.size; c.save();
+    const setFont = sz => { c.font = font(sz, vc.font || type.display, vc.weight ?? 700); c.letterSpacing = `${sz * .01}px`; };
+    setFont(size); const spW = c.measureText(' ').width;
+    let widths = full.map(x => c.measureText(x).width), total = widths.reduce((x, y) => x + y, 0) + spW * (full.length - 1);
+    if (total > avail) { size = Math.floor(size * avail / total * .99); setFont(size); widths = full.map(x => c.measureText(x).width); total = widths.reduce((x, y) => x + y, 0) + c.measureText(' ').width * (full.length - 1); }
+    const sp = c.measureText(' ').width, padX = size * .55, padY = size * .34, h = size * 1.2 + padY * 2;
+    const zone = f.zone(vc.at), cx = Array.isArray(vc.at) ? vc.at[0] : zone[0], bottom = (Array.isArray(vc.at) ? vc.at[1] : zone[1]) - Math.round(size * .3) + rise;   // above the bottom margin, also while it rises into place
+    const x0 = cx - total / 2, top = bottom - h;
+    c.globalAlpha = a;
+    if (vc.box) { c.fillStyle = alpha(T.bg, .88); c.beginPath(); c.roundRect(x0 - padX, top, total + padX * 2, h, size * .3); c.fill(); c.strokeStyle = alpha(T.ink, .16); c.lineWidth = 2; c.stroke(); }
+    c.textBaseline = 'alphabetic'; c.textAlign = 'left';
+    let x = x0;
+    words.forEach((w, i) => {
+      const spoken = t >= w.start && t < w.end + .02, past = t >= w.end;
+      c.fillStyle = vc.highlight && spoken ? T.accent : T.ink; c.globalAlpha = a * (past || spoken || !vc.highlight ? 1 : .55);
+      c.fillText(full[i], x, top + padY + size * .95); x += widths[i] + sp;
+    });
+    c.restore();
+    f.box('subtitle', x0 - padX, top, x0 + total + padX, top + h, full.join(' '));
+  }
+  // lower the music under speech by vc.duckDb (default 12 dB); `at` maps film time to the audio clock (-1: before the playback start)
+  function duckBus(bus, ac, at, from = 0) {
+    if (!vc || !vc.duck || !vSpeech.length) return;
+    const base = cfg.gain ?? .9, low = base * 10 ** (-vc.duckDb / 20), g = bus.out.gain, now = ac.currentTime || 0;
+    g.setValueAtTime(vSpeech.some(([a, b]) => a - .1 <= from && from < b + .15) ? low : base, now);
+    for (const [a, b] of vSpeech) {
+      const ta = at(Math.max(0, a - .12)), tb = at(b + .15);
+      if (ta >= 0 && ta >= now) g.setTargetAtTime(low, ta, .05);
+      if (tb >= 0 && tb >= now) g.setTargetAtTime(base, tb, .25);
+    }
+  }
+
   // --- audio: the score reads the same tempo map; at(t) maps film time to the audio context clock
+  // bus.out: the music (ducked under the voice); bus.sfx: effects that must not duck (a stamp landing); bus.verb: reverb send
   function buildBus(ac) {
     const master = ac.createGain(), comp = ac.createDynamicsCompressor(), verb = audio.reverb(ac), wet = ac.createGain();
     master.gain.value = cfg.gain ?? .9; comp.threshold.value = -16; comp.ratio.value = 4; comp.attack.value = .005; comp.release.value = .2;
     wet.gain.value = .35; verb.connect(wet).connect(master); master.connect(comp).connect(ac.destination);
-    return { out: master, verb, dry: master };
+    const sfx = ac.createGain(); sfx.gain.value = cfg.gain ?? .9; sfx.connect(comp);
+    return { out: master, sfx, verb, dry: master };
   }
   if (cfg.score) {
     window.__renderAudio = async () => {
       const sr = 48000, oac = new OfflineAudioContext(2, Math.ceil(sr * DURATION), sr);
-      cfg.score(oac, buildBus(oac), f, tg => tg);
+      const bus = buildBus(oac), at = tg => tg;
+      duckBus(bus, oac, at, 0);
+      cfg.score(oac, bus, f, at);
       return encodeWavBase64(await oac.startRendering());
     };
   }
@@ -705,7 +813,11 @@ function create(cfg) {
   window.__draw = frame;
   window.__shots = shots.map(s => ({ id: s.id, chapter: s.chapter, start: +s.start.toFixed(4), end: +s.end.toFixed(4), beats: s.beats }));
   window.__film = f;
-  const fontLoads = (cfg.fonts || []).map(x => document.fonts.load(x));
+  // Google Fonts (and most hosts) split a family by unicode-range: load(font) with no text fetches only the Latin file, and Cyrillic, Greek
+  // or accented text falls back silently. So load each font for the characters the film really draws: every statement and caption,
+  // plus `cfg.fontText` for text drawn inside draw() functions.
+  const sample = cfg.shots.flatMap(sh => [].concat(sh.say || []).map(sp => typeof sp === 'string' ? sp : `${sp.text} ${sp.caption || ''}`)).join(' ').replace(/[|*]/g, ' ') + ' ' + (cfg.fontText || '') + ' 0123456789';
+  const fontLoads = (cfg.fonts || []).map(x => document.fonts.load(x, sample));
   Promise.all([...fontLoads, ...(cfg.assets || [])]).then(() => document.fonts.ready).then(() => {
     window.__ready = true;
     if (!RENDER) preview();
@@ -723,12 +835,26 @@ function create(cfg) {
     const clock = () => ac ? ac.currentTime : performance.now() / 1000;
     let c0 = clock();
     const now = () => playing ? Math.max(0, offset + clock() - c0) : offset;
+    // the voice-over in the live preview (the render mixes the file with ffmpeg: `render.mjs --voice`); vc.src is a URL or a data: URI
+    let voiceBuf = null;
+    async function playVoice(ac0, from, acStart) {
+      if (!vc || !vc.src) return;
+      try {
+        voiceBuf ||= await fetch(vc.src).then(r => r.arrayBuffer()).then(b => ac0.decodeAudioData(b));
+        if (ac !== ac0) return;                                         // superseded by a seek while decoding
+        const src = ac0.createBufferSource(); src.buffer = voiceBuf; src.connect(ac0.destination);
+        const lateBy = Math.max(0, ac0.currentTime - acStart), skip = Math.max(0, from - vc.offset) + lateBy;
+        src.start(Math.max(ac0.currentTime, acStart + Math.max(0, vc.offset - from)), skip);
+      } catch (e) { console.warn('voice-over not played:', e.message); }
+    }
     function startAudio() {
-      if (!cfg.score) return;
+      if (!cfg.score && !(vc && vc.src)) return;
       if (ac) ac.close();
       ac = new AudioContext();
-      const from = offset, acStart = ac.currentTime + .08;
-      cfg.score(ac, buildBus(ac), f, tg => tg < from - .01 ? -1 : acStart + (tg - from));
+      const from = offset, acStart = ac.currentTime + .08, bus = buildBus(ac), at = tg => tg < from - .01 ? -1 : acStart + (tg - from);
+      duckBus(bus, ac, at, from);
+      if (cfg.score) cfg.score(ac, bus, f, at);
+      playVoice(ac, from, acStart);
       c0 = acStart;
       if (!playing) ac.suspend();
     }
@@ -752,7 +878,7 @@ function create(cfg) {
     let hint = null;
     if (!params.has('nohint')) {
       hint = document.createElement('div');
-      hint.textContent = cfg.score ? 'click for sound · space pauses · ← → shots' : 'space pauses · ← → shots';
+      hint.textContent = cfg.score || (vc && vc.src) ? 'click for sound · space pauses · ← → shots' : 'space pauses · ← → shots';
       hint.style.cssText = 'position:fixed;left:50%;top:14px;transform:translateX(-50%);font:500 13px/1 "IBM Plex Mono",monospace;letter-spacing:.14em;text-transform:uppercase;color:#fff;background:rgba(0,0,0,.55);padding:9px 14px;border-radius:4px;pointer-events:none;transition:opacity .6s;z-index:9';
       document.body.appendChild(hint);
       setTimeout(hide, 7000);
@@ -784,8 +910,8 @@ function recap(ids, { per = .5, theme = null, pose = .92, label = null, punch = 
     src.draw && src.draw(ctx, st, f);
     ctx.restore();
     if (label) {
-      const txt = label(src, f), size = Math.round(f.H * .1), spr = textSprite(txt, font(size, f.type.mono, 600), T.ink, T.glow ? T.ink : null, T.glow ? size * .3 : 0);
-      drawSprite(ctx, spr, f.W / 2 - spr.w / 2, f.H * .82);
+      const txt = label(src, f), size = Math.round(Math.min(f.W, f.H) * .1), spr = textSprite(txt, font(size, f.type.mono, 600), T.ink, T.glow ? T.ink : null, T.glow ? size * .3 : 0);
+      drawSprite(ctx, spr, f.W / 2 - spr.w / 2, f.portrait ? f.H - f.margin.yb - size * 1.3 : f.H * .82);
     }
   };
 }
@@ -795,24 +921,24 @@ function recap(ids, { per = .5, theme = null, pose = .92, label = null, punch = 
 // opts: { title, sub: h => string, left: {label, value: h => string}, right: {label, value: h => string, meter: h => 0..1}, rail: true }
 function hudFrame(opts = {}) {
   return (ctx, h, f) => {
-    const { W, H } = f, T = h.T, mx = f.margin.x * .55, my = f.margin.y * .5, col = T.hud || T.muted, mono = f.type.mono, u = H / 1080;
+    const { W, H, u } = f, T = h.T, mx = f.margin.x * .55, my = f.margin.y * .5, myb = f.margin.yb * .5, col = T.hud || T.muted, mono = f.type.mono;
     ctx.strokeStyle = alpha(col, .7); ctx.fillStyle = col; ctx.lineWidth = 1.5 * u;
     const br = 22 * u;
-    for (const [x, y, dx, dy] of [[mx, my, 1, 1], [W - mx, my, -1, 1], [mx, H - my, 1, -1], [W - mx, H - my, -1, -1]]) { ctx.beginPath(); ctx.moveTo(x, y + dy * br); ctx.lineTo(x, y); ctx.lineTo(x + dx * br, y); ctx.stroke(); }
+    for (const [x, y, dx, dy] of [[mx, my, 1, 1], [W - mx, my, -1, 1], [mx, H - myb, 1, -1], [W - mx, H - myb, -1, -1]]) { ctx.beginPath(); ctx.moveTo(x, y + dy * br); ctx.lineTo(x, y); ctx.lineTo(x + dx * br, y); ctx.stroke(); }
     const txt = (s, x, y, size, align = 'left', a = 1, wt = 500) => { ctx.font = font(size * u, mono, wt); ctx.letterSpacing = `${size * u * .22}px`; ctx.textAlign = align; ctx.globalAlpha = h.alpha * a; ctx.fillText(s, x, y); ctx.globalAlpha = h.alpha; };
     ctx.textBaseline = 'middle';
     const x0 = mx + 28 * u, x1 = W - mx - 28 * u;
     if (h.chapter) txt(String(h.chapter).toUpperCase(), x0, my + 18 * u, 15);
     if (opts.title) txt(opts.title.toUpperCase(), x1, my + 18 * u, 15, 'right');
     if (opts.sub) txt(opts.sub(h, f), x1, my + 42 * u, 12, 'right', .6);
-    const yb = H - my - 20 * u;
+    const yb = H - myb - 20 * u;
     if (opts.left) { txt(opts.left.label.toUpperCase(), x0, yb - 30 * u, 11, 'left', .55); txt(opts.left.value(h, f), x0, yb, 22, 'left', 1, 600); }
     if (opts.right) {
       txt(opts.right.label.toUpperCase(), x1, yb - 30 * u, 11, 'right', .55); txt(opts.right.value(h, f), x1, yb, 22, 'right', 1, 600);
       if (opts.right.meter) { const m = clamp(opts.right.meter(h, f)), w = 170 * u, y = yb + 22 * u; ctx.globalAlpha = h.alpha * .35; ctx.fillRect(x1 - w, y, w, 1.5 * u); ctx.globalAlpha = h.alpha; ctx.fillStyle = T.accent; ctx.fillRect(x1 - w, y - 1 * u, w * m, 3.5 * u); ctx.fillStyle = col; }
     }
     if (opts.rail !== false) {
-      const w = W * .3, rx = W / 2 - w / 2, ry = yb + 10 * u;
+      const w = W * (f.portrait ? .56 : .3), rx = W / 2 - w / 2, ry = yb + 10 * u;
       ctx.globalAlpha = h.alpha * .35; ctx.fillRect(rx, ry, w, 1.5 * u);
       for (const c of f.chapters) { const x = rx + w * c.start / f.DURATION; ctx.fillRect(x, ry - 5 * u, 1.5 * u, 11 * u); }
       ctx.globalAlpha = h.alpha; ctx.fillStyle = T.accent; ctx.fillRect(rx, ry - 1 * u, w * h.progress, 3.5 * u);

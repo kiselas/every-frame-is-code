@@ -8,6 +8,7 @@
 <script src="../../runtime/pixel.js"></script>
 <script src="../../runtime/pixel-fx.js"></script>
 <script src="../../runtime/chip.js"></script>
+<script src="../../runtime/compose.js"></script>
 <script>
 // Sixteen Colors: a 64-second film about limits, on runtime/film.js + the pixel toolkit.
 // Script, beat grid and reasoning: SCRIPT.md next to this file. Chapter: 15-pixel-retro.md.
@@ -283,51 +284,23 @@ function hud(ctx, h, f) {
   ov.flip(ctx, { key: 0 });
 }
 
-// ---------------------------------------------------------------- the score: four channels of MML per section, sfx on the same clock
-// C major for the palette and the world, A minor for the machines. Every count is in bars of 8 eighths (T120: a bar is 2 s).
-const B8 = (root, n = 1) => `[${root} ${root} >${root}< ${root} ${root} >${root}< ${root} ${root}]${n}`;     // a bass bar of eighths with octave jumps
-const HAT = n => `@3 V40 O6 L16 [C R C C]${n}`, KICK = n => `@3 V85 O2 L4 [C R C R]${n}`;
-const LEAD_C = 'E8 G8 >C8< G8 E8 G8 >C4<  D8 G8 B8 G8 D4 R4  C8 E8 A8 E8 C8 E8 A4  A8 >C8< A8 F8 A4 R4';     // C  G  Am  F
-const ARP = (...bars) => bars.map(r => `[[${r[0]} ${r[1]} ${r[2]}]5 ${r[0]}]1`).join(' ');
-const SEC = {
-  one: [
-    'T120 @0 V80 Q100 O2 L1 A A F G',
-    'T120 @2 V35 O5 L8 R1 R1 [A R E R]4',
-    'T120 @3 V35 O6 L8 R1 R1 [C C]8',
-  ],
-  palette: [                                                              // shots four + sixteen: 6 bars
-    `T120 @0 V95 O2 L8 ${B8('C')} ${B8('G')} ${B8('A')} ${B8('F')} ${B8('C')} ${B8('G')}`,
-    `T120 @1 V50 O5 L8 ${LEAD_C}  E8 G8 >C8 E8 G4< R4  D8 G8 B8 G8 D2`,
-    `T120 @2 V38 O4 L16 R1 R1 R1 ${ARP(['F', 'A', '>C<'], ['C', 'E', 'G'], ['G', 'B', '>D<'])}`,
-    'T120 @3 V40 O6 L16 R1 [C R C C]20',
-    'T120 @3 V85 O2 L4 R1 [C R C R]5',
-  ],
-  formula: [                                                              // shots plasma..copper: 8 bars of A minor
-    `T120 @0 V90 O2 L8 [${B8('A')} ${B8('A')} ${B8('F')} ${B8('G')}]2`,
-    'T120 @1 V52 O5 L8 [A8 C8 E8 C8 A8 C8 E4  E8 D8 C8 D8 E4 R4  F8 A8 F8 A8 >C4< A4  G8 B8 >D8< B8 G4 R4]2',
-    `T120 @2 V42 O4 L16 [[[A >C E<]5 A]2 [[F A >C<]5 F]1 [[G B >D<]5 G]1]2`,
-    'T120 @3 V40 O6 L16 [C R C C]32',
-    'T120 @3 V85 O2 L4 [C R C R]8',
-  ],
-  world: [                                                                // 8 bars, C major, the song at full drive
-    `T120 @0 V95 O2 L8 [${B8('C')} ${B8('G')} ${B8('A')} ${B8('F')}]2`,
-    `T120 @1 V52 O5 L8 [${LEAD_C}]2`,
-    `T120 @2 V40 O4 L16 [${ARP(['C', 'E', 'G'], ['G', 'B', '>D<'], ['A', '>C', 'E<'], ['F', 'A', '>C<'])}]2`,
-    'T120 @3 V42 O6 L16 [C R C C]32',
-    'T120 @3 V88 O2 L4 [C R C R]8',
-  ],
-  anything: [                                                             // 4 bars, F G Am C: a build and a landing
-    `T120 @0 V95 O2 L8 ${B8('F')} ${B8('G')} ${B8('A')} ${B8('C')}`,
-    'T120 @1 V48 O5 L4 F A >C F<  G B >D G<  A >C E A<  >C2 G2<',
-    `T120 @2 V42 O4 L16 ${ARP(['F', 'A', '>C<'], ['G', 'B', '>D<'], ['A', '>C', 'E<'], ['C', 'E', 'G'])}`,
-    'T120 @3 V45 O6 L16 [C R C C]16',
-    'T120 @3 V88 O2 L4 [C R C R]4',
-  ],
-  end: [
-    'T120 @0 V70 Q100 O2 L1 A A',
-    'T120 @2 V35 O5 L8 [A E C E]2 R1',
+// ---------------------------------------------------------------- the score: generated from a plan, sfx on the same clock
+// One section per shot or group of shots, energy from the story (a quiet start, the reveal at the top); the bars add up to the film's 32.
+// Compose writes chords, bass, arpeggio, hook, groove and fills; Chip plays the Score. Try other seeds in music-lab.html. See 18-music-generation.md.
+const PLAN = {
+  seed: 1, bpm: 120, key: 'C major', style: 'adventure',
+  sections: [
+    { name: 'one', bars: 4, energy: .12 },
+    { name: 'palette', bars: 3, energy: .3 }, { name: 'sixteen', bars: 3, energy: .45 },
+    { name: 'plasma', bars: 2, energy: .6, key: 'A minor' }, { name: 'tunnel', bars: 2, energy: .7, key: 'A minor' },
+    { name: 'roto', bars: 2, energy: .75, key: 'A minor' }, { name: 'copper', bars: 2, energy: .8, key: 'A minor' },
+    { name: 'world', bars: 8, energy: .92, key: 'D major', breakBefore: true },
+    { name: 'anything', bars: 2, energy: .8 }, { name: 'squeeze', bars: 2, energy: 1, breakBefore: true },
+    { name: 'end', bars: 2, energy: .12 },
   ],
 };
+const SCORE = Compose.generate(PLAN);
+window.__score = SCORE;                                                  // render/music-report.mjs reads it: piano roll, lint, spectrogram
 const SFX = [                                                             // [shot, local beat, preset]: the events the picture makes
   ['four', 6, 'select'], ['sixteen', 0, 'powerup'], ['sixteen', 8.5, 'blip'],
   ['tunnel', 0, 'select'], ['roto', 0, 'select'], ['copper', 0, 'powerup'],
@@ -338,8 +311,7 @@ const SFX = [                                                             // [sh
 function score(ac, bus, f, at) {
   const zero = at(f.DURATION) - f.DURATION, T = (id, beat = 0) => zero + f.time(f.shot(id).b0 + beat);      // film time -> context time, also mid-film in the live preview
   const now = ac.currentTime || 0;
-  const play = (id, key) => { const t = T(id); if (t + 20 > now) Chip.play(ac, t, bus.out, SEC[key]); };
-  play('one', 'one'); play('four', 'palette'); play('plasma', 'formula'); play('world', 'world'); play('anything', 'anything'); play('end', 'end');
+  Chip.playScore(ac, 0, bus.out, SCORE, { timeOf: b => zero + f.time(b), from: now, gain: .7 });
   for (const [id, beat, name] of SFX) { const t = T(id, beat); if (t >= now) Chip.sfx[name](ac, t, bus.out, { gain: .5 }); }
 }
 
