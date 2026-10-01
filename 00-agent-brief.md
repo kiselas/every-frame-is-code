@@ -46,6 +46,14 @@ Short rules. Details in the neighboring files.
 29. Fades, shadows and transparency are dither (`scr.dither`, `Pixel.transitions`) and palette maps (`Pixel.fadeMap`), not alpha.
 30. Music is data, not hand-typed loops: write a plan (key, style, one energy per shot or chapter, matching the film's bars), let `runtime/compose.js` generate the Score and `runtime/chip.js` play it on the film's tempo map. You cannot hear: run `MusicLint` and `render/music-report.mjs`, fix the plan, and give the human the audition page (`18-music-generation.md`). MML is for short hand-written parts. Retro backdrops are per-pixel formulas of (x, y, t) from `runtime/pixel-fx.js`: stateless, so they seek and render in parallel.
 
+## Vertical (19)
+31. For Reels, Shorts and TikTok build on `runtime/film.js` with `W: 1080, H: 1920` (`Film.create` switches to portrait defaults on its own). Keep important content out of the top 10% and the bottom 22%; frame 0 must already move; use one statement size for the whole film that fits the longest line, and run `node render/textcheck.mjs film.html`: a line that had to shrink is a bug in the script, not a feature.
+32. Every character the film draws must be in the loaded font: `fonts` plus `fontText` (text drawn inside `draw()`), and the family must really have the subset (Archivo has no Cyrillic; Oswald and IBM Plex Mono do). Check a supplied image or a quote against the facts before it goes on screen.
+
+## Silent social video and infographics (20, 21)
+33. Social video is watched without sound: the picture is the film, music is a bonus layer. Review once with the sound off. Word budget 2.5 words per second of film; a statement is at most 8 words and stays at least 2 s; frame 0 moves and the question is on screen by 2 s. Name the genre in `SCRIPT.md` and check its requirement card (`20-silent-social.md`).
+34. A picture proves the statement or it is not a picture. Write the claim type per shot (magnitude, comparison, change, mechanism, structure, location, identity); apply the label test (cover the drawing, read the labels as a list: if nothing is lost, redraw); encode with position, length or counts, never area; every number has a yardstick drawn first and a source in the caption; animate the datum, keep the chrome still, hold the end state at least 1.5 s (`21-infographics.md`).
+
 ## Review
 23. Iterate on fragments with `render.mjs --draft`; run `--profile` when a render is slow, it names the slowest timecodes.
 24. After every version, render a contact sheet (one frame every 0.5 s) and look at it yourself. Look for: text overlaps, empty frames, static stretches longer than 2 s, elements running off the edges, brightness jumps.

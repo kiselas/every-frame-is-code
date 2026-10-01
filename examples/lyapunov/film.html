@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<title>Ляпунов: сначала схема</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Oswald:wght@500;700&display=block" rel="stylesheet">
+</head><body><canvas></canvas>
+<script src="../../runtime/film.js"></script>
+<script src="../../runtime/chip.js"></script>
+<script src="../../runtime/compose.js"></script>
+<script>
+// Lyapunov: a 50-second vertical film (1080x1920, Reels / Shorts / TikTok) about Alexey Lyapunov, built on runtime/film.js.
+// Script, beat grid, facts and sources: SCRIPT.md next to this file. The vertical format: 19-vertical.md.
+const { ink, fx, audio: A, util: { clamp, lerp, ease, mulberry32, TAU, alpha, spring } } = Film;
+const W = 1080, H = 1920;
+const DISP = '"Oswald", sans-serif', MONO = '"IBM Plex Mono", monospace';
+const disp = (size, wt = 700) => Film.font(size, DISP, wt);
+const mono = (size, wt = 500) => Film.font(size, MONO, wt);
+const CY = 1140;                                               // vertical center of the picture band (statement above, platform UI below)
+
+// ---------------------------------------------------------------- helpers (colors only from s.T)
+function put(ctx, str, x, y, { size = 28, face = 'mono', wt = 500, color, align = 'left', a = 1, track = .12, base = 'middle' } = {}) {
+  ctx.save(); ctx.font = face === 'mono' ? mono(size, wt) : disp(size, wt); ctx.letterSpacing = `${size * track}px`;
+  ctx.textAlign = align; ctx.textBaseline = base; ctx.fillStyle = color; ctx.globalAlpha *= a; ctx.fillText(str, x, y); ctx.restore();
+}
+const typed = (str, p) => str.slice(0, Math.ceil(str.length * clamp(p)));
+
+// a rubber stamp as a worn-ink sprite, built once per look
+const stamps = new Map();
+function stampSprite(txt, color, size) {
+  const key = `${txt}|${color}|${size}`; if (stamps.has(key)) return stamps.get(key);
+  const m = new OffscreenCanvas(1, 1).getContext('2d'); m.font = disp(size); m.letterSpacing = `${size * .06}px`;
+  const tw = m.measureText(txt).width, w = Math.ceil(tw + size * .9), h = Math.ceil(size * 1.5);
+  const oc = new OffscreenCanvas(w, h), x = oc.getContext('2d');
+  x.fillStyle = color; x.strokeStyle = color; x.lineJoin = 'round';
+  x.lineWidth = size * .07; x.beginPath(); x.roundRect(size * .05, size * .05, w - size * .1, h - size * .1, size * .12); x.stroke();
+  x.lineWidth = size * .022; x.beginPath(); x.roundRect(size * .17, size * .17, w - size * .34, h - size * .34, size * .07); x.stroke();
+  x.font = disp(size); x.letterSpacing = `${size * .06}px`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, w / 2 + size * .03, h / 2 + size * .05);
+  const r = mulberry32(txt.length * 97 + 3);                   // worn ink: specks and scratches punched out
+  x.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < w * h / 80; i++) { x.globalAlpha = .3 + r() * .7; x.beginPath(); x.arc(r() * w, r() * h, .6 + r() ** 3 * 5, 0, TAU); x.fill(); }
+  x.lineWidth = 1.5; for (let i = 0; i < 7; i++) { x.globalAlpha = .5 + r() * .5; x.beginPath(); const px = r() * w, py = r() * h, a = r() * TAU, l = 30 + r() * 120; x.moveTo(px, py); x.lineTo(px + Math.cos(a) * l, py + Math.sin(a) * l); x.stroke(); }
+  const sp = { img: oc.transferToImageBitmap(), w, h }; stamps.set(key, sp); return sp;
+}
+function drawStamp(ctx, sp, cx, cy, rot, sc, a) {
+  if (a <= 0) return;
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.scale(sc, sc); ctx.globalAlpha *= a; ctx.globalCompositeOperation = 'multiply';
+  ctx.drawImage(sp.img, -sp.w / 2, -sp.h / 2); ctx.restore();
+}
+// a stamp comes down on beat b: it grows out of the screen (anticipation), lands, shakes the page, ink flies
+function slam(s, b, lead = 3) {
+  const k = s.beat - b, dt = s.t - s.at(b);
+  if (k < 0) { const p = clamp((k + lead) / lead); return { sc: lerp(2, 1, ease.inCubic(p)), a: .08 + .3 * p, sx: 0, sy: 0, dt, hit: false }; }
+  const amp = 20 * Math.exp(-dt * 11);
+  return { sc: 1 + .07 * Math.exp(-dt * 14) * Math.cos(dt * 38), a: 1, sx: Math.sin(dt * 91) * amp, sy: Math.cos(dt * 77) * amp, dt, hit: true };
+}
+// the camera never stops: a slow push-in and a sway, so no stretch of the film is dead
+function drift(ctx, s, amp = 1) {
+  ctx.translate(540, CY); ctx.rotate(Math.sin(s.t * .9) * .0035 * amp); const k = 1 + .035 * amp * s.p; ctx.scale(k, k);
+  ctx.translate(-540 + Math.sin(s.t * 1.3) * 7 * amp, -CY + Math.cos(s.t * 1.1) * 6 * amp);
+}
+function splash(ctx, T, cx, cy, dt, seed = 1) {              // ink droplets thrown out by the hit
+  if (dt < 0 || dt > .5) return;
+  const r = mulberry32(seed), q = ease.outCubic(dt / .5);
+  ctx.save(); ctx.fillStyle = T.accent; ctx.globalAlpha = (1 - q) * .8;
+  for (let i = 0; i < 22; i++) { const a = r() * TAU, d = (80 + r() * 330) * q, rr = (2 + r() * 6) * (1 - q * .6); ctx.beginPath(); ctx.arc(cx + Math.cos(a) * (200 + d), cy + Math.sin(a) * (90 + d * .5), rr, 0, TAU); ctx.fill(); }
+  ctx.restore();
+}
+
+// the dictionary page the film opens and closes on; drawn around (0, 0), the caller moves and rotates it
+function dictCard(ctx, s, { w = 880, h = 640, reveal = 1, rows = true } = {}) {
+  const T = s.T, x0 = -w / 2, y0 = -h / 2;
+  ctx.save(); ctx.shadowColor = 'rgba(40,30,10,.3)'; ctx.shadowBlur = 38; ctx.shadowOffsetY = 16; ctx.fillStyle = T.card; ctx.fillRect(x0, y0, w, h); ctx.restore();
+  ctx.strokeStyle = alpha(T.ink, .16); ctx.lineWidth = 2; ctx.strokeRect(x0 + 18, y0 + 18, w - 36, h - 36);
+  put(ctx, 'КИБЕРНЕТИКА', x0 + 56, y0 + 112, { size: 124, face: 'disp', color: T.ink, track: .01, a: ease.outCubic(clamp(reveal * 4)) });
+  ctx.strokeStyle = T.ink; ctx.lineWidth = 3; ink.poly(ctx, [x0 + 56, y0 + 178, x0 + w - 56, y0 + 178], ease.outCubic(clamp(reveal * 3)));
+  if (!rows) return;
+  const r = mulberry32(11);                                    // gray bars stand for the entry's text
+  for (let i = 0; i < 9; i++) {
+    const ww = (w - 112) * (i === 8 ? .42 : .62 + r() * .38), p = clamp(reveal * 1.6 - .1 - i * .09);
+    ctx.fillStyle = alpha(T.ink, .2); ctx.fillRect(x0 + 56, y0 + 222 + i * 44, ww * ease.outCubic(p), 14);
+  }
+}
+
+// ---------------------------------------------------------------- 1. the stamp
+function drawLabel(ctx, s) {
+  const T = s.T, k = slam(s, 3), enter = ease.outCubic(s.seg(0, 3)), sp = stampSprite('ЛЖЕНАУКА', T.accent, 150);
+  ctx.save(); drift(ctx, s, 1); ctx.translate(540 + k.sx, CY + 10 + k.sy); const sc = lerp(1.1, 1, enter); ctx.scale(sc, sc); ctx.rotate(lerp(-.035, -.018, enter));
+  dictCard(ctx, s, { reveal: s.seg(.2, 2.8) });
+  drawStamp(ctx, sp, 30, 120, -.16, k.sc, k.a);
+  splash(ctx, T, 30, 120, k.hit ? k.dt : -1, 3);
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- 2. the man
+function drawWho(ctx, s) {
+  ctx.save(); drift(ctx, s, .8);
+  const T = s.T, name = 'ЛЯПУНОВ', size = 220;
+  put(ctx, typed('АЛЕКСЕЙ АНДРЕЕВИЧ', s.seg(.2, 1.8)), 70, 878, { size: 34, wt: 600, color: T.muted, track: .22 });
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 906, W, 254); ctx.clip();
+  ctx.font = disp(size); ctx.letterSpacing = '0px';
+  const ws = [...name].map(ch => ctx.measureText(ch).width), total = ws.reduce((a, b) => a + b, 0); let x = 540 - total / 2;
+  [...name].forEach((ch, i) => { const e = ease.outExpo(s.seg(.1 + i * .16, .9 + i * .16)); put(ctx, ch, x, 1100 + (1 - e) * 300, { size, face: 'disp', color: T.ink, track: 0, base: 'alphabetic' }); x += ws[i]; });
+  ctx.restore();
+  ctx.strokeStyle = T.ink; ctx.lineWidth = 4; ink.poly(ctx, [70, 1170, 1010, 1170], ease.outCubic(s.seg(1.2, 2.4)));
+  put(ctx, '1911 — 1973', 1010, 1220, { size: 34, wt: 600, color: T.muted, align: 'right', a: s.seg(2, 2.6), track: .22 });
+  const rows = [['С 1932', 'УЧЕНИК Н. Н. ЛУЗИНА'], ['1940', 'ТЕОРЕМА О ВЫПУКЛОСТИ'], ['1944', 'АРТИЛЛЕРИСТ, ОРДЕН КРАСНОЙ ЗВЕЗДЫ']];
+  rows.forEach(([yr, tx], i) => {
+    const b0 = 2.6 + i * .7, p = s.seg(b0, b0 + .6), y = 1318 + i * 76;
+    ctx.fillStyle = T.accent; ctx.globalAlpha = p; ctx.fillRect(70, y - 24, 8, 48 * ease.outCubic(p)); ctx.globalAlpha = 1;
+    put(ctx, yr, 104, y, { size: 32, wt: 600, color: T.accent, a: p });
+    put(ctx, typed(tx, s.seg(b0 + .1, b0 + .9)), 280, y, { size: 30, color: T.ink, a: p });
+  });
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- 3. the course
+function drawCourse(ctx, s) {
+  const T = s.T;
+  ctx.strokeStyle = T.ink; ctx.lineWidth = 4; ink.poly(ctx, ink.rect(70, 830, 940, 640), ease.inOutCubic(s.seg(0, 1.6)), true);
+  put(ctx, typed('ПРИНЦИПЫ ПРОГРАММИРОВАНИЯ', s.seg(1, 3)), 110, 886, { size: 30, wt: 600, color: T.muted });
+  const lec = 1 + Math.min(7, Math.floor(s.seg(1.6, 6.8) * 8));
+  put(ctx, 'ЛЕКЦИЯ №', 540, 934, { size: 34, wt: 600, color: T.muted, align: 'center', a: s.seg(1.4, 2) });
+  Film.count(ctx, s, { value: lec, x: 540, y: 1280, size: 300, align: 'center', format: 'plain', b: [1.6, 2], color: T.ink });
+  for (let i = 0; i < 8; i++) {
+    const x = 110 + i * 100, on = lec > i && s.beat > 1.6, cur = lec === i + 1 && s.beat > 1.6;
+    ctx.strokeStyle = T.ink; ctx.lineWidth = 3; ctx.strokeRect(x, 1346, 80, 80);
+    if (on) { ctx.fillStyle = cur ? T.accent : alpha(T.ink, .55); const pop = cur ? lerp(.7, 1, spring(s.t - s.at(1.6 + (i) * 5.2 / 8), .5, 16)) : 1; ctx.fillRect(x + 40 - 34 * pop, 1386 - 34 * pop, 68 * pop, 68 * pop); }
+  }
+  put(ctx, 'МГУ · 1952–53', 990, 886, { size: 24, color: T.muted, align: 'right', a: s.seg(1, 1.8) });
+}
+
+// ---------------------------------------------------------------- 4. only numbers
+const oct = (r, c) => Math.floor(mulberry32(r * 131 + c * 17 + 5)() * 32768).toString(8).padStart(5, '0');
+function drawNumbers(ctx, s) {
+  const T = s.T, row = 62, cols = 5, top = 800, bot = 1490, off = (s.t * 70) % row, base = Math.floor(s.t * 70 / row);
+  for (let r = -1; r < 12; r++) for (let c = 0; c < cols; c++) {
+    const y = top + r * row + row / 2 - off, ny = (y - (top + bot) / 2) / ((bot - top) / 2), vis = clamp(1 - ny * ny) * .9;
+    if (vis <= 0) continue;
+    const bad = (r + base) % 7 === 3 && c === 2 && Math.floor(s.beat * 2) % 2 === 0;
+    put(ctx, oct(r + base, c), 70 + (c + .5) * 188, y, { size: 40, wt: 600, color: bad ? T.accent : T.ink, align: 'center', a: vis * (bad ? 1.2 : .75), track: .06 });
+  }
+  const scan = (s.beat / 4) % 1, sy = lerp(top + 20, bot - 20, scan);
+  ctx.fillStyle = alpha(T.accent, .16); ctx.fillRect(70, sy - 31, 940, 62); ctx.fillStyle = T.accent; ctx.fillRect(70, sy - 31, 6, 62);
+}
+
+// ---------------------------------------------------------------- 5. the scheme (operators and a condition)
+const NODES = { S: [480, 850], A: [480, 950], B: [480, 1070], D: [480, 1215], E: [480, 1420] };
+const RUN = [480, 850, 480, 950, /* two laps: A B D, right, up, back to A */ 480, 1070, 480, 1215, 860, 1215, 860, 950, 480, 950,
+  480, 1070, 480, 1215, 860, 1215, 860, 950, 480, 950, /* out: B D E */ 480, 1070, 480, 1215, 480, 1420];
+const RUNLEN = (() => { const c = [0]; for (let i = 2; i < RUN.length; i += 2) c.push(c[c.length - 1] + Math.hypot(RUN[i] - RUN[i - 2], RUN[i + 1] - RUN[i - 1])); return c; })();
+function runAt(p) {
+  const d = p * RUNLEN[RUNLEN.length - 1]; let i = 1; while (i < RUNLEN.length - 1 && RUNLEN[i] < d) i++;
+  const k = (d - RUNLEN[i - 1]) / (RUNLEN[i] - RUNLEN[i - 1] || 1);
+  return [lerp(RUN[2 * i - 2], RUN[2 * i], k), lerp(RUN[2 * i - 1], RUN[2 * i + 1], k)];
+}
+function node(ctx, T, kind, [cx, cy], w, h, label, p, lit, letter) {
+  if (p <= 0) return;
+  ctx.save(); ctx.strokeStyle = T.ink; ctx.lineWidth = 3.5; ctx.lineJoin = 'round';
+  let pts;
+  if (kind === 'diamond') pts = [cx - w / 2, cy, cx, cy - h / 2, cx + w / 2, cy, cx, cy + h / 2];
+  else if (kind === 'pill') pts = ink.rect(cx - w / 2, cy - h / 2, w, h);
+  else pts = ink.rect(cx - w / 2, cy - h / 2, w, h);
+  if (lit > 0) { ctx.fillStyle = alpha(T.accent, .3 * lit); ctx.beginPath(); for (let i = 0; i < pts.length; i += 2) i ? ctx.lineTo(pts[i], pts[i + 1]) : ctx.moveTo(pts[i], pts[i + 1]); ctx.closePath(); ctx.fill(); }
+  ink.poly(ctx, pts, ease.outCubic(p), true);
+  ctx.restore();
+  put(ctx, label, cx + (letter ? 22 : 0), cy, { size: 28, wt: 600, color: T.ink, align: 'center', a: clamp((p - .5) * 2) });
+  if (letter) put(ctx, letter, cx - w / 2 + 30, cy, { size: 36, wt: 600, color: T.accent, align: 'center', a: clamp((p - .5) * 2) });
+}
+function arrow(ctx, T, pts, p, a = 1) {
+  ctx.save(); ctx.strokeStyle = T.ink; ctx.fillStyle = T.ink; ctx.lineWidth = 3.5; ctx.globalAlpha *= a; ink.poly(ctx, pts, ease.outCubic(p));
+  if (p >= .98) { const n = pts.length, x = pts[n - 2], y = pts[n - 1], dx = x - pts[n - 4], dy = y - pts[n - 3], l = Math.hypot(dx, dy), ux = dx / l, uy = dy / l; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - ux * 22 - uy * 11, y - uy * 22 + ux * 11); ctx.lineTo(x - ux * 22 + uy * 11, y - uy * 22 - ux * 11); ctx.fill(); }
+  ctx.restore();
+}
+function scheme(ctx, s, P = k => 1, lit = () => 0) {
+  const T = s.T, n = NODES;
+  node(ctx, T, 'pill', n.S, 300, 64, 'ЗАДАЧА', P(0), lit('S'));
+  node(ctx, T, 'box', n.A, 380, 84, 'ЧИТАТЬ', P(1), lit('A'), 'A');
+  node(ctx, T, 'box', n.B, 380, 84, 'СЧИТАТЬ', P(2), lit('B'), 'B');
+  node(ctx, T, 'diamond', n.D, 380, 150, 'ГОТОВО?', P(3), lit('D'));
+  node(ctx, T, 'pill', n.E, 300, 64, 'РЕЗУЛЬТАТ', P(4), lit('E'));
+  arrow(ctx, T, [480, 882, 480, 908], P(1)); arrow(ctx, T, [480, 992, 480, 1028], P(2)); arrow(ctx, T, [480, 1112, 480, 1140], P(3));
+  arrow(ctx, T, [480, 1290, 480, 1388], P(4)); arrow(ctx, T, [670, 1215, 860, 1215, 860, 950, 672, 950], P(5));
+  put(ctx, 'ДА', 506, 1338, { size: 26, wt: 600, color: T.accent, a: P(4) }); put(ctx, 'НЕТ', 764, 1190, { size: 26, wt: 600, color: T.accent, a: P(5) });
+}
+function drawScheme(ctx, s) {
+  const T = s.T, P = k => ease.outCubic(s.seg(.4 + k * .55, 1.1 + k * .55 + (k > 4 ? .3 : 0)));
+  const p = ease.linear(s.seg(5.6, 11.6)), [tx, ty] = runAt(p);
+  const inside = (id, w, h) => Math.abs(tx - NODES[id][0]) < w / 2 && Math.abs(ty - NODES[id][1]) < h / 2 ? 1 : 0;
+  const lit = id => s.beat > 5.6 ? inside(id, id === 'D' ? 150 : id === 'S' || id === 'E' ? 300 : 380, id === 'D' ? 150 : 84) : 0;
+  scheme(ctx, s, P, lit);
+  if (s.beat > 5.4) {
+    for (let i = 5; i >= 1; i--) { const [x, y] = runAt(clamp(p - i * .012)); ctx.fillStyle = T.accent; ctx.globalAlpha = .1 * (6 - i) / 5; ctx.beginPath(); ctx.arc(x, y, 14 - i * 1.2, 0, TAU); ctx.fill(); }
+    ctx.globalAlpha = 1; ctx.fillStyle = T.accent; ctx.beginPath(); ctx.arc(tx, ty, 16, 0, TAU); ctx.fill(); ctx.strokeStyle = T.bg; ctx.lineWidth = 4; ctx.stroke();
+    const lap = p < .03 ? 0 : p < .43 ? 1 : p < .83 ? 2 : 3;
+    put(ctx, lap ? `ЦИКЛ ${Math.min(lap, 2)}` : '', 1010, 850, { size: 28, wt: 600, color: T.accent, align: 'right' });
+  }
+}
+
+// ---------------------------------------------------------------- 6. the programming program
+const SRC = ['A', 'B', '?'];
+function drawCompile(ctx, s) {
+  const T = s.T, k = ease.outCubic;
+  [[220, 'A', 'box'], [540, 'B', 'box'], [860, '?', 'diamond']].forEach(([x, l, kind], i) => {
+    const p = k(s.seg(.2 + i * .25, .9 + i * .25));
+    node(ctx, T, kind, [x, 880], kind === 'box' ? 220 : 230, kind === 'box' ? 80 : 120, '', p, 0);
+    put(ctx, l, x, 880, { size: 44, wt: 600, color: T.accent, align: 'center', a: p });
+    const q = s.seg(1.2 + i * .2, 2.2 + i * .2);
+    ctx.strokeStyle = T.ink; ctx.lineWidth = 3; ink.poly(ctx, [x, 880 + (kind === 'box' ? 40 : 60), x, 940, 540, 1000], k(q));
+    if (q >= 1) for (let j = 0; j < 2; j++) { const u = ((s.beat * .8 + j * .5 + i * .23) % 1), px = x === 540 ? 540 : lerp(x, 540, clamp((u - .45) / .55)), py = u < .45 ? lerp(880 + 50, 940, u / .45) : lerp(940, 1000, (u - .45) / .55); ctx.fillStyle = T.accent; ctx.globalAlpha = .9; ctx.beginPath(); ctx.arc(px, py, 6, 0, TAU); ctx.fill(); ctx.globalAlpha = 1; }
+  });
+  const g = k(s.seg(2, 3));
+  if (g > 0) {
+    ctx.save(); ctx.translate(540, 1100); ctx.scale(g, g); ctx.strokeStyle = T.ink; ctx.lineWidth = 4; ctx.fillStyle = alpha(T.accent, .22);
+    const gear = ink.gear(0, 0, 96, 12, s.beat * .55, .16); ctx.beginPath(); for (let i = 0; i < gear.length; i += 2) i ? ctx.lineTo(gear[i], gear[i + 1]) : ctx.moveTo(gear[i], gear[i + 1]); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore(); put(ctx, 'ПП', 540, 1102, { size: 52, face: 'disp', color: T.ink, align: 'center', a: g, track: .04 });
+  }
+  const o = s.seg(3.2, 4); ctx.strokeStyle = T.ink; ctx.lineWidth = 3; ink.poly(ctx, [540, 1204, 540, 1262], k(o));
+  // the code comes out by itself, a line every 0.4 beat; the last six stay on screen
+  const n = s.beat < 4 ? 0 : Math.floor((s.beat - 4) / .4) + 1, lines = 6, y0 = 1296;
+  put(ctx, 'НАБРАНО РУКАМИ: 0', 70, 1262, { size: 22, wt: 600, color: T.muted, a: s.seg(3.4, 4.2) });
+  put(ctx, `СТРОК КОДА: ${n}`, 1010, 1262, { size: 22, wt: 600, color: T.accent, align: 'right', a: s.seg(3.4, 4.2) });
+  for (let i = 0; i < lines; i++) {
+    const idx = n - lines + i; if (idx < 0) continue;
+    const age = n - 1 - idx, born = (s.beat - 4) / .4 - idx, pop = clamp(born);
+    const txt = [0, 1, 2].map(c => oct(idx + 40, c).slice(1)).join('      ');
+    put(ctx, String(idx + 1).padStart(2, '0'), 70, y0 + i * 52, { size: 30, color: T.muted, a: .8 * pop });
+    put(ctx, typed(txt, pop), 160, y0 + i * 52, { size: 42, wt: 600, color: age === 0 ? T.accent : T.ink, a: (1 - age * .13) * pop, track: .08 });
+  }
+}
+
+// ---------------------------------------------------------------- 7. the seminar
+const SEM = ['МАТЕМАТИКИ', 'БИОЛОГИ', 'ЛИНГВИСТЫ', 'ФИЛОСОФЫ', 'ИНЖЕНЕРЫ', 'ЭКОНОМИСТЫ'];
+function drawSeminar(ctx, s) {
+  const T = s.T, cx = 540, cy = CY + 10, R = 310 * (1 + .012 * Math.sin(s.beat * Math.PI));
+  const c = ease.outBack(s.seg(0, 1));
+  ctx.strokeStyle = T.ink; ctx.lineWidth = 4; ctx.fillStyle = alpha(T.accent, .16); ctx.beginPath(); ctx.arc(cx, cy, 128 * c, 0, TAU); ctx.fill(); ctx.stroke();
+  put(ctx, 'КИБЕР-', cx, cy - 16, { size: 34, wt: 600, color: T.ink, align: 'center', a: c, track: .1 }); put(ctx, 'НЕТИКА', cx, cy + 22, { size: 34, wt: 600, color: T.ink, align: 'center', a: c, track: .1 });
+  SEM.forEach((tx, i) => {
+    const ang = (-90 + i * 60) * Math.PI / 180, tx_ = cx + Math.cos(ang) * R * (Math.abs(Math.cos(ang)) > .5 ? .93 : 1), ty = cy + Math.sin(ang) * R;
+    const b0 = 1 + i * .6, e = ease.outBack(s.seg(b0, b0 + .8)), side = i % 2 ? 1 : -1;
+    const x = lerp(cx + side * 900, tx_, e), y = ty, w = tx.length * 25 + 56, h = 72;
+    const lineP = ease.outCubic(s.seg(b0 + .6, b0 + 1.2));
+    ctx.strokeStyle = alpha(T.ink, .7); ctx.lineWidth = 2.5; ink.poly(ctx, [cx + Math.cos(ang) * 128, cy + Math.sin(ang) * 128, tx_ - Math.cos(ang) * (Math.abs(Math.cos(ang)) > .5 ? w / 2 : 0), ty - Math.sin(ang) * (Math.abs(Math.cos(ang)) > .5 ? 0 : h / 2)], lineP);
+    ctx.fillStyle = T.bg; ctx.fillRect(x - w / 2, y - h / 2, w, h); ctx.strokeStyle = T.ink; ctx.lineWidth = 3; ctx.strokeRect(x - w / 2, y - h / 2, w, h);
+    put(ctx, tx, x, y, { size: 30, wt: 600, color: T.ink, align: 'center', track: .1 });
+  });
+}
+
+// ---------------------------------------------------------------- 8. the article (1955)
+function drawArticle(ctx, s) {
+  ctx.save(); drift(ctx, s, .8);
+  const T = s.T, out = ease.inCubic(s.seg(5.2, 8));
+  // behind: the page that started it all, with its stamp, sliding out of the way
+  ctx.save(); ctx.translate(440, 1030 + out * 700); ctx.rotate(-.05 - out * .12); ctx.scale(.78, .78); ctx.globalAlpha = .65;
+  dictCard(ctx, s, { reveal: 1 }); drawStamp(ctx, stampSprite('ЛЖЕНАУКА', T.accent, 150), 30, 120, -.16, 1, 1); ctx.restore();
+  // front: the article
+  const e = spring(s.t - s.at(1), .55, 13), y = lerp(2300, 1235, clamp(e, 0, 1.15)), w = 800, h = 560;
+  ctx.save(); ctx.translate(590, y); ctx.rotate(.022);
+  ctx.shadowColor = 'rgba(40,30,10,.32)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 18; ctx.fillStyle = T.card; ctx.fillRect(-w / 2, -h / 2, w, h); ctx.shadowColor = 'transparent';
+  put(ctx, 'ВОПРОСЫ ФИЛОСОФИИ · №4 · 1955', -w / 2 + 44, -h / 2 + 50, { size: 22, wt: 600, color: T.muted, track: .16 });
+  ['ОСНОВНЫЕ', 'ЧЕРТЫ', 'КИБЕРНЕТИКИ'].forEach((l, i) => put(ctx, typed(l, s.seg(1.8 + i * .45, 2.5 + i * .45)), -w / 2 + 44, -h / 2 + 140 + i * 82, { size: 84, face: 'disp', color: T.ink, track: .01 }));
+  ctx.strokeStyle = T.ink; ctx.lineWidth = 3; ink.poly(ctx, [-w / 2 + 44, 76, w / 2 - 44, 76], ease.outCubic(s.seg(3.4, 4.2)));
+  const names = ['С. Л. СОБОЛЕВ', 'А. И. КИТОВ', 'А. А. ЛЯПУНОВ'];
+  names.forEach((n, i) => { const p = s.seg(3.8 + i * .3, 4.5 + i * .3); put(ctx, n, -w / 2 + 44 + i * 252, 112, { size: 24, wt: 600, color: i === 2 ? T.accent : T.ink, a: p, track: .06 }); });
+  ctx.restore(); ctx.restore();
+}
+
+// ---------------------------------------------------------------- 9. the council (1959)
+function drawCouncil(ctx, s) {
+  const T = s.T, ok = slam(s, 4.5), enter = ease.outCubic(s.seg(0, 3));
+  ctx.save(); drift(ctx, s, 1); ctx.translate(540 + ok.sx, CY + 10 + ok.sy); ctx.scale(lerp(1.06, 1, enter), lerp(1.06, 1, enter)); ctx.rotate(-.018);
+  dictCard(ctx, s, { reveal: 1 });
+  drawStamp(ctx, stampSprite('ЛЖЕНАУКА', T.accent, 150), 50, 0, -.16, .85, 1 - .55 * ease.outCubic(s.seg(2, 3)));
+  ctx.strokeStyle = T.accent; ctx.lineWidth = 16; ctx.lineCap = 'round'; ink.poly(ctx, [-330, 110, 420, -110], ease.inOutCubic(s.seg(2, 3.2)));   // struck out
+  drawStamp(ctx, stampSprite('НАУКА', T.ok, 190), -20, 200, .05, ok.sc, ok.a);
+  splash(ctx, { accent: T.ok }, -20, 200, ok.hit ? ok.dt : -1, 7);
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- 10. Siberia and the school
+const TREE = [['А. П. ЕРШОВ', 1], ['Ю. И. ЖУРАВЛЁВ', -1], ['О. Б. ЛУПАНОВ', 1], ['Ю. Л. КЕТКОВ', -1], ['А. М. ФЕДОТОВ', 1]];
+function drawSiberia(ctx, s) {
+  const T = s.T, mapA = 1 - ease.inCubic(s.seg(4.4, 5.6));
+  if (mapA > 0) {
+    ctx.save(); ctx.globalAlpha = mapA;
+    ctx.strokeStyle = alpha(T.ink, .1); ctx.lineWidth = 2;
+    for (let i = 0; i < 7; i++) { ctx.beginPath(); ctx.moveTo(70, 830 + i * 100); ctx.quadraticCurveTo(540, 800 + i * 100 + (i - 3) * 22, 1010, 830 + i * 100); ctx.stroke(); }
+    const m = [250, 900], n = [820, 1410], c = [840, 880], p = ease.inOutCubic(s.seg(.4, 4));
+    const pt = u => [(1 - u) ** 2 * m[0] + 2 * (1 - u) * u * c[0] + u * u * n[0], (1 - u) ** 2 * m[1] + 2 * (1 - u) * u * c[1] + u * u * n[1]];
+    ctx.strokeStyle = T.ink; ctx.lineWidth = 3.5; ctx.setLineDash([4, 14]); ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(m[0], m[1]); for (let i = 1; i <= 48; i++) { const [x, y] = pt(i / 48 * p); ctx.lineTo(x, y); } ctx.stroke(); ctx.setLineDash([]);
+    for (const [pos, lab, dx, dy, al] of [[m, 'МОСКВА', 0, -46, 'center'], [n, 'НОВОСИБИРСК', 0, 52, 'center']]) { ctx.fillStyle = T.ink; ctx.beginPath(); ctx.arc(pos[0], pos[1], 13, 0, TAU); ctx.fill(); put(ctx, lab, pos[0] + dx, pos[1] + dy, { size: 30, wt: 600, color: T.ink, align: al, a: pos === m ? 1 : s.seg(3.2, 4) }); }
+    const km = String(Math.round(2800 * p)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    put(ctx, `≈ ${km} КМ`, 640, 1130, { size: 34, wt: 600, color: T.accent, a: s.seg(.6, 1.2), track: .1 });
+    const [x, y] = pt(p); ctx.fillStyle = T.accent; ctx.beginPath(); ctx.arc(x, y, 19, 0, TAU); ctx.fill(); ctx.strokeStyle = T.bg; ctx.lineWidth = 4; ctx.stroke();
+    ctx.restore();
+  }
+  const g = s.seg(5.4, 9.4);
+  if (g > 0) {
+    const top = 850, bot = 1450;
+    ctx.strokeStyle = T.ink; ctx.lineWidth = 5; ink.poly(ctx, [540, bot, 540, lerp(bot, top, ease.outCubic(g))], 1);
+    put(ctx, 'ЛЯПУНОВ', 540, bot + 46, { size: 46, face: 'disp', color: T.ink, align: 'center', a: s.seg(5.4, 6.2), track: .08 });
+    TREE.forEach(([nm, side], i) => {
+      const y = bot - 90 - i * 112, b0 = 6.2 + i * .55, p = ease.outCubic(s.seg(b0, b0 + .5)), len = 120;
+      ctx.strokeStyle = T.ink; ctx.lineWidth = 3.5; ink.poly(ctx, [540, y, 540 + side * len * p, y - 34 * p], 1);
+      put(ctx, nm, 540 + side * (len + 14), y - 34, { size: 32, wt: 600, color: i === 0 ? T.accent : T.ink, align: side > 0 ? 'left' : 'right', a: s.seg(b0 + .3, b0 + .8) });
+      ctx.fillStyle = T.accent; ctx.globalAlpha = p; ctx.beginPath(); ctx.arc(540, y, 8, 0, TAU); ctx.fill(); ctx.globalAlpha = 1;
+    });
+  }
+}
+
+// ---------------------------------------------------------------- 11. the label peels off, the scheme runs
+function drawEnd(ctx, s) {
+  const T = s.T, fade = ease.inOutCubic(s.seg(.5, 3.2));
+  ctx.save(); drift(ctx, s, 1); ctx.translate(540, CY + 10); ctx.rotate(-.018);
+  dictCard(ctx, s, { reveal: 1, rows: false });
+  // where the gray lines were, the scheme from chapter II now runs by itself
+  const y0 = 185, xs = [-250, 0, 250];
+  ctx.strokeStyle = T.ink; ctx.lineWidth = 3.5; ctx.fillStyle = T.ink;
+  const loop = [-250, y0, 0, y0, 250, y0, 250, y0 + 90, -250, y0 + 90, -250, y0];
+  ctx.globalAlpha = .5; ink.poly(ctx, loop, 1); ctx.globalAlpha = 1;
+  [['box', xs[0], 'A'], ['box', xs[1], 'B'], ['diamond', xs[2], '?']].forEach(([kind, x, l]) => {
+    ctx.fillStyle = T.card; ctx.strokeStyle = T.ink; ctx.lineWidth = 3.5;
+    if (kind === 'box') { ctx.fillRect(x - 70, y0 - 34, 140, 68); ctx.strokeRect(x - 70, y0 - 34, 140, 68); }
+    else { ctx.beginPath(); ctx.moveTo(x - 80, y0); ctx.lineTo(x, y0 - 48); ctx.lineTo(x + 80, y0); ctx.lineTo(x, y0 + 48); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    put(ctx, l, x, y0, { size: 34, wt: 600, color: T.accent, align: 'center' });
+  });
+  const u = (s.beat * .38) % 1, d = u * (250 + 250 + 90 + 500 + 90);
+  const lp = [[-250, y0], [0, y0], [250, y0], [250, y0 + 90], [-250, y0 + 90], [-250, y0]]; let dd = d, tx = -250, ty = y0;
+  for (let i = 1; i < lp.length; i++) { const l = Math.hypot(lp[i][0] - lp[i - 1][0], lp[i][1] - lp[i - 1][1]); if (dd <= l) { tx = lerp(lp[i - 1][0], lp[i][0], dd / l); ty = lerp(lp[i - 1][1], lp[i][1], dd / l); break; } dd -= l; }
+  ctx.fillStyle = T.accent; ctx.beginPath(); ctx.arc(tx, ty, 13, 0, TAU); ctx.fill(); ctx.strokeStyle = T.card; ctx.lineWidth = 3; ctx.stroke();
+  // the old stamp dissolves; the new one stays
+  drawStamp(ctx, stampSprite('ЛЖЕНАУКА', T.accent, 150), 50, -fade * 40, -.16 - fade * .18, .85 + fade * .3, .45 * (1 - fade));
+  drawStamp(ctx, stampSprite('НАУКА', T.ok, 170), 0, -10, .05, 1, 1);
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- HUD: the year and a timeline of one life
+const KEY_YEARS = [1911, 1932, 1944, 1952, 1955, 1959, 1961, 1973];
+function hud(ctx, h, f) {
+  const T = h.T, yr = Math.round(h.val('year')), x0 = 70, x1 = 1010, Y = 256, y0 = 1911, y1 = 1973, xOf = y => lerp(x0, x1, (y - y0) / (y1 - y0));
+  put(ctx, String(yr), x0, 206, { size: 66, wt: 600, color: T.ink, track: .03 });
+  put(ctx, String(h.chapter || '').toUpperCase(), x1, 202, { size: 24, wt: 600, color: T.muted, align: 'right', track: .18 });
+  ctx.fillStyle = T.hud || T.muted; ctx.globalAlpha = h.alpha * .35; ctx.fillRect(x0, Y, x1 - x0, 2); ctx.globalAlpha = h.alpha;
+  for (const k of KEY_YEARS) ctx.fillRect(xOf(k) - 1, Y - 7, 2, 14);
+  const mx = xOf(clamp(yr, y0, y1));
+  ctx.fillStyle = T.accent; ctx.fillRect(x0, Y - 1.5, mx - x0, 4.5);
+  ctx.beginPath(); ctx.moveTo(mx, Y + 5); ctx.lineTo(mx - 9, Y + 22); ctx.lineTo(mx + 9, Y + 22); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+// ---------------------------------------------------------------- the score: generated from a plan, sfx on the same clock
+// One section per shot or group of shots; the bars add up to the film's 25. Energy follows the story: quiet label, the build of the idea,
+// a silence before the fight, the peak at "science", an exhale. Try other seeds with render/music-report.mjs. See 18-music-generation.md.
+const PLAN = {
+  seed: 5, bpm: 120, key: 'A minor', style: 'tense',
+  sections: [
+    { name: 'label', bars: 2, energy: .18 }, { name: 'man', bars: 2, energy: .3 },
+    { name: 'course', bars: 2, energy: .4 }, { name: 'numbers', bars: 2, energy: .5 },
+    { name: 'scheme', bars: 3, energy: .62 }, { name: 'compile', bars: 3, energy: .85, breakBefore: true },
+    { name: 'seminar', bars: 2, energy: .45 }, { name: 'article', bars: 2, energy: .72 },
+    { name: 'council', bars: 2, energy: .95, key: 'C major', breakBefore: true },
+    { name: 'school', bars: 3, energy: .7, key: 'C major' }, { name: 'end', bars: 2, energy: .15, key: 'A minor' },
+  ],
+};
+const SCORE = Compose.generate(PLAN);
+window.__score = SCORE;                                        // render/music-report.mjs reads it
+const SFX = [                                                  // [shot, local beat, kind]: what the picture does, heard
+  ['stamp', 3, 'impact'], ['compile', -2, 'riser'], ['compile', 4, 'print'], ['article', 1, 'whoosh'], ['council', 4.5, 'impact'], ['end', 0.5, 'whoosh'],
+];
+function score(ac, bus, f, at) {
+  const zero = at(f.DURATION) - f.DURATION, T = (id, beat = 0) => zero + f.time(f.shot(id).b0 + beat), now = ac.currentTime || 0;
+  Chip.playScore(ac, 0, bus.out, SCORE, { timeOf: b => zero + f.time(b), from: now, gain: .7 });
+  for (const [id, beat, kind] of SFX) {
+    const t = T(id, beat); if (t < now) continue;
+    if (kind === 'impact') A.impact(ac, t, bus.out, .8);
+    else if (kind === 'riser') A.riser(ac, t, 2 * 60 / 120, bus.out, .2);
+    else if (kind === 'whoosh') A.whoosh(ac, t, bus.out, { g: .16, d: .6 });
+    else if (kind === 'print') for (let i = 0; i < 30; i++) A.tick(ac, t + i * .4 * .5, bus.out, .1, 2200 + (i % 3) * 400);   // a line of code every 0.4 beat
+  }
+}
+
+// ---------------------------------------------------------------- the film
+// one statement size for the whole film (the longest line, 16 capitals, fits 940 px at 94); a size that differs per shot reads as a mistake
+const S = (text, extra = {}) => ({ text, weight: 700, size: 94, captionSize: 24, ...extra });
+Film.create({
+  W, H, FPS: 30, tempo: 120,
+  safe: [.07, .17, .22],                                       // sides, top (the year and the rail live there), bottom (platform UI)
+  type: { display: DISP, mono: MONO },
+  fonts: ['700 100px "Oswald"', '500 30px "IBM Plex Mono"', '600 30px "IBM Plex Mono"'],
+  fontText: 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя0123456789 .,:;?!«»№·—-–→',
+  themes: {
+    paper: { bg: '#e9e1cd', ink: '#17150f', muted: '#756d5b', accent: '#b3261e', card: '#f7f2e4', ok: '#1d6b4b', hud: '#17150f', texture: 'paper', grain: .07, vignette: .3 },
+    blueprint: { bg: '#1b4a8a', ink: '#eaf1fb', muted: '#93b3dd', accent: '#ff8a50', card: '#1b4a8a', ok: '#7be0a6', hud: '#eaf1fb', texture: 'grid', grain: .05, vignette: .35 },
+  },
+  theme: 'paper', initial: { year: 1954 }, tween: 1,
+  hud, score,
+  shots: [
+    { id: 'stamp', bars: 2, chapter: 'I · ЯРЛЫК', draw: drawLabel, set: { year: 1954 },
+      say: S('В 1954-М СЛОВО|*КИБЕРНЕТИКА*|БЫЛО ПРИГОВОРОМ.', { per: .35, gap: .35, caption: 'КРАТКИЙ ФИЛОСОФСКИЙ СЛОВАРЬ, 1954' }) },
+    { id: 'who', bars: 2, draw: drawWho, in: { type: 'push', axis: 'y', beats: 1 }, set: { year: { to: 1911, b: [0, 1.5] } },
+      say: S('ЕЁ ВЕРНУЛ|*МАТЕМАТИК.*', { per: .45 }) },
+    { id: 'course', bars: 2, chapter: 'II · СХЕМА', theme: 'blueprint', draw: drawCourse, in: { type: 'dip', color: '#1b4a8a', beats: 1.5 }, set: { year: { to: 1952, b: [0, 1.5] } },
+      say: S('1952. ПЕРВЫЙ|В СТРАНЕ КУРС|*ПРОГРАММИРОВАНИЯ*', { accentScale: 1, per: .33, caption: 'МГУ · ПРИГЛАСИЛ АКАДЕМИК С. Л. СОБОЛЕВ' }) },
+    { id: 'numbers', bars: 2, draw: drawNumbers,
+      say: S('МАШИНА ЗНАЛА|ТОЛЬКО|*ЧИСЛА.*', { per: .4, caption: 'ПРОГРАММА — СТОЛБЦЫ МАШИННЫХ КОДОВ' }) },
+    { id: 'scheme', bars: 3, draw: drawScheme, in: { type: 'push', axis: 'y', beats: 1 },
+      say: [S('ЛЯПУНОВ:|СНАЧАЛА|*СХЕМА.*', { per: .4, out: 4.6, caption: 'ОПЕРАТОРНЫЙ МЕТОД, 1952–53' }),
+            S('РАЗБЕЙ ЗАДАЧУ|НА|*ОПЕРАТОРЫ*', { start: 5.2, per: .35, caption: 'ОПЕРАТОРЫ И ЛОГИЧЕСКИЕ УСЛОВИЯ' })] },
+    { id: 'compile', bars: 3, draw: drawCompile, in: { type: 'flash', color: '#eaf1fb', beats: 1.5 }, set: { year: { to: 1953, b: [0, 2] } },
+      say: S('ПОТОМ ПРОГРАММА|СОБЕРЁТ ИХ|*САМА.*', { per: .35, caption: 'ПРОГРАММИРУЮЩАЯ ПРОГРАММА · ПРООБРАЗ КОМПИЛЯТОРА' }) },
+    { id: 'seminar', bars: 2, chapter: 'III · ИМЯ', theme: 'paper', draw: drawSeminar, in: { type: 'dip', color: '#e9e1cd', beats: 1.5 }, set: { year: { to: 1954, b: [0, 1.5] } },
+      say: S('1954. В МГУ ОН|СОБИРАЕТ|*СЕМИНАР.*', { per: .38, caption: '«АВТОМАТЫ И МЫШЛЕНИЕ» · 1954–1964' }) },
+    { id: 'article', bars: 2, draw: drawArticle, in: { type: 'punch', beats: 1 }, set: { year: { to: 1955, b: [0, 1] } },
+      say: S('1955. ПЕРВАЯ|СТАТЬЯ В ЕЁ|*ЗАЩИТУ.*', { per: .35, caption: 'СОБОЛЕВ · КИТОВ · ЛЯПУНОВ, «ВОПРОСЫ ФИЛОСОФИИ»' }) },
+    { id: 'council', bars: 2, draw: drawCouncil, set: { year: { to: 1959, b: [0, 1.5] } },
+      say: S('1959. ПРИ АКАДЕМИИ|НАУК — СОВЕТ ПО|*КИБЕРНЕТИКЕ*', { per: .33, caption: 'ПРЕДСЕДАТЕЛЬ БЕРГ · ЗАМЕСТИТЕЛЬ ЛЯПУНОВ' }) },
+    { id: 'siberia', bars: 3, chapter: 'IV · ШКОЛА', draw: drawSiberia, in: { type: 'dip', color: '#e9e1cd', beats: 1.5 }, set: { year: { to: 1961, b: [0, 1.5] } },
+      say: [S('С 1961-ГО —|*СИБИРЬ.*', { per: .45, out: 4.6 }),
+            S('ОН ВЫРАСТИЛ|*ШКОЛУ.*', { start: 5.2, per: .45, caption: 'КАФЕДРА В НГУ · ФИЗМАТШКОЛА В АКАДЕМГОРОДКЕ' })] },
+    { id: 'end', bars: 2, draw: drawEnd, in: { type: 'push', axis: 'y', beats: 1 }, set: { year: { to: 1973, b: [0, 3] } },
+      say: S('ЯРЛЫК ОТЛЕПИЛСЯ.|*НАУКА*|ОСТАЛАСЬ.', { per: .4, caption: 'АЛЕКСЕЙ ЛЯПУНОВ · 1911–1973' }) },
+  ],
+});
+</script>
+</body></html>

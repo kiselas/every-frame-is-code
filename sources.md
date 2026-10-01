@@ -35,3 +35,18 @@ The ideas and observations in this kit come from open community material publish
 - [ChatMusician](https://arxiv.org/pdf/2402.16153) and [ComposerX](https://arxiv.org/html/2404.18081v1): why one-shot note writing by an LLM fails on structure, and why staged composition works better (behind `runtime/compose.js`).
 - [Euclidean rhythm](https://en.wikipedia.org/wiki/Euclidean_rhythm), [Tonal](https://github.com/tonaljs/tonal), [Strudel](https://strudel.cc/) (patterns as text; not used, license to be checked) and [chiptune arrangement guides](https://ozzed.net/how-to-make-8-bit-music.shtml): the music-generation background.
 - [Fantasy console overview](https://www.davideaversa.it/blog/how-choose-fantasy-console/): PICO-8, TIC-80 and their constraints as a creative tool.
+
+## Vertical video and non-Latin text
+
+- [MDN: FontFaceSet.load()](https://developer.mozilla.org/en-US/docs/Web/API/FontFaceSet/load) and [MDN: unicode-range](https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/unicode-range): why `document.fonts.load(font)` without text fetches only the Latin file of a family split by script, and how `Film.create` loads fonts for the text it draws.
+- [Google Fonts CSS API](https://developers.google.com/fonts/docs/css2): one `@font-face` per subset (`cyrillic`, `latin`, ...); the way to check that a family has the script you need.
+- The facts and sources of the worked example (a vertical film about A. A. Lyapunov) are listed in [examples/lyapunov/SCRIPT.md](examples/lyapunov/SCRIPT.md).
+
+## Silent social video and infographics
+
+- Muted viewing and captions: [Digiday on Facebook's 85%](https://digiday.com/media/silent-world-facebook-video/), the [Verizon/Publicis survey](https://digiday.com/sponsored/75-percent-of-people-watch-mobile-videos-on-mute/) (69% muted in public, captions raise completion by about 80%).
+- Hooks and retention benchmarks: [TikTok 3-second hook statistics](https://insights.ttsvibes.com/tiktok-first-3-seconds-hook-retention-rate/), [TikTok view-rate benchmarks](https://www.shortimize.com/blog/what-is-a-good-view-rate-for-tiktok), [retention curves for TikTok ads](https://sociavault.com/blog/tiktok-ad-retention-curves-hook-optimization).
+- Reading speed for on-screen text: [University of Melbourne captioning style guide](https://www.unimelb.edu.au/accessibility/video-captioning/style-guide), [Netflix's 20 characters per second](https://en.wikipedia.org/wiki/Closed_captioning).
+- Cleveland and McGill, [Graphical Perception](https://www.textbookofusability.com/references/clevelandmcgill1984.html) (1984): the ranking of encodings behind `21-infographics.md`.
+- Edward Tufte, *The Visual Display of Quantitative Information*; Otto Neurath, Isotype; Claus Wilke, [Fundamentals of Data Visualization](https://clauswilke.com/dataviz/introduction.html).
+- Shu et al., [What Makes a Data-GIF Understandable?](https://arxiv.org/abs/2008.07227), IEEE VIS 2020: animated charts, what helps and hurts comprehension.

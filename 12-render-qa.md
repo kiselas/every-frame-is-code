@@ -79,7 +79,7 @@ node render/still.mjs film.html stills/ two fast@0.3       # shots of a runtime/
 | Platform | Size | FPS |
 |---|---|---|
 | YouTube, website | 1920×1080 | 30 or 60 |
-| Reels, Shorts, TikTok | 1080×1920 | 30 or 60 |
+| Reels, Shorts, TikTok | 1080×1920 | 30 or 60 (30 is enough; see [19-vertical.md](19-vertical.md)) |
 | Telegram, square social | 1080×1080 | 30 |
 
 Encoding: H.264, `-pix_fmt yuv420p`, `-crf 18`, `-movflags +faststart`. For a GIF preview: `ffmpeg -i out.mp4 -vf "fps=15,scale=640:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse" preview.gif`.

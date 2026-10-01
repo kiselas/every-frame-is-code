@@ -2,6 +2,8 @@
 
 A 20-second clip survives on one good image. A two-minute film doesn't: the viewer needs a reason to keep watching, and the agent needs a way to make 20-70 shots that feel like one film. This file covers both halves: the meaning (thesis, spine, through-line, callbacks) and the production (script as data, the runtime in `runtime/film.js`, the loop from animatic to final cut). The worked example is [examples/gps/](examples/gps/): a 90-second explainer on how GPS finds you.
 
+For a vertical film (Reels, Shorts, TikTok, 30-60 s) the same method applies with a different frame ([19-vertical.md](19-vertical.md)), a viewer who has the sound off ([20-silent-social.md](20-silent-social.md)) and pictures that must carry the proof alone ([21-infographics.md](21-infographics.md)); worked example [examples/lyapunov/](examples/lyapunov/).
+
 ## What breaks after 60 seconds
 
 - **No question, no reason to stay.** A pretty sequence of facts is a screensaver with captions. A long film is a question asked in the first seconds and answered at the end, with complications in between.

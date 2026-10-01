@@ -59,6 +59,16 @@ Long films need more than good frames: a question, a through-line, chapters, cal
 
 To learn from someone else's film: `node render/analyze.mjs reference.mp4 out/` writes a report on its shots, pace, tempo and cuts, with contact sheets.
 
+## Vertical video
+
+Reels, Shorts and TikTok are a different screen: 9:16, the platform's own interface over the edges, a hook in the first second, text read at arm's length. [19-vertical.md](19-vertical.md) is the frame (safe zones, three bands, type, fonts for Cyrillic and other non-Latin scripts, tools), [20-silent-social.md](20-silent-social.md) is the film (the contract with a viewer who has the sound off, the word budget, eleven genres and what each demands), [21-infographics.md](21-infographics.md) is the picture (how a diagram proves a claim instead of decorating it), and `runtime/film.js` switches to portrait defaults when `H > W`. The worked example, [examples/lyapunov/](examples/lyapunov/), is a 50-second film in Russian about the mathematician Alexey Lyapunov: a rubber stamp that lands, a flowchart that runs, a program that assembles itself, a stamp that is struck out.
+
+<div align="center">
+<img src="examples/lyapunov/preview.jpg" width="270" alt="Lyapunov: a dictionary page stamped as pseudoscience, struck out, and stamped as science">
+</div>
+
+Source: [examples/lyapunov/film.html](examples/lyapunov/film.html) · script, facts and sources: [examples/lyapunov/SCRIPT.md](examples/lyapunov/SCRIPT.md)
+
 ## Pixel and retro
 
 A limit is a style. 160×90 pixels, 16 colors and four sound channels take away the defaults a model reaches for (gradients, glow, navy and amber) and leave what it does well: composition, timing, shapes. The pixel toolkit borrows the best ideas of [Pyxel](https://github.com/kitao/pyxel), PICO-8 and the demoscene and rebuilds them around `draw(t)`:
@@ -162,11 +172,15 @@ node render.mjs ../examples/demo/demo.html ../examples/demo/demo.mp4
 | [16-chiptune.md](16-chiptune.md) | A score as text: MML on four channels, 8-bit sound effects, synced to the film's tempo map |
 | [17-demoscene.md](17-demoscene.md) | Per-pixel effects as functions of (x, y, t): plasma, tunnel, rotozoom, copper bars, fire and more |
 | [18-music-generation.md](18-music-generation.md) | A score from a plan: key, style and an energy per section become chords, bass, hook, groove and fills; a linter and an audio report for music you cannot hear |
+| [19-vertical.md](19-vertical.md) | Vertical video for Reels, Shorts and TikTok: 1080×1920, safe zones, type, non-Latin fonts, text-fit checks, review |
+| [20-silent-social.md](20-silent-social.md) | Silent social video: the contract with a muted viewer, the word budget, eleven genres (how it works, one life, one number, timeline, versus, myth vs fact, countdown, process, statement, teaser, loop) and their requirements |
+| [21-infographics.md](21-infographics.md) | Infographics in motion: claim types, the label test, encodings people read accurately, yardsticks, motion as data, density limits for a phone, a worked critique |
 | [runtime/](runtime/) | `film.js`: the runtime for long films, `pixel.js`, `pixel-fx.js`, `chip.js`, `compose.js` and `music-lint.js` for pixel, retro and generated music, and `inline.mjs` to fold a film into one file |
 | [render/](render/) | Render, contact sheets, stills, reference breakdown, beat maps (Node + Playwright + ffmpeg) |
 | [examples/demo/](examples/demo/) | Demo film: script and source |
 | [examples/gps/](examples/gps/) | Four Clocks: a 90 s explainer built on the runtime, with its script and sources |
 | [examples/pixel/](examples/pixel/) | Sixteen Colors: a 64 s pixel film that uses the whole pixel toolkit, with its script |
+| [examples/lyapunov/](examples/lyapunov/) | Lyapunov: a 50 s vertical film for Reels and Shorts (in Russian), with its script, facts and sources |
 | [scripts/pack-skill.sh](scripts/pack-skill.sh) | Builds `motion-kit.zip` for ChatGPT and Claude.ai. Releases build it automatically: just push a `vX.Y.Z` tag |
 | [sources.md](sources.md) | Sources and further reading |
 
