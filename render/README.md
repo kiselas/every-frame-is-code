@@ -144,3 +144,14 @@ Eyes and lint for music, for an agent that cannot listen. The input is a Score (
 Exit code 1 when the lint has `error` findings (a note outside both the chord and the key on a strong beat), 2 when the tool failed, otherwise 0. Chrome is found like in the other tools (`CHROME_PATH` or the installed Chrome); ffmpeg and ffprobe on PATH. The linter itself is a pure function and also runs without a browser: `const { findings, score } = require('../runtime/music-lint.js').lint(score)`; `MusicLint.describe(score)` gives a compact text summary a model can read. Rules and thresholds are documented in the header of `runtime/music-lint.js` and can be overridden or disabled through `opts` (`{ disable: ['loop'], leapWarn: 14 }`).
 
 What to look at first: errors, then `strong-beat-chord`, `clash` and `parallel-perfects` (harmony), `loop` and `flat-dynamics` (the music feels mechanical), `density-vs-energy` and `drum-groove` (the structure does not lift), and in the loudness table whether the chorus is at least 2 to 3 LU louder than the verse.
+
+## Grid check and AI music
+
+```bash
+node grid-check.mjs ../track.wav --bpm 124 --sections intro:8,build:8,drop:16,break:8,drop2:16,outro:8 --riser build,break   # a track at a tempo you chose
+node grid-check.mjs ../take.wav --bpm 126 --sections all:15 --fit                                                         # a take from a model
+uv run --project ../local/ACE-Step-1.5 python ace-gen.py --out ../local/ace-out --name genres --jobs ace-genres.json      # ACE-Step takes
+node ace-batch-check.mjs ../local/ace-out/genres-report.json                                                              # a table per take
+```
+
+For a track **you generated** (see [22-electronic-music.md](../22-electronic-music.md)), not a found one (that is `beatmap.mjs`). `grid-check.mjs` per section: level, low-band level and the phase of the pulse against the ideal grid (the low band for a kick, the onsets on eighths for any other mix); then the lag behind the grid, whether the rhythm stops for the last beat of each seam, and whether a riser really rises. `--fit` finds the constant tempo within 3 bpm of the request that puts the pulse on a grid, for a model that runs a little off. `ace-gen.py` runs ACE-Step 1.5 (MIT) in the mode for 6 GB cards, many jobs in one process; `ace-batch-check.mjs` tabulates the fitted tempo, the slip over the take, the pulse and the loudness and makes an MP3 of each take. Needs ffmpeg; `ace-gen.py` needs ACE-Step and uv.

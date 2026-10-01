@@ -2,6 +2,8 @@
 
 A model cannot hear, and music written note by note in one go comes out as a four-bar loop that repeats until the film ends: one chord progression, one melody, drums that never change. The fix is the same as for pictures in this kit: write **data**, not pixels. The agent writes an *intent* (key, tempo, style, and an energy for each section of the film), seeded generators write the notes, a linter and a report tell the agent what is wrong, and a human listens at the end.
 
+For a modern electronic sound (house, a four-on-the-floor bed) rendered from open-source tools instead of chip voices, see [22-electronic-music.md](22-electronic-music.md).
+
 ```
 plan  ->  Compose.generate  ->  Score (data)  ->  Chip.playScore  ->  sound
               ^                    |
