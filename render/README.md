@@ -59,11 +59,20 @@ The page is opened with `?render`: in this mode it must not run its own requestA
 ## Contact sheet
 
 ```bash
-./contact-sheet.sh ../film.mp4 ../sheet.png        # 2 frames/s, 8 columns
+./contact-sheet.sh ../film.mp4 ../sheet.png        # 2 frames/s, 8 columns (12 for a portrait video)
 ./contact-sheet.sh ../film.mp4 ../sheet.png 4 10   # 4 frames/s, 10 columns
 ```
 
-Requires an ffmpeg build with drawtext (freetype). Builds without fontconfig (common on Windows) need a font file: the script uses Consolas on Windows, or set `FONTFILE=/path/to/font.ttf`. If drawtext isn't available at all, remove it from the filter in the script.
+Tiles are 320 px wide for a landscape video and 190 px for a portrait one, so a 50-second 1080×1920 film at 1 frame/s fits one readable image. Requires an ffmpeg build with drawtext (freetype). Builds without fontconfig (common on Windows) need a font file: the script uses Consolas on Windows, or set `FONTFILE=/path/to/font.ttf`. If drawtext isn't available at all, remove it from the filter in the script.
+
+## Text check
+
+```bash
+node textcheck.mjs ../film.html          # draws the whole film every 0.5 s, lists warnings and errors, exit code 1 if any
+node textcheck.mjs ../film.html 0.25     # a finer sweep
+```
+
+`runtime/film.js` shrinks a statement or caption that is wider than its room and logs a warning; the sweep collects them, plus page errors, so a type size that would wander from shot to shot is caught before a render. Matters most for vertical films ([19-vertical.md](../19-vertical.md)).
 
 ## Stills
 
