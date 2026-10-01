@@ -513,17 +513,20 @@ export const LANG_DEFAULTS = {
   ru: { voice: 'ru-RU-DmitryNeural', display: 'Oswald', mono: 'IBM Plex Mono' },
   en: { voice: 'en-US-GuyNeural', display: 'Oswald', mono: 'IBM Plex Mono' },
 };
-/** A new spec from a genre template: the id, the language, the voice name and the fonts. Returns { spec, notes } (notes: what the author must still set). */
-export function scaffoldSpec(template, { id, lang = 'ru' }) {
+/** A new spec from a genre template: the id, the language, the voice and the fonts. Returns { spec, notes } (notes: what the author must still set).
+ *  `voice`: a ready voice block that replaces the template's (new.mjs --engine openrouter gives { engine, profile, ... }: the profile is a KIND of voice that
+ *  render/voices.json resolves, and the voices of those models speak any language, so no voice name is written and nothing is left as a TODO for it). */
+export function scaffoldSpec(template, { id, lang = 'ru', voice = null }) {
   const spec = JSON.parse(JSON.stringify(template)), notes = [], known = LANG_DEFAULTS[lang];
   spec.id = id;
   spec.lang = lang;
+  if (voice && spec.voice) spec.voice = { ...voice };
   if (known) {
-    if (spec.voice) spec.voice.voice = known.voice;
+    if (spec.voice && !voice) spec.voice.voice = known.voice;
     spec.style = { ...spec.style, display: known.display, mono: known.mono };
   } else {
-    if (spec.voice) spec.voice.voice = `TODO: voice name for "${lang}" (node render/voice.mjs --voices ${lang})`;
-    notes.push(`language "${lang}": set voice.voice (node render/voice.mjs --voices ${lang}) and style.display / style.mono (Google Fonts families that have your script)`);
+    if (spec.voice && !voice) spec.voice.voice = `TODO: voice name for "${lang}" (node render/voice.mjs --voices ${lang})`;
+    notes.push(`language "${lang}": ${voice ? '' : 'set voice.voice (node render/voice.mjs --voices ' + lang + ') and '}set style.display / style.mono (Google Fonts families that have your script)`);
   }
   return { spec, notes };
 }

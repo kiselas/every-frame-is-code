@@ -8,6 +8,8 @@
 //
 // Options:  --engine edge|openrouter   edge (default): free, needs `pip install edge-tts`; openrouter: paid, the key is OPENROUTER_KEY
 //                                      (or OPENROUTER_API_KEY) in the environment or in the kit's .env (git-ignored)
+//           --profile NAME             openrouter: a KIND of voice from voices.json (documentary, explainer, assertive, warm, energetic, default);
+//                                      the tool resolves the voice name, so a genre is not tied to one voice. --voice, --model, --style override it
 //           --voice NAME               edge: ru-RU-DmitryNeural (default), ru-RU-SvetlanaNeural, ...; openrouter: a voice of the model
 //                                      (google/gemini-*-tts: Charon, Kore, Fenrir, Orus, Rasalgethi, Schedar, Gacrux, Sulafat ... 30 of them)
 //           --model NAME               openrouter only; default google/gemini-3.8-flash-tts. `--models` lists the speech models and prices
@@ -68,8 +70,13 @@ if (args.includes('--voices')) {
 
 const engine = opt('--engine', 'edge'), rate = opt('--rate', '-5%'), gap = parseFloat(opt('--gap', '0.45')), sentenceGap = parseFloat(opt('--sentence-gap', '0.22')), maxWords = parseInt(opt('--max-words', '4'), 10);
 const noCache = flag('--no-cache'), calibrate = !flag('--no-calibrate');
-const voice = opt('--voice', engine === 'edge' ? 'ru-RU-DmitryNeural' : 'Charon'), model = opt('--model', 'google/gemini-3.8-flash-tts');
-const style = opt('--style', ''), alignMode = opt('--align', 'whisper'), maxCost = parseFloat(opt('--max-cost', '0.25')), sttModel = opt('--stt-model', 'openai/whisper-1'), langOpt = opt('--lang', '');
+const voiceOpt = opt('--voice', ''), modelOpt = opt('--model', ''), styleOpt = opt('--style', ''), profileName = opt('--profile', 'default');
+const alignMode = opt('--align', 'whisper'), maxCost = parseFloat(opt('--max-cost', '0.25')), sttModel = opt('--stt-model', 'openai/whisper-1'), langOpt = opt('--lang', '');
+// the voice: what is asked for on the command line, else the profile in voices.json (a kind of voice, not a name written into the code)
+const voicesCfg = JSON.parse(fs.readFileSync(path.join(here, 'voices.json'), 'utf8'));
+const profile = engine === 'openrouter' ? voicesCfg.profiles[profileName] : null;
+if (engine === 'openrouter' && !profile) { console.error(`unknown voice profile "${profileName}". The profiles in voices.json: ${Object.keys(voicesCfg.profiles).join(', ')}`); process.exit(1); }
+const voice = voiceOpt || (engine === 'edge' ? 'ru-RU-DmitryNeural' : profile.voice), model = modelOpt || (profile && profile.model) || voicesCfg.openrouter.model, style = styleOpt || (profile && profile.style) || '';
 const [scriptFile, outBase] = args;
 if (!scriptFile || !outBase) { console.error('usage: node voice.mjs <script.txt> <out-base> [--engine edge|openrouter] [--voice NAME] [--rate -5%] [--gap 0.45]\n       node voice.mjs --voices [ru]'); process.exit(1); }
 
@@ -143,16 +150,18 @@ async function synth(text) {
       try { await run(python(), [path.join(here, 'voice.py'), tf, voice, rate, base]); }
       catch (e) { throw new Error(`edge-tts failed (pip install edge-tts?): ${e.message}`); }
     } else if (engine === 'openrouter') {
-      if (!prices) await loadPrices();
-      const res = await orPost('https://openrouter.ai/api/v1/audio/speech', { model, input: text, voice, response_format: isGemini ? 'pcm' : 'mp3', ...(style ? { instructions: style } : {}) }, 'speech');
-      const ct = res.headers.get('content-type') || '', buf = Buffer.from(await res.arrayBuffer());
-      if (!/audio/.test(ct) || !buf.length) throw new Error(`openrouter returned ${ct || 'nothing'} instead of audio: ${buf.toString('utf8').slice(0, 200)}`);
-      spend.tts += estTts(text.length); spend.calls++; spend.chars += text.length;
-      if (/pcm/.test(ct)) {                                          // raw 16-bit mono PCM, the rate is in the content type: keep it lossless as a wav
-        const sr = (/rate=(\d+)/.exec(ct) || [])[1] || '24000', raw = base + '.pcm'; fs.writeFileSync(raw, buf);
-        ffmpeg('-f', 's16le', '-ar', sr, '-ac', '1', '-i', raw, base + '.wav'); fs.rmSync(raw);
-      } else fs.writeFileSync(base + (/wav/.test(ct) ? '.wav' : '.mp3'), buf);
-      const audio = audioOf(base), ws = text.split(/\s+/).filter(Boolean);
+      if (noCache || !audioOf(base)) {                              // the audio is paid for once; the word times below can be redone from it (only the transcription is paid again)
+        if (!prices) await loadPrices();
+        const res = await orPost('https://openrouter.ai/api/v1/audio/speech', { model, input: text, voice, response_format: isGemini ? 'pcm' : 'mp3', ...(style ? { instructions: style } : {}) }, 'speech');
+        const ct = res.headers.get('content-type') || '', buf = Buffer.from(await res.arrayBuffer());
+        if (!/audio/.test(ct) || !buf.length) throw new Error(`openrouter returned ${ct || 'nothing'} instead of audio: ${buf.toString('utf8').slice(0, 200)}`);
+        spend.tts += estTts(text.length); spend.calls++; spend.chars += text.length;
+        if (/pcm/.test(ct)) {                                          // raw 16-bit mono PCM, the rate is in the content type: keep it lossless as a wav
+          const sr = (/rate=(\d+)/.exec(ct) || [])[1] || '24000', raw = base + '.pcm'; fs.writeFileSync(raw, buf);
+          ffmpeg('-f', 's16le', '-ar', sr, '-ac', '1', '-i', raw, base + '.wav'); fs.rmSync(raw);
+        } else fs.writeFileSync(base + (/wav/.test(ct) ? '.wav' : '.mp3'), buf);
+      }
+      const audio = audioOf(base), ws = text.split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w));   // a lone dash or bullet is punctuation, not a word
       let words = null;
       if (alignMode === 'whisper') {                                 // the words and when they were said, from a transcription of this very file
         const mp3 = spawnSync('ffmpeg', ['-v', 'error', '-i', audio, '-ac', '1', '-ar', '16000', '-b:a', '48k', '-f', 'mp3', '-'], { maxBuffer: 1 << 26 }).stdout;
@@ -162,6 +171,10 @@ async function synth(text) {
         if (al) {
           const sp = speechSpan(audio);                                // whisper chains words end to start: pin the first and the last to the real speech
           words = ws.map((w, k) => ({ word: w.replace(/[.,;:!?…«»"()—–-]+$/g, '').replace(/^[«"(]+/, ''), start: +al[k].start.toFixed(3), end: +al[k].end.toFixed(3), ...(al[k].guessed ? { approx: true } : {}) }));
+          for (let k = 1; k < words.length; k++) {                      // two words heard as one: the recognizer gives the second no time, so the pair's span is shared by letter count
+            const x = words[k - 1], y = words[k];
+            if (y.end - y.start < 0.06 && x.end - x.start > 0.12) { const e = Math.max(x.end, y.end), m = +(x.start + (e - x.start) * x.word.length / (x.word.length + y.word.length)).toFixed(3); x.end = m; y.start = m; y.end = +e.toFixed(3); }
+          }
           words[0].start = +Math.max(words[0].start, sp.start).toFixed(3); words[words.length - 1].end = +Math.min(words[words.length - 1].end, sp.end).toFixed(3);
           if (words[words.length - 1].end <= words[words.length - 1].start) words[words.length - 1].end = +(words[words.length - 1].start + 0.1).toFixed(3);
         } else console.warn(`  (the transcription of "${text.slice(0, 40)}..." does not match the script: word times are spread by letter count)`);
@@ -205,7 +218,7 @@ if (engine === 'openrouter') {
   await loadPrices();
   const todo = phrases.flatMap(p => p.split(/(?<=[.!?…])\s+/).filter(Boolean)).filter(s => !isCached(s));
   const est = todo.reduce((s, x) => s + estTts(x.length) + estStt(x.length), 0);
-  console.log(`openrouter ${model}, voice ${voice}${style ? `, style "${style}"` : ''}: ${todo.length} sentence(s) to synthesize (${todo.reduce((s, x) => s + x.length, 0)} characters), the rest is cached; estimated cost $${est.toFixed(4)} (limit $${maxCost})`);
+  console.log(`openrouter ${model}, voice ${voice}${voiceOpt ? '' : ` (profile ${profileName}: ${profile.status.split(' (')[0].split(';')[0]})`}${style ? `, style "${style}"` : ''}: ${todo.length} sentence(s) to synthesize (${todo.reduce((s, x) => s + x.length, 0)} characters), the rest is cached; estimated cost $${est.toFixed(4)} (limit $${maxCost})`);
   if (est > maxCost) { console.error(`the estimate $${est.toFixed(4)} is above --max-cost $${maxCost}: nothing was spent. Raise --max-cost to go on.`); process.exitCode = 3; await sleep(150); process.exit(3); }   // the pause: on Windows an exit right after fetch trips a libuv assertion
 }
 
@@ -250,7 +263,7 @@ outPhrases.forEach((p, k) => {
   console.log(`${String(k + 1).padStart(4)}  ${p.start.toFixed(2).padStart(6)} ${p.end.toFixed(2).padStart(6)}  ${String(n).padStart(4)}  ${(n / (p.end - p.start)).toFixed(2)}  ${p.text.length > 70 ? p.text.slice(0, 67) + '...' : p.text}`);
 });
 if (allWords.some(w => w.approx)) console.log(`note: ${allWords.filter(w => w.approx).length} of ${allWords.length} word times are approximate (spread by letter count)`);
-if (engine === 'openrouter' && spend.calls) {
+if (engine === 'openrouter' && (spend.calls || spend.stt)) {
   const ledger = path.join(cacheDir, 'spend.json'), prev = fs.existsSync(ledger) ? JSON.parse(fs.readFileSync(ledger, 'utf8')) : [];
   prev.push({ at: new Date().toISOString(), model, voice, style, calls: spend.calls, chars: spend.chars, tts_estimated_usd: +spend.tts.toFixed(5), stt_usd: +spend.stt.toFixed(5) });
   fs.writeFileSync(ledger, JSON.stringify(prev, null, 1));

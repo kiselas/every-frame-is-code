@@ -60,7 +60,7 @@ async function make(specFile) {
     const v = spec.voice, textFile = path.resolve(dir, v.file || 'voice.txt'), base = path.join(out, 'voice');
     if (!exists(textFile)) { console.error(`the voice text ${textFile} does not exist`); return 2; }
     const a = [path.join(here, 'voice.mjs'), textFile, base];
-    for (const [flagName, val] of [['--engine', v.engine], ['--voice', v.voice], ['--model', v.model], ['--rate', v.rate], ['--gap', v.gap], ['--sentence-gap', v.sentenceGap], ['--style', v.style], ['--align', v.align], ['--lang', v.lang], ['--max-cost', v.maxCost]]) if (val !== undefined) a.push(flagName, String(val));
+    for (const [flagName, val] of [['--engine', v.engine], ['--voice', v.voice], ['--model', v.model], ['--rate', v.rate], ['--gap', v.gap], ['--sentence-gap', v.sentenceGap], ['--profile', v.profile], ['--style', v.style], ['--align', v.align], ['--lang', v.lang], ['--max-cost', v.maxCost]]) if (val !== undefined) a.push(flagName, String(val));
     const code = await sh(process.execPath, a);
     if (code) { console.error('voice.mjs failed'); return 2; }
     voice = { words: JSON.parse(fs.readFileSync(base + '.words.json', 'utf8')), phrases: JSON.parse(fs.readFileSync(base + '.phrases.json', 'utf8')) };

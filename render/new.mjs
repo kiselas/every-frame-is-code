@@ -2,6 +2,8 @@
 // Usage: node new.mjs <id> --genre <genre> [--lang ru] [--dir videos]     creates <dir>/<id>/spec.json and voice.txt (never overwrites)
 //        node new.mjs --genres                                           lists the genres with their promise and length
 // Languages: ru (ru-RU-DmitryNeural) and en (en-US-GuyNeural) with Oswald + IBM Plex Mono; for any other language set voice.voice and the fonts yourself.
+// --engine openrouter: the spec gets { engine: "openrouter", profile } instead of a voice name; the profile is the genre's kind of voice (render/voices.json:
+//   documentary, explainer, assertive, ...) and can be changed there, or pinned in the spec with voice.voice / voice.style. Needs OPENROUTER_KEY in .env.
 // Then: fill in facts, voice.txt, the shots (every TODO), and run  node render/lint-spec.mjs <dir>/<id>/spec.json
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,7 +19,7 @@ const listGenres = () => GENRES.map(g => `  ${g.name.padEnd(14)} ${(g.length[0] 
 const USAGE = 'usage: node new.mjs <id> --genre <genre> [--lang ru] [--dir videos]\n       node new.mjs --genres';
 
 if (flag('--genres')) { console.log('genre          length   the promise to the viewer\n' + listGenres()); process.exit(0); }
-const genre = opt('--genre', null), lang = opt('--lang', 'ru'), dir = opt('--dir', 'videos'), [id] = args;
+const genre = opt('--genre', null), lang = opt('--lang', 'ru'), dir = opt('--dir', 'videos'), engine = opt('--engine', 'edge'), [id] = args;
 if (!id || id.startsWith('--') || !genre) {
   console.error(USAGE + '\n\ngenres:\n' + listGenres());
   process.exit(1);
@@ -26,7 +28,14 @@ if (!/^[a-z0-9-]+$/.test(id)) { console.error(`the id "${id}" must be [a-z0-9-]+
 if (!GENRES.some(g => g.name === genre)) { console.error(`unknown genre "${genre}". The genres:\n${listGenres()}`); process.exit(1); }
 
 const template = JSON.parse(fs.readFileSync(path.join(templates, genre + '.json'), 'utf8'));
-const { spec, notes } = scaffoldSpec(template, { id, lang });
+if (engine !== 'edge' && engine !== 'openrouter') { console.error(`unknown --engine "${engine}" (edge or openrouter)`); process.exit(1); }
+let voice = null;
+if (engine === 'openrouter' && template.voice) {
+  const cfg = JSON.parse(fs.readFileSync(path.join(here, 'voices.json'), 'utf8')), profile = cfg.genres[genre] || 'default';
+  voice = { engine: 'openrouter', profile, file: template.voice.file, offset: template.voice.offset };
+}
+const { spec, notes } = scaffoldSpec(template, { id, lang, voice });
+if (voice) notes.push(`voice profile "${voice.profile}" (render/voices.json): ${JSON.parse(fs.readFileSync(path.join(here, 'voices.json'), 'utf8')).profiles[voice.profile].status}`);
 const target = path.resolve(dir, id), specFile = path.join(target, 'spec.json'), voiceFile = path.join(target, spec.voice ? (spec.voice.file || 'voice.txt') : 'voice.txt');
 const voiceSkeleton = path.join(templates, genre + '.voice.txt');
 const clash = [specFile, ...(spec.voice ? [voiceFile] : [])].filter(f => fs.existsSync(f));
